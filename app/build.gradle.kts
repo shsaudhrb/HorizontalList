@@ -2,8 +2,9 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    id("org.jlleitschuh.gradle.ktlint") version "13.0.0"
+    id("io.gitlab.arturbosch.detekt") version "1.23.8"
 }
-
 android {
     namespace = "com.example.lmd"
     compileSdk = 36
@@ -23,7 +24,7 @@ android {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
         }
     }
@@ -36,6 +37,20 @@ android {
     }
     buildFeatures {
         compose = true
+    }
+    lint {
+        lintConfig = file("$rootDir/lint.xml")
+    }
+}
+
+detekt {
+    config = files("../detekt.yml")
+    buildUponDefaultConfig = true
+
+    reports {
+        html.required.set(true)
+        xml.required.set(false)
+        txt.required.set(false)
     }
 }
 
@@ -55,5 +70,7 @@ dependencies {
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
-    debugImplementation(libs.androidx.ui.test.manifest)
+
+    // navigation
+    implementation("androidx.navigation:navigation-compose:2.9.3")
 }

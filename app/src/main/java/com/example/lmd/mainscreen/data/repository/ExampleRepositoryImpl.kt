@@ -1,4 +1,3 @@
 package com.example.lmd.mainscreen.data.repository
 
-class ExampleRepositoryImpl {
-}
+class ExampleRepositoryImpl

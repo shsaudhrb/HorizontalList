@@ -1,4 +1,3 @@
 package com.example.lmd.settings.domain
 
-class SetDarkModeUseCase {
-}
+class SetDarkModeUseCase

@@ -1,5 +1,3 @@
 package com.example.lmd.navigation
 
-sealed class Screen() {
-    
-}
+sealed class Screen

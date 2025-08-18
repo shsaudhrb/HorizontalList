@@ -1,4 +1,3 @@
 package com.example.lmd.settings.data
 
-class SettingsPreferenceDataSource {
-}
+class SettingsPreferenceDataSource

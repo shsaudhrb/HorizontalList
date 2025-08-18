@@ -1,4 +1,3 @@
 package com.example.lmd.settings.domain
 
-class SetLanguageUseCase {
-}
+class SetLanguageUseCase
