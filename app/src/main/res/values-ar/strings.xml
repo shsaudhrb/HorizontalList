@@ -12,5 +12,6 @@
         <string name="menu_settings">الإعدادات</string>
         <string name="menu_chat">المحادثة</string>
         <string name="menu_logout">تسجيل الخروج</string>
+    <string name="open_menu"> افتح القائمة</string>
 
 </resources>

@@ -16,7 +16,7 @@ class MainActivity : ComponentActivity() {
             lmdTheme {
                 val rootNavController = rememberNavController()
                 appNavGraph(
-                    rootNavController
+                    rootNavController,
                 )
             }
         }

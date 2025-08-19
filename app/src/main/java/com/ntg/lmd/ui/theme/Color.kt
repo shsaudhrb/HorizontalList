@@ -54,7 +54,7 @@ val Greenish_teal = Color(0xFF44AA8D)
 val SoftPink = Color(0xFFE5C2C2)
 
 val CupertinoSystemBackground = Color(0xFFF2F2F7) // groupedList background
-val CupertinoCellBackground   = Color(0xFFFFFFFF) // card/cell
-val CupertinoSeparator        = Color(0x332C2C2E) // thin separator (20% alpha)
-val CupertinoLabelPrimary     = Color(0xFF1C1C1E) // black-ish
-val CupertinoLabelSecondary   = Color(0x993C3C43) // 60% black
+val CupertinoCellBackground = Color(0xFFFFFFFF) // card/cell
+val CupertinoSeparator = Color(0x332C2C2E) // thin separator (20% alpha)
+val CupertinoLabelPrimary = Color(0xFF1C1C1E) // black-ish
+val CupertinoLabelSecondary = Color(0x993C3C43) // 60% black

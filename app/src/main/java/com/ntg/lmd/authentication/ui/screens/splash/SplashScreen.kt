@@ -15,11 +15,15 @@ import androidx.navigation.NavController
 import com.ntg.lmd.navigation.Screen
 
 @Composable
-fun splashScreen(navController: NavController,onDecide: (Boolean) -> Unit) {
-        LaunchedEffect(Unit) {
-            val isLoggedIn = /* check token or saved state */ false
-            onDecide(isLoggedIn)
-        }
+fun splashScreen(
+    navController: NavController,
+    onDecide: (Boolean) -> Unit,
+) {
+    LaunchedEffect(Unit) {
+        // check token or saved state
+        val isLoggedIn = false
+        onDecide(isLoggedIn)
+    }
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
