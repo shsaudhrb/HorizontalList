@@ -75,8 +75,6 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     // Retrofit
     implementation(libs.retrofit)
-    // Converter
-    implementation(libs.converter.name)
     // Gson Converter
     implementation(libs.converter.gson)
     // OkHttp
