@@ -12,6 +12,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import com.example.lmd.ui.theme.lmdTheme
 
 class MainActivity : ComponentActivity() {
@@ -36,7 +37,7 @@ fun greeting() {
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = "This is LMD",
+            text = stringResource(id = R.string.hello),
             color = MaterialTheme.colorScheme.onBackground,
         )
     }
