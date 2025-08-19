@@ -5,4 +5,4 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavController
 
 @Composable
-fun generalPoolScreen(navController: NavController) { Text("General Pool Screen") }
+fun chatScreen(navController: NavController) { Text("Chat Screen") }

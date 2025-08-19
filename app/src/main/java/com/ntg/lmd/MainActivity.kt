@@ -14,9 +14,9 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             lmdTheme {
-                val navController = rememberNavController()
+                val rootNavController = rememberNavController()
                 appNavGraph(
-                    navController = navController,
+                    rootNavController
                 )
             }
         }
