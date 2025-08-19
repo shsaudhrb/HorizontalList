@@ -12,6 +12,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 
 @Composable
+@Suppress("UNUSED_PARAMETER")
 fun myPoolScreen(navController: NavController) {
     Box(
         modifier = Modifier.fillMaxSize(),
