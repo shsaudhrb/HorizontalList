@@ -71,7 +71,18 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
 
-    // navigation
-    implementation("androidx.navigation:navigation-compose:2.9.3")
-    testImplementation(kotlin("test"))
+    // Navigation
+    implementation(libs.androidx.navigation.compose)
+    // Retrofit
+    implementation(libs.retrofit)
+    // Converter
+    implementation(libs.converter.name)
+    // Gson Converter
+    implementation(libs.converter.gson)
+    // OkHttp
+    implementation(libs.okhttp)
+    // OkHttp Logging Interceptor
+    implementation(libs.logging.interceptor)
+    // Lifecycle ViewModel
+    implementation(libs.androidx.lifecycle.viewmodel.ktx)
 }
