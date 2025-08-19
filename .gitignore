@@ -215,3 +215,6 @@ app/build/test-results/
 # Coverage reports
 app/build/reports/coverage/
 
+# Documentation files
+*.md
+
