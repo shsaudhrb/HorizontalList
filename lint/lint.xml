@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!-- أخطاء الترجمة -->
+    <issue id="MissingTranslation" severity="error" />
+
+    <!-- موارد غير مستخدمة -->
+    <issue id="UnusedResources" severity="warning" />
+
+    <!-- APIs جديدة لا تعمل في إصدارات قديمة -->
+    <issue id="NewApi" severity="error" />
+
+    <!-- مشاكل الوصول (Accessibility) -->
+    <issue id="ContentDescription" severity="error" />
+    <issue id="TouchTargetSizeCheck" severity="warning" />
+    <issue id="LabelFor" severity="warning" />
+
+    <!-- Jetpack Compose -->
+    <issue id="ComposableNaming" severity="warning" />
+    <issue id="ModifierFactoryExtensionFunction" severity="warning" />
+    <issue id="RememberReturnType" severity="warning" />
+
+    <!-- الأداء -->
+    <issue id="Overdraw" severity="warning" />
+    <issue id="DrawAllocation" severity="error" />
+
+    <!-- جعل تحذيرات HardcodedCredentials تصبح أخطاء -->
+    <issue id="HardcodedCredentials" severity="error" />
+
+    <!-- جعل تحذيرات NetworkSecurityConfig تصبح أخطاء -->
+    <issue id="NetworkSecurityConfig" severity="error" />
+
+    <!-- جعل تحذيرات TrustAllX509TrustManager تصبح أخطاء -->
+    <issue id="TrustAllX509TrustManager" severity="error" />
+
+    <!-- الأمان -->
+    <issue id="UnsafeBroadcastReceiver" severity="error" />
+    <issue id="ExportedReceiver" severity="error" />
+
+    <!-- تجاهل أشياء بسيطة -->
+    <issue id="ObsoleteLayoutParam" severity="ignore" />
+
+    <!-- تأمين الـ Activities/Services/Providers بعدم تصديرها بالخطأ -->
+    <issue id="ExportedActivity" severity="error" />
+    <issue id="ExportedService" severity="error" />
+    <issue id="ExportedContentProvider" severity="error" />
+
+    <!-- WebView أمان -->
+    <issue id="SetJavaScriptEnabled" severity="error" />
+    <issue id="WebViewClientOnReceivedSslError" severity="error" />
+
+    <!-- الأمان في PendingIntent -->
+    <issue id="UnsafePendingIntent" severity="error" />
+    <issue id="UnsafeOptInUsageError" severity="error" />
+
+</lint>

@@ -2,8 +2,11 @@ package com.example.lmd.authentication.ui.screens.register
 
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.navigation.NavController
 
 @Composable
-fun registerScreen() {
+fun registerScreen(
+    navController: NavController
+) {
     Text(text = "Register Screen")
 }

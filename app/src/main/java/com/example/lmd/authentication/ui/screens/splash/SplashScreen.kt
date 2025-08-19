@@ -2,8 +2,11 @@ package com.example.lmd.authentication.ui.screens.splash
 
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.navigation.NavController
 
 @Composable
-fun splashScreen() {
+fun splashScreen(
+    navController: NavController
+) {
     Text(text = "Splash Screen")
 }

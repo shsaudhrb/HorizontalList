@@ -6,7 +6,7 @@ plugins {
     id("io.gitlab.arturbosch.detekt") version "1.23.8"
 }
 android {
-    namespace = "com.example.lmd"
+    namespace = "com.ntg.lmd"
     compileSdk = 36
 
     defaultConfig {
