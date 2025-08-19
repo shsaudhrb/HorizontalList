@@ -11,14 +11,6 @@ sealed class Screen(
 
     object Login : Screen("login_screen")
 
-    // ---------- Reset Password ----------
-
-    object EnterEmailResetPassword : Screen("enter_email_reset_password_screen")
-
-    object VerificationCode : Screen("verification_code_screen")
-
-    object NewPassword : Screen("new_password_screen")
-
     // ---------- Main Screen ----------
 
     object DeliveriesLog : Screen("deliveries_log_screen")

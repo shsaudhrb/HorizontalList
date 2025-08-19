@@ -1,3 +1,3 @@
 package com.ntg.lmd.mainscreen.data.datasource.remote
 
-interface ExampleApi
+interface File

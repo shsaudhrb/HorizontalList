@@ -6,9 +6,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.ntg.lmd.authentication.ui.screens.login.loginScreen
 import com.ntg.lmd.authentication.ui.screens.register.registerScreen
-import com.ntg.lmd.authentication.ui.screens.reset.enterEmailResetPasswordScreen
-import com.ntg.lmd.authentication.ui.screens.reset.newPasswordScreen
-import com.ntg.lmd.authentication.ui.screens.reset.verificationCodeScreen
 import com.ntg.lmd.authentication.ui.screens.splash.splashScreen
 import com.ntg.lmd.mainscreen.ui.screens.deliveriesLogScreen
 import com.ntg.lmd.mainscreen.ui.screens.generalPoolScreen
@@ -39,26 +36,6 @@ fun appNavGraph(navController: NavHostController) {
 
         composable(Screen.Register.route) {
             registerScreen(
-                navController = navController,
-            )
-        }
-
-        // ---------- Reset Password ----------
-
-        composable(Screen.EnterEmailResetPassword.route) {
-            enterEmailResetPasswordScreen(
-                navController = navController,
-            )
-        }
-
-        composable(Screen.VerificationCode.route) {
-            verificationCodeScreen(
-                navController = navController,
-            )
-        }
-
-        composable(Screen.NewPassword.route) {
-            newPasswordScreen(
                 navController = navController,
             )
         }

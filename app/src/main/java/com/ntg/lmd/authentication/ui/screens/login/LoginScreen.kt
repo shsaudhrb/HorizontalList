@@ -27,14 +27,6 @@ fun loginScreen(navController: NavController) {
 
             Button(
                 onClick = {
-                    navController.navigate(Screen.EnterEmailResetPassword.route) {
-                        popUpTo(Screen.Login.route) { inclusive = true }
-                    }
-                },
-            ) { Text("Reset Password") }
-
-            Button(
-                onClick = {
                     navController.navigate(Screen.GeneralPool.route) {
                         popUpTo(Screen.Login.route) { inclusive = true }
                     }
