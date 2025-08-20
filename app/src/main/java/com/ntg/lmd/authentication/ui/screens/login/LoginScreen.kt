@@ -27,7 +27,7 @@ fun loginScreen(navController: NavController) {
 
             Button(
                 onClick = {
-                    navController.navigate(Screen.GeneralPool.route) {
+                    navController.navigate(Screen.Drawer.route) {
                         popUpTo(Screen.Login.route) { inclusive = true }
                     }
                 },

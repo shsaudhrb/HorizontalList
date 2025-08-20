@@ -97,6 +97,8 @@ dependencies {
     implementation(libs.logging.interceptor)
     // Lifecycle ViewModel
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
+    // Icons
+    implementation("androidx.compose.material:material-icons-extended:1.7.8")
 }
 
 // Custom tasks for code quality checks

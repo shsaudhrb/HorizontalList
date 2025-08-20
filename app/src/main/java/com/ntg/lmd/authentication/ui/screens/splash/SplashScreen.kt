@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -14,7 +15,15 @@ import androidx.navigation.NavController
 import com.ntg.lmd.navigation.Screen
 
 @Composable
-fun splashScreen(navController: NavController) {
+fun splashScreen(
+    navController: NavController,
+    onDecide: (Boolean) -> Unit,
+) {
+    LaunchedEffect(Unit) {
+        // check token or saved state
+        val isLoggedIn = false
+        onDecide(isLoggedIn)
+    }
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
