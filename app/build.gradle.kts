@@ -103,6 +103,8 @@ dependencies {
     implementation(libs.logging.interceptor)
     // Lifecycle ViewModel
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
+    // Icons
+    implementation("androidx.compose.material:material-icons-extended:1.7.8")
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.core)
