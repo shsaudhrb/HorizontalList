@@ -19,7 +19,7 @@ import com.ntg.lmd.settings.ui.screens.settingsOptions
 fun appNavGraph(navController: NavHostController) {
     NavHost(
         navController = navController,
-        startDestination = Screen.Splash.route,
+        startDestination = Screen.GeneralPool.route,
     ) {
         // ---------- Splash & Auth ----------
         composable(Screen.Splash.route) {

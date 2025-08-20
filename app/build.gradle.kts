@@ -10,7 +10,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.lmd"
+        applicationId = "com.ntg.lmd"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
@@ -83,4 +83,13 @@ dependencies {
     implementation(libs.logging.interceptor)
     // Lifecycle ViewModel
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
+    // Icons
+    implementation(libs.androidx.material.icons.extended)
+    // animation
+    implementation(libs.androidx.animation)
+    // Google Maps
+    implementation(libs.play.services.maps)
+    implementation(libs.maps.compose)
+    // Play Services for current location
+    implementation(libs.play.services.location)
 }
