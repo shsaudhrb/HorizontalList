@@ -230,7 +230,7 @@ private fun authFields(
     Spacer(Modifier.height(dimensionResource(R.dimen.largeSpace)))
 
     gradientPrimaryButton(
-        text = if (ui.isLoading) "Signing in…" else stringResource(R.string.login),
+        text = stringResource(R.string.login),
         loading = ui.isLoading,
         onClick = onSubmit,
     )
