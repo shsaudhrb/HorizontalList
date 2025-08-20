@@ -1,7 +1,5 @@
 package com.ntg.lmd.authentication.ui.screens.login
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -62,7 +60,6 @@ private const val CARD_ELEVATION_FOCUSED = 10f
 private const val CARD_ELEVATION_DEFAULT = 2f
 private const val CARD_ANIMATION_DURATION = 240
 
-@RequiresApi(Build.VERSION_CODES.P)
 @Composable
 fun loginScreen(
     viewModel: LoginViewModel =
