@@ -26,4 +26,23 @@
     <!--Card dimensions-->
     <dimen name="cardRoundCorner">28dp</dimen>
 
+    <dimen name="drawer_padding">16dp</dimen>
+    <dimen name="drawer_header_height">96dp</dimen>
+    <dimen name="drawer_avatar_size">56dp</dimen>
+    <dimen name="drawer_icon_size">22dp</dimen>
+    <dimen name="drawer_item_vertical_padding">12dp</dimen>
+    <dimen name="drawer_group_outer_padding">12dp</dimen>
+    <dimen name="group_vertical_padding">4dp</dimen>
+    <dimen name="card_radius">12dp</dimen>
+
+    <dimen name="drawer_divider_inset">56dp</dimen>
+    <dimen name="hairline">0.5dp</dimen>
+
+    <dimen name="space_xsmall">8dp</dimen>
+    <dimen name="space_small">12dp</dimen>
+
+    <dimen name="drawer_header_text_size">20sp</dimen>
+    <dimen name="drawer_section_title_text_size">12sp</dimen>
+    <dimen name="drawer_item_text_size">16sp</dimen>
+    <dimen name="drawer_badge_text_size">14sp</dimen>
 </resources>

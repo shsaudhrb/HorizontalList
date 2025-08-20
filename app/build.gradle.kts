@@ -56,6 +56,20 @@ detekt {
     }
 }
 
+// Custom detekt task for unused imports only
+tasks.register("detektUnusedImports", io.gitlab.arturbosch.detekt.Detekt::class) {
+    description = "Run detekt analysis for unused imports only"
+    group = "verification"
+
+    config.setFrom(files("../detekt-unused-imports.yml"))
+
+    reports {
+        html.required.set(false)
+        xml.required.set(false)
+        txt.required.set(false)
+    }
+}
+
 dependencies {
 
     implementation(libs.androidx.core.ktx)
@@ -87,4 +101,229 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     // Icons
     implementation(libs.androidx.material.icons.extended)
+}
+
+// Custom tasks for code quality checks
+tasks.register("checkUnusedAssets") {
+    group = "verification"
+    description = "Check for unused assets in the project"
+
+    doLast {
+        val resDir = file("src/main/res")
+        val drawableDir = file("src/main/res/drawable")
+        val mipmapDir = file("src/main/res/mipmap-anydpi-v26")
+        val valuesDir = file("src/main/res/values")
+
+        val unusedAssets = mutableListOf<String>()
+
+        // Check drawable resources
+        if (drawableDir.exists()) {
+            drawableDir.listFiles()?.forEach { file ->
+                if (file.isFile && file.extension in listOf("xml", "png", "jpg", "jpeg", "webp")) {
+                    val resourceName = file.nameWithoutExtension
+                    if (!isResourceUsed(resourceName, "drawable")) {
+                        unusedAssets.add("drawable/${file.name}")
+                    }
+                }
+            }
+        }
+
+        // Check mipmap resources
+        if (mipmapDir.exists()) {
+            mipmapDir.listFiles()?.forEach { file ->
+                if (file.isFile && file.extension == "xml") {
+                    val resourceName = file.nameWithoutExtension
+                    if (!isResourceUsed(resourceName, "mipmap")) {
+                        unusedAssets.add("mipmap/${file.name}")
+                    }
+                }
+            }
+        }
+
+        if (unusedAssets.isNotEmpty()) {
+            println("❌ Found ${unusedAssets.size} unused assets:")
+            unusedAssets.forEach { println("   - $it") }
+            println("⚠️  Note: Launcher-related drawables (ic_launcher_*) are often unused if using bitmap launcher icons.")
+            throw GradleException("Unused assets found. Please remove them or use them in your code.")
+        } else {
+            println("✅ No unused assets found")
+        }
+    }
+}
+
+tasks.register("checkUnusedFiles") {
+    group = "verification"
+    description = "Check for unused Kotlin/Java files in the project"
+
+    doLast {
+        val srcDir = file("src/main/java")
+        val unusedFiles = mutableListOf<String>()
+
+        if (srcDir.exists()) {
+            findUnusedFiles(srcDir, unusedFiles)
+        }
+
+        if (unusedFiles.isNotEmpty()) {
+            println("❌ Found ${unusedFiles.size} potentially unused files:")
+            unusedFiles.forEach { println("   - $it") }
+            println("⚠️  Note: This is a basic check. Some files might be used dynamically.")
+            throw GradleException("Potentially unused files found. Please review and remove if not needed.")
+        } else {
+            println("✅ No unused files found")
+        }
+    }
+}
+
+// Helper function to check if a resource is used
+fun isResourceUsed(
+    resourceName: String,
+    resourceType: String,
+): Boolean {
+    val srcDir = file("src/main/java")
+    val layoutDir = file("src/main/res/layout")
+    val valuesDir = file("src/main/res/values")
+    val manifestFile = file("src/main/AndroidManifest.xml")
+
+    // Check in Kotlin/Java files
+    if (srcDir.exists()) {
+        val used = findResourceUsageInFiles(srcDir, resourceName, resourceType)
+        if (used) return true
+    }
+
+    // Check in layout files
+    if (layoutDir.exists()) {
+        val used = findResourceUsageInFiles(layoutDir, resourceName, resourceType)
+        if (used) return true
+    }
+
+    // Check in values files
+    if (valuesDir.exists()) {
+        val used = findResourceUsageInFiles(valuesDir, resourceName, resourceType)
+        if (used) return true
+    }
+
+    // Check in AndroidManifest.xml
+    if (manifestFile.exists()) {
+        val used = findResourceUsageInFiles(manifestFile.parentFile, resourceName, resourceType)
+        if (used) return true
+    }
+
+    return false
+}
+
+// Helper function to find resource usage in files
+fun findResourceUsageInFiles(
+    dir: File,
+    resourceName: String,
+    resourceType: String,
+): Boolean {
+    dir.walkTopDown().forEach { file ->
+        if (file.isFile && file.extension in listOf("kt", "java", "xml")) {
+            val content = file.readText()
+            val patterns =
+                listOf(
+                    "@$resourceType/$resourceName",
+                    "R.$resourceType.$resourceName",
+                    "\"$resourceName\"",
+                )
+
+            if (patterns.any { pattern -> content.contains(pattern) }) {
+                return true
+            }
+        }
+    }
+    return false
+}
+
+// Helper function to find unused files
+fun findUnusedFiles(
+    dir: File,
+    unusedFiles: MutableList<String>,
+) {
+    dir.walkTopDown().forEach { file ->
+        if (file.isFile && file.extension in listOf("kt", "java")) {
+            val className = file.nameWithoutExtension
+            val packagePath =
+                file.parentFile
+                    .relativeTo(dir)
+                    .path
+                    .replace("/", ".")
+            val fullClassName = if (packagePath.isNotEmpty()) "$packagePath.$className" else className
+
+            if (!isFileUsed(file, fullClassName)) {
+                unusedFiles.add(file.relativeTo(project.projectDir).path)
+            }
+        }
+    }
+}
+
+// Helper function to check if a file is used
+fun isFileUsed(
+    file: File,
+    fullClassName: String,
+): Boolean {
+    val srcDir = file("src/main/java")
+
+    // Skip certain files that are typically used
+    val skipPatterns =
+        listOf(
+            "MainActivity",
+            "MyApp",
+            "Application",
+            "Activity",
+            "Fragment",
+            "ViewModel",
+            "Repository",
+            "UseCase",
+            "Service",
+            "Receiver",
+            "Provider",
+            "Test",
+            "Example",
+            "Screen",
+            "Theme",
+            "Color",
+            "Type",
+            "Font",
+            "NavGraph",
+            "Module",
+            "DataSource",
+            "ApiClient",
+            "Request",
+            "Response",
+            "UiState",
+            "ApiResult",
+            "Validator",
+        )
+
+    if (skipPatterns.any { pattern -> fullClassName.contains(pattern) }) {
+        return true
+    }
+
+    // Check if the class is imported or referenced in other files
+    srcDir.walkTopDown().forEach { otherFile ->
+        if (otherFile != file && otherFile.isFile && otherFile.extension in listOf("kt", "java")) {
+            val content = otherFile.readText()
+            val className = file.nameWithoutExtension
+
+            // Check for various reference patterns
+            val referencePatterns =
+                listOf(
+                    fullClassName,
+                    className,
+                    "import.*$fullClassName",
+                    "import.*$className",
+                    "@Composable.*$className",
+                    "class.*$className",
+                    "object.*$className",
+                    "interface.*$className",
+                )
+
+            if (referencePatterns.any { pattern -> content.contains(pattern) }) {
+                return true
+            }
+        }
+    }
+
+    return false
 }

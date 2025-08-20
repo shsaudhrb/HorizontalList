@@ -13,6 +13,8 @@ sealed class Screen(
 
     // ---------- Main Screen ----------
 
+    object Drawer : Screen("root_drawer")
+
     object DeliveriesLog : Screen("deliveries_log_screen")
 
     object GeneralPool : Screen("general_pool_screen")
@@ -22,6 +24,10 @@ sealed class Screen(
     object MyPool : Screen("my_pool_screen")
 
     object OrdersHistory : Screen("orders_history_screen")
+
+    data object Chat : Screen("chat_screen")
+
+    data object Logout : Screen("logout_screen")
 
     // ---------- Notification & Settings ----------
 
