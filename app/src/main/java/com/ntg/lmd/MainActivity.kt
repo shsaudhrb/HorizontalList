@@ -14,11 +14,10 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             lmdTheme {
-//                val navController = rememberNavController()
-//                appNavGraph(
-//                    navController = navController,
-//                )
-                DevNetworkTestPanel()
+                val navController = rememberNavController()
+                appNavGraph(
+                    navController = navController,
+                )
             }
         }
     }
