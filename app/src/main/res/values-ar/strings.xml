@@ -1,4 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">نظام توصيل</string>
+
+    <string name="welcome_back">مرحبًا بعودتك</string>
+    <string name="agentId">معرف الوكيل</string>
+    <string name="username">اسم المستخدم</string>
+    <string name="password">كلمة المرور</string>
+    <string name="password_placeholder">••••••••</string>
+    <string name="login">تسجيل الدخول</string>
+    <string name="forgotPassword">هل نسيت كلمة المرور؟</string>
+    <string name="forgot_password">نسيت كلمة المرور</string>
+    <string name="error_username_empty">اسم المستخدم مطلوب</string>
+    <string name="error_username_invalid">يرجى إدخال اسم المستخدم صالح</string>
+    <string name="error_password_empty">كلمة المرور مطلوبة</string>
+    <string name="error_password_invalid">يجب أن تحتوي على حرف كبير وصغير ورقم ورمز وطول 8 أحرف على الأقل</string>
+    <string name="error_agent_id_invalid">  يجب أن يكون رقم الوكيل من 14 رقمًا </string>
+    <string name="msg_welcome">مرحبًا!</string>
+    <string name="error_invalid_credentials">بيانات تسجيل الدخول غير صحيحة</string>
 </resources>

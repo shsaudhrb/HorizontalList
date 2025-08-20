@@ -1,5 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <dimen name="text_spacing_small">8dp</dimen>
-    <dimen name="text_spacing_medium">16dp</dimen>
+    <!--general dimensions-->
+    <dimen name="smallestSpace">2dp</dimen>
+    <dimen name="extraSmallSpace">4dp</dimen>
+    <dimen name="smallerSpace">8dp</dimen>
+    <dimen name="smallSpace">12dp</dimen>
+    <dimen name="mediumSpace">16dp</dimen>
+    <dimen name="largeSpace">20dp</dimen>
+    <dimen name="largerSpace">24dp</dimen>
+    <dimen name="extralargeSpace">28dp</dimen>
+    <dimen name="largestSpace">32dp</dimen>
+    <dimen name="hugeSpace">64dp</dimen>
+
+    <dimen name="smallStrokeWidth">2dp</dimen>
+    <dimen name="smallestStrokeWidth">1dp</dimen>
+
+    <dimen name="appLogoSize">300dp</dimen>
+
+    <!--Button dimensions-->
+    <dimen name="textFieldRoundCorner">15dp</dimen>
+    <dimen name="buttonRoundCorner">15dp</dimen>
+    <dimen name="buttonHeight">54dp</dimen>
+    <dimen name="buttonProgressIndicatorSize">22dp</dimen>
+
+    <!--Card dimensions-->
+    <dimen name="cardRoundCorner">28dp</dimen>
+
 </resources>

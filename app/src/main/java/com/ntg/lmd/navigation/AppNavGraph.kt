@@ -29,9 +29,7 @@ fun appNavGraph(navController: NavHostController) {
         }
 
         composable(Screen.Login.route) {
-            loginScreen(
-                navController = navController,
-            )
+            loginScreen()
         }
 
         composable(Screen.Register.route) {
@@ -43,9 +41,7 @@ fun appNavGraph(navController: NavHostController) {
         // ---------- Main Screen ----------
 
         composable(Screen.DeliveriesLog.route) {
-            deliveriesLogScreen(
-                navController = navController,
-            )
+            deliveriesLogScreen()
         }
 
         composable(Screen.GeneralPool.route) {
@@ -55,35 +51,25 @@ fun appNavGraph(navController: NavHostController) {
         }
 
         composable(Screen.MyOrders.route) {
-            myOrdersScreen(
-                navController = navController,
-            )
+            myOrdersScreen()
         }
 
         composable(Screen.MyPool.route) {
-            myPoolScreen(
-                navController = navController,
-            )
+            myPoolScreen()
         }
 
         composable(Screen.OrdersHistory.route) {
-            ordersHistoryScreen(
-                navController = navController,
-            )
+            ordersHistoryScreen()
         }
 
         // ---------- Notification & Settings ----------
 
         composable(Screen.Notifications.route) {
-            notificationScreen(
-                navController = navController,
-            )
+            notificationScreen()
         }
 
         composable(Screen.Settings.route) {
-            settingsOptions(
-                navController = navController,
-            )
+            settingsOptions()
         }
     }
 }
