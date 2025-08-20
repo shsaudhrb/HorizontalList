@@ -31,6 +31,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,6 +67,13 @@ fun appScaffoldWithDrawer(
 ) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    val groupedDrawerItems =
+        remember {
+            Pair(
+                drawerItems.take(FIRST_GROUP_SIZE),
+                drawerItems.drop(FIRST_GROUP_SIZE),
+            )
+        }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -79,8 +87,7 @@ fun appScaffoldWithDrawer(
                 drawerSectionTitle(stringResource(R.string.drawer_section_orders))
 
                 groupCard {
-                    val firstGroup = drawerItems.take(FIRST_GROUP_SIZE)
-                    firstGroup.forEachIndexed { index, item ->
+                    groupedDrawerItems.first.forEachIndexed { index, item ->
                         drawerItemRow(
                             entry = item,
                             selected = currentRoute == item.route,
@@ -93,7 +100,7 @@ fun appScaffoldWithDrawer(
                                 }
                             },
                         )
-                        if (index != firstGroup.lastIndex) insetDivider()
+                        if (index != groupedDrawerItems.first.lastIndex) insetDivider()
                     }
                 }
 
@@ -101,8 +108,8 @@ fun appScaffoldWithDrawer(
 
                 // Group 2 (rest)
                 groupCard {
-                    val rest = drawerItems.drop(FIRST_GROUP_SIZE)
-                    rest.forEachIndexed { index, item ->
+                    // val rest = drawerItems.drop(FIRST_GROUP_SIZE)
+                    groupedDrawerItems.second.forEachIndexed { index, item ->
                         drawerItemRow(
                             entry = item,
                             selected = currentRoute == item.route,
@@ -115,7 +122,7 @@ fun appScaffoldWithDrawer(
                                 }
                             },
                         )
-                        if (index != rest.lastIndex) insetDivider()
+                        if (index != groupedDrawerItems.second.lastIndex) insetDivider()
                     }
                 }
             }
