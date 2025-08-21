@@ -36,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -65,6 +66,8 @@ fun customBottom(
     // calculates how much empty space is left on the sides when one card is centered on the screen
     val sidePadding =
         ((screenWidth - dimensionResource(id = R.dimen.orders_card_width)) / 2).coerceAtLeast(0.dp)
+
+    val startPadding = 16.dp
 
     // ensure the lazyrow cards always stop centered on screen when scrolling
     val cardBehavior = rememberSnapFlingBehavior(lazyListState = listState)
@@ -104,7 +107,7 @@ fun customBottom(
         modifier =
             modifier
                 .fillMaxWidth()
-                .height(250.dp)
+                .height(200.dp)
                 .background(MaterialTheme.colorScheme.primary),
     ) {
         // ---- list of orders ----
@@ -116,19 +119,30 @@ fun customBottom(
                     .fillMaxWidth()
                     .align(Alignment.Center),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = PaddingValues(horizontal = sidePadding),
+            contentPadding =
+                PaddingValues(
+                    start = startPadding,
+                    end = sidePadding,
+                ),
         ) {
             itemsIndexed(
                 items = orders,
                 key = { _, item -> item.orderNumber },
             ) { index, order ->
+
+                val densityPx = LocalDensity.current
+                val sidePaddingPx = with(densityPx) { sidePadding.roundToPx() }
+
                 orderCard(
                     order = order,
                     onAddClick = onAddClick,
                     onOrderClick = { clicked ->
                         // when a card is tapped: animate it into the center
                         scope.launch {
-                            listState.animateScrollToItem(index = index, scrollOffset = 0)
+                            listState.animateScrollToItem(
+                                index = index,
+                                scrollOffset = -sidePaddingPx,
+                            ) // negative to pull it to center
                         }
                         onOrderClick(clicked)
                     },
@@ -150,7 +164,7 @@ private fun orderCard(
         shape = RoundedCornerShape(14.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        modifier = modifier.size(width = 300.dp, height = 180.dp),
+        modifier = modifier.size(width = 270.dp, height = 150.dp),
     ) {
         Column(
             modifier =
@@ -167,7 +181,7 @@ private fun orderCard(
                 Box(
                     modifier =
                         Modifier
-                            .size(70.dp)
+                            .size(50.dp)
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.primary),
                     contentAlignment = Alignment.Center,

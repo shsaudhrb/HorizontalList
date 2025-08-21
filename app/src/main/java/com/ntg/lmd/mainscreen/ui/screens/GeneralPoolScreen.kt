@@ -1,6 +1,7 @@
 package com.ntg.lmd.mainscreen.ui.screens
 
 import android.Manifest
+import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -8,18 +9,21 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,9 +34,15 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.integerResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -42,6 +52,8 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.CameraPositionState
 import com.google.maps.android.compose.Circle
 import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MapProperties
+import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
@@ -58,6 +70,14 @@ import kotlin.math.roundToInt
 // Map / Camera behavior
 private const val INITIAL_MAP_ZOOM = 12f
 private const val ORDER_FOCUS_ZOOM = 14f
+
+// Slider constraints
+private const val DISTANCE_MIN_KM = 1.0F
+private const val DISTANCE_MAX_KM = 100.0F
+
+// screen height
+private const val TOP_OVERLAY_RATIO = 0.09f   // 9% of screen height
+private const val BOTTOM_BAR_RATIO = 0.22f    // 22% of screen height
 
 // Madinah Latitude and Longitude
 private const val DEFAULT_CITY_CENTER_LAT = 24.5247
@@ -153,6 +173,62 @@ fun generalPoolScreen(
 }
 
 @Composable
+private fun generalPoolContent(
+    ui: GeneralPoolUiState,
+    focusOnOrder: (OrderInfo, Boolean) -> Unit,
+    onMaxDistanceKm: (Float) -> Unit,
+    mapStates: MapStates,
+    innerPadding: PaddingValues,
+) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .padding(innerPadding),
+    ) {
+        // Map at the bottom layer
+        mapCenter(
+            selected = ui.selected,
+            orders = ui.mapOrders,
+            cameraPositionState = mapStates.cameraPositionState,
+            markerState = mapStates.markerState,
+            modifier = Modifier.fillMaxSize(),
+        )
+
+        // Distance filter OVER the map
+        Row(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 8.dp)
+                .zIndex(1f),  // below search dropdown, above map
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            distanceFilterBar(
+                maxDistanceKm = ui.distanceThresholdKm,
+                onMaxDistanceKm = onMaxDistanceKm,
+                enabled = ui.hasLocationPerm,
+            )
+        }
+
+        // Search results should be ON TOP of both map and filter
+        if (ui.searching && ui.searchText.isNotBlank() && ui.filteredOrders.isNotEmpty()) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .fillMaxWidth()
+                    .padding(top = 4.dp)
+                    .zIndex(2f) // topmost layer
+            ) {
+                searchResultsDropdown(
+                    visible = true,
+                    orders = ui.filteredOrders,
+                    onPick = { focusOnOrder(it, true) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun mapCenter(
     selected: OrderInfo?,
     orders: List<OrderInfo>,
@@ -163,9 +239,34 @@ private fun mapCenter(
     // for zoom in & zoom out
     val zoom = cameraPositionState.position.zoom
 
+    // Screen-aware padding so map UI (incl. +/- and my-location button) isn't hidden
+    val cfg = LocalConfiguration.current
+    val screenH = cfg.screenHeightDp.dp
+
+    val topOverlayHeight = (screenH * TOP_OVERLAY_RATIO).coerceIn(48.dp, 96.dp)
+    val bottomBarHeight = if (orders.isNotEmpty()) {
+        (screenH * BOTTOM_BAR_RATIO).coerceIn(128.dp, 280.dp)
+    } else 0.dp
+
+    // Enable blue dot only if we have location permission (prevents SecurityException)
+    val context = LocalContext.current
+    val hasFine = ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.ACCESS_FINE_LOCATION,
+    ) == PackageManager.PERMISSION_GRANTED
+    val hasCoarse = ContextCompat.checkSelfPermission(
+        context, Manifest.permission.ACCESS_COARSE_LOCATION,
+    ) == PackageManager.PERMISSION_GRANTED
+    val canShowMyLocation = hasFine || hasCoarse
+
     GoogleMap(
         modifier = modifier,
         cameraPositionState = cameraPositionState,
+        // Blue dot + target button
+        properties = MapProperties(isMyLocationEnabled = canShowMyLocation),
+        uiSettings = MapUiSettings(zoomControlsEnabled = true, myLocationButtonEnabled = true),
+        contentPadding =
+            PaddingValues(top = topOverlayHeight, bottom = bottomBarHeight),
     ) {
         // draw a circle for each order
         orders.forEach { order ->
@@ -231,58 +332,112 @@ private fun distanceFilterBar(
     onMaxDistanceKm: (Float) -> Unit,
     enabled: Boolean,
 ) {
-    // Allowed discrete values (0, 10, 20, …, 100)
-    val distanceRangeKm =
-        (
-            integerResource(id = R.integer.min_distance_km)..integerResource(id = R.integer.max_distance_km) step
-                integerResource(
-                    id = R.integer.step_distance_km,
-                )
-        ).map { it.toFloat() }
+    // clamp to [1, 100]
+    val value = maxDistanceKm.coerceIn(DISTANCE_MIN_KM, DISTANCE_MAX_KM)
 
-    Column(
+    Surface(
         modifier =
             Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .width(280.dp) // not full width
+                .padding(vertical = 8.dp),
+        color = MaterialTheme.colorScheme.onPrimary,
+        shape =
+            androidx.compose.foundation.shape
+                .RoundedCornerShape(12.dp),
+        tonalElevation = 6.dp,
+        shadowElevation = 6.dp,
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            // Centered label like “100 Km”
             Text(
-                text = "Distance",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-            Spacer(Modifier.width(8.dp))
-            Text(
-                text = "$maxDistanceKm km",
+                text = "${value.roundToInt()} Km",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
             )
-            Spacer(Modifier.weight(1f))
-        }
 
-        // Slider for the distance range in km
-        Slider(
-            value = distanceRangeKm.indexOf(maxDistanceKm).takeIf { it >= 0 }?.toFloat() ?: 0f,
-            onValueChange = { indexFloat ->
-                val index = indexFloat.roundToInt().coerceIn(0, distanceRangeKm.lastIndex)
-                onMaxDistanceKm(distanceRangeKm[index])
-            },
-            valueRange = 0f..distanceRangeKm.lastIndex.toFloat(),
-            steps = distanceRangeKm.size - 2, // size = 11, exclude min and max, number of distance range = 9
-            enabled = enabled,
+            // Straight track + circular thumb
+            circleSlider(
+                value = value,
+                onValueChange = { onMaxDistanceKm(it.coerceIn(DISTANCE_MIN_KM, DISTANCE_MAX_KM)) },
+                valueRange = DISTANCE_MIN_KM..DISTANCE_MAX_KM,
+                enabled = enabled,
+            )
+        }
+    }
+
+    if (!enabled) {
+        Text(
+            text = "Please allow location access to enable distance filtering.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 4.dp),
         )
+    }
+}
 
-        if (!enabled) {
-            // when permission is not yet granted
-            Text(
-                text = "Please allow location access to enable distance filtering.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+@Composable
+fun circleSlider(
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    valueRange: ClosedFloatingPointRange<Float> = DISTANCE_MIN_KM..DISTANCE_MAX_KM,
+    enabled: Boolean = true,
+) {
+    val trackWidth = 220.dp
+    val thumbRadius = 10.dp
+
+    // Capture theme colors in composable scope (OK to read MaterialTheme here)
+    val trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+    val thumbColor: Color = MaterialTheme.colorScheme.primary
+
+    Box(
+        modifier =
+            Modifier
+                .width(trackWidth)
+                .padding(vertical = 12.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        // Thin straight line
+        Box(
+            modifier =
+                Modifier
+                    .height(2.dp)
+                    .fillMaxWidth()
+                    .background(trackColor),
+        )
+
+        // Draggable circular thumb
+        Canvas(
+            modifier =
+                Modifier
+                    .matchParentSize()
+                    .then(
+                        if (enabled) {
+                            Modifier.pointerInput(Unit) {
+                                detectDragGestures { change, _ ->
+                                    change.consume()
+                                    val posX = change.position.x.coerceIn(0f, size.width.toFloat())
+                                    val fraction = posX / size.width
+                                    val newValue =
+                                        valueRange.start +
+                                                fraction * (valueRange.endInclusive - valueRange.start)
+                                    onValueChange(newValue)
+                                }
+                            }
+                        } else {
+                            Modifier
+                        },
+                    ),
+        ) {
+            val fraction =
+                (value - valueRange.start) / (valueRange.endInclusive - valueRange.start)
+            val x = size.width * fraction
+            drawCircle(
+                color = thumbColor,
+                radius = thumbRadius.toPx(),
+                center = Offset(x, size.height / 2),
             )
         }
     }
@@ -300,7 +455,7 @@ private fun searchResultsDropdown(
         exit = fadeOut() + shrinkVertically(),
     ) {
         Surface(
-            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+            color = MaterialTheme.colorScheme.primaryContainer,
             tonalElevation = 2.dp,
         ) {
             Column(
@@ -369,7 +524,6 @@ fun rememberFocusOnOrder(
     scope: kotlinx.coroutines.CoroutineScope,
     focusZoom: Float = ORDER_FOCUS_ZOOM,
 ): (OrderInfo, Boolean) -> Unit {
-
     // keep latest references without re-allocating the lambda on every recomposition
     val vm = rememberUpdatedState(viewModel)
     val marker = rememberUpdatedState(markerState)
@@ -400,40 +554,5 @@ fun rememberFocusOnOrder(
                 vm.value.onSearchTextChange("")
             }
         }
-    }
-}
-
-@Composable
-private fun generalPoolContent(
-    ui: GeneralPoolUiState,
-    focusOnOrder: (OrderInfo, Boolean) -> Unit,
-    onMaxDistanceKm: (Float) -> Unit,
-    mapStates: MapStates,
-    innerPadding: PaddingValues,
-) {
-    Column(
-        Modifier
-            .fillMaxSize()
-            .padding(innerPadding),
-    ) {
-        searchResultsDropdown(
-            visible = ui.searching && ui.searchText.isNotBlank() && ui.filteredOrders.isNotEmpty(),
-            orders = ui.filteredOrders,
-            onPick = { focusOnOrder(it, true) },
-        )
-
-        distanceFilterBar(
-            maxDistanceKm = ui.distanceThresholdKm,
-            onMaxDistanceKm = onMaxDistanceKm,
-            enabled = ui.hasLocationPerm,
-        )
-
-        mapCenter(
-            selected = ui.selected,
-            orders = ui.mapOrders,
-            cameraPositionState = mapStates.cameraPositionState,
-            markerState = mapStates.markerState,
-            modifier = Modifier.fillMaxSize(),
-        )
     }
 }

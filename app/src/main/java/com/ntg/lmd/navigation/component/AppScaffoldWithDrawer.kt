@@ -134,6 +134,7 @@ fun appScaffoldWithDrawer(
 
     ModalNavigationDrawer(
         drawerState = drawerState,
+        // Disable gestures in the General Pool screen to prevent conflicts with the map
         gesturesEnabled = currentRoute?.startsWith(Screen.GeneralPool.route) != true,
         drawerContent = {
             drawerContent(
@@ -141,9 +142,13 @@ fun appScaffoldWithDrawer(
                 onLogout = onLogout,
             ) { route ->
                 scope.launch { drawerState.close() }
-                if (route == Screen.Logout.route) onLogout() else navController.navigateSingleTop(
-                    route
-                )
+                if (route == Screen.Logout.route) {
+                    onLogout()
+                } else {
+                    navController.navigateSingleTop(
+                        route,
+                    )
+                }
             }
         },
     ) {
@@ -220,6 +225,7 @@ private fun appTopBar(
     val fadeSpec =
         remember { tween<Float>(FADE_ANIMATION_DURATION_MS, easing = FastOutSlowInEasing) }
 
+    // Auto focus text field when entering search mode
     LaunchedEffect(search.searching.value) {
         if (search.searching.value) focusRequester.requestFocus()
     }
@@ -227,11 +233,13 @@ private fun appTopBar(
     TopAppBar(
         colors = colors,
         navigationIcon = {
+            // Normal mode: show menu button
             if (!search.searching.value) {
                 IconButton(onClick = onOpenDrawer, modifier = Modifier.padding(start = 8.dp)) {
                     Icon(Icons.Filled.Menu, contentDescription = stringResource(R.string.open_menu))
                 }
             } else {
+                // Searching mode: show search icon instead
                 Icon(
                     imageVector = Icons.Filled.Search,
                     contentDescription = stringResource(R.string.search),
@@ -241,6 +249,7 @@ private fun appTopBar(
             }
         },
         title = {
+            // Show title when not searching
             AnimatedVisibility(
                 visible = !search.searching.value,
                 enter = fadeIn(fadeSpec),
@@ -255,6 +264,7 @@ private fun appTopBar(
                         ),
                 )
             }
+            // Show search text field when searching
             AnimatedVisibility(
                 visible = showSearchIcon && search.searching.value,
                 enter = fadeIn(fadeSpec),
@@ -280,6 +290,7 @@ private fun appTopBar(
             }
         },
         actions = {
+            // Action search icon (only when not in search mode)
             if (showSearchIcon && !search.searching.value) {
                 IconButton(onClick = { search.onToggle(true) }) {
                     Icon(Icons.Filled.Search, contentDescription = stringResource(R.string.search))
