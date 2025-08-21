@@ -10,6 +10,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -45,6 +46,7 @@ import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.ntg.lmd.R
+import com.ntg.lmd.mainscreen.domain.model.GeneralPoolUiState
 import com.ntg.lmd.mainscreen.domain.model.HeaderUiModel
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.model.SearchController
@@ -79,7 +81,6 @@ fun generalPoolScreen(
         }
     val markerState = remember { MarkerState(position = DEFAULT_CITY_CENTER) }
     val scope = rememberCoroutineScope()
-
     // Load Local orders.json from assets
     LaunchedEffect(Unit) { generalPoolViewModel.loadOrdersFromAssets(context) }
 
@@ -87,24 +88,26 @@ fun generalPoolScreen(
     locationPermissionGate(viewModel = generalPoolViewModel)
 
     // we will use this focusOnOrder when we search orders and click on it to be showing on the map
-    val focusOnOrder = rememberFocusOnOrder(
-        viewModel = generalPoolViewModel,
-        markerState = markerState,
-        cameraPositionState = cameraPositionState,
-        scope = scope,
-    )
+    val focusOnOrder =
+        rememberFocusOnOrder(
+            viewModel = generalPoolViewModel,
+            markerState = markerState,
+            cameraPositionState = cameraPositionState,
+            scope = scope,
+        )
 
     val headerUiModel =
         remember {
             HeaderUiModel("General Pool", true, { navController.popBackStack() }, true)
         }
 
-    val searchController = SearchController(
-        ui.searching,
-        ui.searchText,
-        generalPoolViewModel::onSearchingChange,
-        generalPoolViewModel::onSearchTextChange,
-    )
+    val searchController =
+        SearchController(
+            ui.searching,
+            ui.searchText,
+            generalPoolViewModel::onSearchingChange,
+            generalPoolViewModel::onSearchTextChange,
+        )
 
     Scaffold(
         // custom header with search bar
@@ -132,38 +135,13 @@ fun generalPoolScreen(
             }
         },
     ) { innerPadding ->
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-        ) {
-            // Search dropdown: shows filtered orders; picking one focuses the map and closes search
-            searchResultsDropdown(
-                visible =
-                    ui.searching &&
-                            ui.searchText.isNotBlank() &&
-                            ui.filteredOrders.isNotEmpty(),
-                orders = ui.filteredOrders,
-                onPick = { focusOnOrder(it, true) },
-            )
-
-            // Distance filter slider: enabled only after location permission is granted
-            distanceFilterBar(
-                maxDistanceKm = ui.distanceThresholdKm,
-                onMaxDistanceKm = generalPoolViewModel::onDistanceChange,
-                enabled = ui.hasLocationPerm,
-            )
-
-            // Google Map with circles and a single marker for the selected order
-            mapCenter(
-                selected = ui.selected,
-                orders = ui.mapOrders,
-                cameraPositionState = cameraPositionState,
-                markerState = markerState,
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
+        generalPoolContent(
+            ui = ui,
+            focusOnOrder = focusOnOrder,
+            onMaxDistanceKm = generalPoolViewModel::onDistanceChange,
+            mapStates = MapStates(cameraPositionState, markerState),
+            innerPadding = innerPadding
+        )
     }
 }
 
@@ -416,3 +394,45 @@ fun rememberFocusOnOrder(
         }
     }
 }
+
+@Composable
+private fun generalPoolContent(
+    ui: GeneralPoolUiState,
+    focusOnOrder: (OrderInfo, Boolean) -> Unit,
+    onMaxDistanceKm: (Float) -> Unit,
+    mapStates: MapStates,
+    innerPadding: PaddingValues
+) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .padding(innerPadding),
+    ) {
+        searchResultsDropdown(
+            visible = ui.searching &&
+                    ui.searchText.isNotBlank() &&
+                    ui.filteredOrders.isNotEmpty(),
+            orders = ui.filteredOrders,
+            onPick = { focusOnOrder(it, true) },
+        )
+
+        distanceFilterBar(
+            maxDistanceKm = ui.distanceThresholdKm,
+            onMaxDistanceKm = onMaxDistanceKm,
+            enabled = ui.hasLocationPerm,
+        )
+
+        mapCenter(
+            selected = ui.selected,
+            orders = ui.mapOrders,
+            cameraPositionState = mapStates.cameraPositionState,
+            markerState = mapStates.markerState,
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
+}
+
+data class MapStates(
+    val cameraPositionState: CameraPositionState,
+    val markerState: MarkerState
+)
