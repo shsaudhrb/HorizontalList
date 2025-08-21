@@ -14,6 +14,7 @@ import androidx.navigation.NavController
 import com.ntg.lmd.navigation.Screen
 
 @Composable
+@Suppress("UNUSED_PARAMETER")
 fun myPoolScreen(navController: NavController) {
     Box(
         modifier = Modifier.fillMaxSize(),

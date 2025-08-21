@@ -1,89 +1,110 @@
 package com.ntg.lmd.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.ntg.lmd.authentication.ui.screens.login.loginScreen
-import com.ntg.lmd.authentication.ui.screens.register.registerScreen
-import com.ntg.lmd.authentication.ui.screens.splash.splashScreen
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import com.ntg.lmd.mainscreen.ui.screens.chatScreen
 import com.ntg.lmd.mainscreen.ui.screens.deliveriesLogScreen
 import com.ntg.lmd.mainscreen.ui.screens.generalPoolScreen
 import com.ntg.lmd.mainscreen.ui.screens.myOrdersScreen
 import com.ntg.lmd.mainscreen.ui.screens.myPoolScreen
 import com.ntg.lmd.mainscreen.ui.screens.ordersHistoryScreen
+import com.ntg.lmd.navigation.component.appScaffoldWithDrawer
 import com.ntg.lmd.notification.ui.screens.notificationScreen
 import com.ntg.lmd.settings.ui.screens.settingsOptions
+import com.ntg.lmd.authentication.ui.screens.login.loginScreen as LoginScreen
+import com.ntg.lmd.authentication.ui.screens.register.registerScreen as RegisterScreen
+import com.ntg.lmd.authentication.ui.screens.splash.splashScreen as SplashScreen
 
 @Composable
-fun appNavGraph(navController: NavHostController) {
+fun appNavGraph(rootNavController: NavHostController) {
     NavHost(
-        navController = navController,
-        startDestination = Screen.GeneralPool.route,
+        navController = rootNavController,
+        startDestination = Screen.Splash.route,
     ) {
-        // ---------- Splash & Auth ----------
+        // ---------- Splash ----------
         composable(Screen.Splash.route) {
-            splashScreen(
-                navController = navController,
+            SplashScreen(
+                navController = rootNavController,
+                onDecide = { isLoggedIn ->
+                    rootNavController.navigate(
+                        if (isLoggedIn) Screen.Drawer.route else Screen.Login.route,
+                    ) {
+                        popUpTo(Screen.Splash.route) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
             )
         }
 
+        // ---------- Auth ----------
         composable(Screen.Login.route) {
-            loginScreen(
-                navController = navController,
+            LoginScreen(
+                navController = rootNavController,
             )
         }
-
         composable(Screen.Register.route) {
-            registerScreen(
-                navController = navController,
+            RegisterScreen(
+                navController = rootNavController,
+                // after register success, navigate to Drawer similarly
             )
         }
 
-        // ---------- Main Screen ----------
-
-        composable(Screen.DeliveriesLog.route) {
-            deliveriesLogScreen(
-                navController = navController,
+        // ---------- Drawer Host (AFTER LOGIN) ----------
+        composable(Screen.Drawer.route) {
+            drawerHost(
+                onLogout = {
+                    rootNavController.navigate(Screen.Login.route) {
+                        popUpTo(Screen.Drawer.route) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
             )
         }
+    }
+}
 
-        composable(Screen.GeneralPool.route) {
-            generalPoolScreen(
-                navController = navController,
-            )
+@Composable
+private fun drawerHost(onLogout: () -> Unit) {
+    val drawerNavController = rememberNavController()
+    val backStack by drawerNavController.currentBackStackEntryAsState()
+    val currentRoute = backStack?.destination?.route ?: Screen.GeneralPool.route
+
+    val title =
+        when (currentRoute) {
+            Screen.GeneralPool.route -> "General Pool"
+            Screen.MyOrders.route -> "My Orders"
+            Screen.OrdersHistory.route -> "Order History"
+            Screen.Notifications.route -> "Notifications"
+            Screen.DeliveriesLog.route -> "Deliveries Log"
+            Screen.Settings.route -> "Settings"
+            Screen.Chat.route -> "Chat"
+            Screen.MyPool.route -> "My Pool"
+            else -> "App"
         }
 
-        composable(Screen.MyOrders.route) {
-            myOrdersScreen(
-                navController = navController,
-            )
-        }
-
-        composable(Screen.MyPool.route) {
-            myPoolScreen(
-                navController = navController,
-            )
-        }
-
-        composable(Screen.OrdersHistory.route) {
-            ordersHistoryScreen(
-                navController = navController,
-            )
-        }
-
-        // ---------- Notification & Settings ----------
-
-        composable(Screen.Notifications.route) {
-            notificationScreen(
-                navController = navController,
-            )
-        }
-
-        composable(Screen.Settings.route) {
-            settingsOptions(
-                navController = navController,
-            )
+    appScaffoldWithDrawer(
+        navController = drawerNavController,
+        currentRoute = currentRoute,
+        title = title,
+        onLogout = onLogout,
+    ) {
+        NavHost(
+            navController = drawerNavController,
+            startDestination = Screen.GeneralPool.route,
+        ) {
+            composable(Screen.GeneralPool.route) { generalPoolScreen() }
+            composable(Screen.MyOrders.route) { myOrdersScreen(drawerNavController) }
+            composable(Screen.OrdersHistory.route) { ordersHistoryScreen(drawerNavController) }
+            composable(Screen.Notifications.route) { notificationScreen(drawerNavController) }
+            composable(Screen.DeliveriesLog.route) { deliveriesLogScreen(drawerNavController) }
+            composable(Screen.Settings.route) { settingsOptions(drawerNavController) }
+            composable(Screen.MyPool.route) { myPoolScreen(drawerNavController) }
+            composable(Screen.Chat.route) { chatScreen() }
         }
     }
 }

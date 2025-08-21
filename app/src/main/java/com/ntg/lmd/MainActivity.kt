@@ -14,10 +14,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            lmdTheme(darkTheme = isSystemInDarkTheme(), dynamicColor = false) {
-                val navController = rememberNavController()
+            lmdTheme {
+                val rootNavController = rememberNavController()
                 appNavGraph(
-                    navController = navController,
+                    rootNavController,
                 )
             }
         }
