@@ -77,8 +77,8 @@ private const val DISTANCE_MIN_KM = 1.0F
 private const val DISTANCE_MAX_KM = 100.0F
 
 // screen height
-private const val TOP_OVERLAY_RATIO = 0.09f   // 9% of screen height
-private const val BOTTOM_BAR_RATIO = 0.22f    // 22% of screen height
+private const val TOP_OVERLAY_RATIO = 0.09f // 9% of screen height
+private const val BOTTOM_BAR_RATIO = 0.22f // 22% of screen height
 
 // Madinah Latitude and Longitude
 private const val DEFAULT_CITY_CENTER_LAT = 24.5247
@@ -195,29 +195,46 @@ private fun generalPoolContent(
             modifier = Modifier.fillMaxSize(),
         )
 
-        // Distance filter OVER the map
-        Row(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 8.dp)
-                .zIndex(1f),  // below search dropdown, above map
-            horizontalArrangement = Arrangement.Center,
-        ) {
-            distanceFilterBar(
-                maxDistanceKm = ui.distanceThresholdKm,
-                onMaxDistanceKm = onMaxDistanceKm,
-                enabled = ui.hasLocationPerm,
+        // Distance filter OVER the map — only if location is granted
+        if (ui.hasLocationPerm) {
+            Row(
+                modifier =
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 8.dp)
+                        .zIndex(1f),
+                // below search dropdown, above map
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                distanceFilterBar(
+                    maxDistanceKm = ui.distanceThresholdKm,
+                    onMaxDistanceKm = onMaxDistanceKm,
+                    enabled = true, // already guarded here
+                )
+            }
+        } else {
+            // Show the hint instead of the slider
+            Text(
+                text = stringResource(R.string.location_access_request),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier =
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 12.dp)
+                        .zIndex(1f),
             )
         }
 
         // Search results should be ON TOP of both map and filter
         if (ui.searching && ui.searchText.isNotBlank() && ui.filteredOrders.isNotEmpty()) {
             Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .fillMaxWidth()
-                    .padding(top = 4.dp)
-                    .zIndex(2f) // topmost layer
+                modifier =
+                    Modifier
+                        .align(Alignment.TopStart)
+                        .fillMaxWidth()
+                        .padding(top = 4.dp)
+                        .zIndex(2f), // topmost layer
             ) {
                 searchResultsDropdown(
                     visible = true,
@@ -245,19 +262,25 @@ private fun mapCenter(
     val screenH = cfg.screenHeightDp.dp
 
     val topOverlayHeight = (screenH * TOP_OVERLAY_RATIO).coerceIn(48.dp, 96.dp)
-    val bottomBarHeight = if (orders.isNotEmpty()) {
-        (screenH * BOTTOM_BAR_RATIO).coerceIn(128.dp, 280.dp)
-    } else 0.dp
+    val bottomBarHeight =
+        if (orders.isNotEmpty()) {
+            (screenH * BOTTOM_BAR_RATIO).coerceIn(128.dp, 280.dp)
+        } else {
+            0.dp
+        }
 
     // Enable blue dot only if we have location permission (prevents SecurityException)
     val context = LocalContext.current
-    val hasFine = ContextCompat.checkSelfPermission(
-        context,
-        Manifest.permission.ACCESS_FINE_LOCATION,
-    ) == PackageManager.PERMISSION_GRANTED
-    val hasCoarse = ContextCompat.checkSelfPermission(
-        context, Manifest.permission.ACCESS_COARSE_LOCATION,
-    ) == PackageManager.PERMISSION_GRANTED
+    val hasFine =
+        ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_FINE_LOCATION,
+        ) == PackageManager.PERMISSION_GRANTED
+    val hasCoarse =
+        ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+        ) == PackageManager.PERMISSION_GRANTED
     val canShowMyLocation = hasFine || hasCoarse
 
     GoogleMap(
@@ -325,6 +348,8 @@ private fun mapCenter(
     }
 }
 
+// -------------------- Distance Filter --------------------
+
 // distance filter component
 // used to select max distance in km for filtering orders
 @Composable
@@ -333,13 +358,16 @@ private fun distanceFilterBar(
     onMaxDistanceKm: (Float) -> Unit,
     enabled: Boolean,
 ) {
+    // Do not draw anything if not enabled (no location permission)
+    if (!enabled) return
+
     // clamp to [1, 100]
     val value = maxDistanceKm.coerceIn(DISTANCE_MIN_KM, DISTANCE_MAX_KM)
 
     Surface(
         modifier =
             Modifier
-                .width(280.dp) // not full width
+                .width(280.dp)
                 .padding(vertical = 8.dp),
         color = MaterialTheme.colorScheme.onPrimary,
         shape =
@@ -368,15 +396,6 @@ private fun distanceFilterBar(
                 enabled = enabled,
             )
         }
-    }
-
-    if (!enabled) {
-        Text(
-            text = stringResource(R.string.location_access_request),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 4.dp),
-        )
     }
 }
 
@@ -424,7 +443,7 @@ fun circleSlider(
                                     val fraction = posX / size.width
                                     val newValue =
                                         valueRange.start +
-                                                fraction * (valueRange.endInclusive - valueRange.start)
+                                            fraction * (valueRange.endInclusive - valueRange.start)
                                     onValueChange(newValue)
                                 }
                             }
