@@ -1,9 +1,8 @@
 package com.ntg.lmd.authentication.ui.screens.login
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.updateTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -58,7 +57,6 @@ private const val CARD_SCALE_FOCUSED = 1.02f
 private const val CARD_SCALE_DEFAULT = 1f
 private const val CARD_ELEVATION_FOCUSED = 10f
 private const val CARD_ELEVATION_DEFAULT = 2f
-private const val CARD_ANIMATION_DURATION = 240
 
 @Composable
 fun loginScreen(
@@ -71,21 +69,22 @@ fun loginScreen(
     // Tracks anyFieldFocused locally to drive card animation (scale/elevation).
     var anyFieldFocused by remember { mutableStateOf(false) }
 
-    val cardUi =
-        CardUi(
-            scale =
-                animateFloatAsState(
-                    targetValue = if (anyFieldFocused) CARD_SCALE_FOCUSED else CARD_SCALE_DEFAULT,
-                    animationSpec = tween(CARD_ANIMATION_DURATION, easing = FastOutSlowInEasing),
-                    label = "cardScale",
-                ).value,
-            elevation =
-                animateFloatAsState(
-                    targetValue = if (anyFieldFocused) CARD_ELEVATION_FOCUSED else CARD_ELEVATION_DEFAULT,
-                    animationSpec = tween(CARD_ANIMATION_DURATION, easing = FastOutSlowInEasing),
-                    label = "cardElevation",
-                ).value,
-        )
+    val transition = updateTransition(
+        targetState = anyFieldFocused,
+        label = "focusTransition"
+    )
+
+    val cardScale by transition.animateFloat(label = "cardScale") { focused ->
+        if (focused) CARD_SCALE_FOCUSED else CARD_SCALE_DEFAULT
+    }
+
+    val cardElevation by transition.animateFloat(label = "cardElevation") { focused ->
+        if (focused) CARD_ELEVATION_FOCUSED else CARD_ELEVATION_DEFAULT
+    }
+
+    val cardUi = remember(cardScale, cardElevation) {
+        CardUi(scale = cardScale, elevation = cardElevation)
+    }
 
     CompositionLocalProvider(
         LocalOnFocusForUsername provides { f ->
@@ -127,7 +126,10 @@ private fun loginScaffold(
                 .background(MaterialTheme.colorScheme.background)
                 .padding(horizontal = dimensionResource(R.dimen.extralargeSpace)),
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.fillMaxWidth()
+        ) {
             appLogo()
             messageBanner(messageRes)
             authCard(
@@ -169,7 +171,8 @@ private fun authCard(
                 .graphicsLayer {
                     scaleX = cardScale
                     scaleY = cardScale
-                }.shadow(cardElevation.dp, shape, clip = false)
+                }
+                .shadow(cardElevation.dp, shape, clip = false)
                 .clip(shape),
         shape = shape,
         border =
