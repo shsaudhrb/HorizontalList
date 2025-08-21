@@ -18,21 +18,23 @@ class MyOrdersViewModel : ViewModel() {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, errorMessage = null, emptyMessage = null)
             try {
-                val mockOrders = listOf(
-                    OrderUI(1, "181818", "confirmed", "Hanan", 100.0, "new", 1700.0),
-                    OrderUI(2, "202020", "added",     "Hanan", 400.0, "new", 2000.0),
-                    OrderUI(3, "648383", "confirmed", "Hanan", 100.0, "new", 1300.0),
-                    OrderUI(4, "000999", "added",     "Hanan", 400.0, "new", 3000.0)
-                )
+                val mockOrders =
+                    listOf(
+                        OrderUI(1, "181818", "confirmed", "Hanan", 100.0, "new", 1700.0),
+                        OrderUI(2, "202020", "added", "Hanan", 400.0, "new", 2000.0),
+                        OrderUI(3, "648383", "confirmed", "Hanan", 100.0, "new", 1300.0),
+                        OrderUI(4, "000999", "added", "Hanan", 400.0, "new", 3000.0),
+                    )
                 allOrders = mockOrders
                 // ↓ flip loading off before filtering so UI can update
                 _state.value = _state.value.copy(isLoading = false)
                 applyFilter()
             } catch (e: Exception) {
-                _state.value = _state.value.copy(
-                    isLoading = false,
-                    errorMessage = "Unable to load orders"
-                )
+                _state.value =
+                    _state.value.copy(
+                        isLoading = false,
+                        errorMessage = "Unable to load orders",
+                    )
             }
         }
     }
@@ -44,34 +46,38 @@ class MyOrdersViewModel : ViewModel() {
 
     private fun List<OrderUI>.sortedByNearest(): List<OrderUI> =
         this.sortedWith(
-            compareBy<OrderUI> { it.distanceMeters == null }           // false (has distance) first
-                .thenBy { it.distanceMeters ?: Double.MAX_VALUE }      // then shortest distance
+            compareBy<OrderUI> { it.distanceMeters == null } // false (has distance) first
+                .thenBy { it.distanceMeters ?: Double.MAX_VALUE }, // then shortest distance
         )
 
     private fun applyFilter() {
         val q = _state.value.query.trim()
 
         val filtered =
-            if (q.isBlank()) allOrders
-            else allOrders.filter { o ->
-                o.orderNumber.contains(q, ignoreCase = true) ||
+            if (q.isBlank()) {
+                allOrders
+            } else {
+                allOrders.filter { o ->
+                    o.orderNumber.contains(q, ignoreCase = true) ||
                         o.customerName.contains(q, ignoreCase = true) ||
                         (o.details?.contains(q, ignoreCase = true) == true)
+                }
             }
         val sorted = filtered.sortedByNearest()
 
         val emptyMsg =
             when {
-                allOrders.isEmpty() && q.isBlank()   -> "No active orders."
+                allOrders.isEmpty() && q.isBlank() -> "No active orders."
                 filtered.isEmpty() && q.isNotBlank() -> "No matching orders."
                 else -> null
             }
 
-        _state.value = _state.value.copy(
-            orders = sorted,
-            emptyMessage = emptyMsg,
-            errorMessage = null
-        )
+        _state.value =
+            _state.value.copy(
+                orders = sorted,
+                emptyMessage = emptyMsg,
+                errorMessage = null,
+            )
     }
 
     fun retry() = loadOrders()

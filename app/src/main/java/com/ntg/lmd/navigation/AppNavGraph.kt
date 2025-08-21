@@ -100,17 +100,17 @@ private fun drawerHost(onLogout: () -> Unit) {
         onLogout = onLogout,
         showSearch = showSearch,
         searchValue = search,
-        onSearchChange = { text -> search = text }
+        onSearchChange = { text -> search = text },
     ) {
         NavHost(
             navController = drawerNavController,
             startDestination = Screen.GeneralPool.route,
         ) {
             composable(Screen.GeneralPool.route) { generalPoolScreen() }
-            composable(Screen.MyOrders.route)      {
+            composable(Screen.MyOrders.route) {
                 myOrdersScreen(
                     navController = drawerNavController,
-                    externalQuery = search
+                    externalQuery = search,
                 )
             }
             composable(Screen.OrdersHistory.route) { ordersHistoryScreen(drawerNavController) }

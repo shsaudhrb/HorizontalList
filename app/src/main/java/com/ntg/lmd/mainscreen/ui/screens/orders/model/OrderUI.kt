@@ -7,7 +7,7 @@ data class OrderUI( // single order
     val customerName: String,
     val totalPrice: Double,
     val details: String?,
-    val distanceMeters: Double?
+    val distanceMeters: Double?,
 )
 
 data class Order(
@@ -15,7 +15,7 @@ data class Order(
     val customerName: String,
     val details: String,
     val price: String,
-    val distanceMeters: Double?
+    val distanceMeters: Double?,
 )
 
 data class MyOrdersUiState(
@@ -24,5 +24,5 @@ data class MyOrdersUiState(
     val isGpsAvailable: Boolean = true,
     val query: String = "",
     val emptyMessage: String? = null,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
 )

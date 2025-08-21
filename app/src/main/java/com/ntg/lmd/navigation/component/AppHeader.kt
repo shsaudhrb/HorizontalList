@@ -34,13 +34,14 @@ fun appHeader(
     onMenuClick: () -> Unit,
     showSearch: Boolean,
     searchValue: String,
-    onSearchChange: (String) -> Unit
+    onSearchChange: (String) -> Unit,
 ) {
     Column(
-        modifier = Modifier
-            .background(DeepRed)
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+        modifier =
+            Modifier
+                .background(DeepRed)
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
     ) {
         // First row: title + menu
         androidx.compose.material3.TopAppBar(
@@ -51,14 +52,16 @@ fun appHeader(
                 }
             },
             actions = {},
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(DeepRed),
-            colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(
-                containerColor = DeepRed,
-                titleContentColor = White,
-                navigationIconContentColor = White
-            )
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .background(DeepRed),
+            colors =
+                androidx.compose.material3.TopAppBarDefaults.topAppBarColors(
+                    containerColor = DeepRed,
+                    titleContentColor = White,
+                    navigationIconContentColor = White,
+                ),
         )
 
         if (showSearch) {
@@ -69,16 +72,18 @@ fun appHeader(
                 singleLine = true,
                 leadingIcon = { Icon(Icons.Filled.Search, null, tint = MediumGray) },
                 placeholder = { Text(stringResource(R.string.search_by_order_number), color = MediumGray) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(10.dp)),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = White,
-                    unfocusedContainerColor = White,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                    cursorColor = DeepRed
-                )
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp)),
+                colors =
+                    TextFieldDefaults.colors(
+                        focusedContainerColor = White,
+                        unfocusedContainerColor = White,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        cursorColor = DeepRed,
+                    ),
             )
         }
     }

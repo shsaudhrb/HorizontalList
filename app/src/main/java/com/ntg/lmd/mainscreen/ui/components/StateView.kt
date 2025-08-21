@@ -19,7 +19,10 @@ fun loadingView() {
 }
 
 @Composable
-fun errorView(message: String, onRetry: () -> Unit) {
+fun errorView(
+    message: String,
+    onRetry: () -> Unit,
+) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Button(onClick = onRetry) { Text(text = message) }
     }
@@ -33,9 +36,11 @@ fun emptyView(text: String) {
 }
 
 @Composable
-fun infoBanner(text: String, modifier: Modifier = Modifier) {
+fun infoBanner(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
     Surface(modifier = modifier, color = MaterialTheme.colorScheme.secondaryContainer) {
         Text(text = text, modifier = Modifier, style = MaterialTheme.typography.bodySmall)
     }
 }
-
