@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -104,6 +106,7 @@ dependencies {
     // Lifecycle ViewModel
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     // Icons
+    implementation(libs.androidx.material.icons.extended)
     implementation("androidx.compose.material:material-icons-extended:1.7.8")
 
     // Coroutines
