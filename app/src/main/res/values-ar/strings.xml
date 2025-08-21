@@ -14,4 +14,17 @@
         <string name="menu_logout">تسجيل الخروج</string>
     <string name="open_menu"> افتح القائمة</string>
 
+    <string name="my_orders_title">طلباتي (%1$d)</string>
+    <string name="search_by_order_number">ابحث برقم الطلب</string>
+    <string name="order_details">تفاصيل الطلب</string>
+    <string name="call">اتصال</string>
+    <string name="retry">إعادة المحاولة</string>
+    <string name="no_active_orders">لا توجد طلبات نشطة.</string>
+    <string name="no_matching_orders">لا توجد طلبات مطابقة.</string>
+    <string name="unable_to_load_orders">تعذر تحميل الطلبات.</string>
+    <string name="distance_unavailable_gps">المسافة غير متوفرة — قم بتشغيل GPS.</string>
+    <string name="distance_na">—</string>
+    <string name="confirm_order">تأكيد الطلب</string>
+    <string name="pick_order">استلام الطلب</string>
+
 </resources>

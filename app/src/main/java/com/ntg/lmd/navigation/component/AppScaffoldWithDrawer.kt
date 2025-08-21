@@ -63,6 +63,9 @@ fun appScaffoldWithDrawer(
     currentRoute: String,
     title: String,
     onLogout: () -> Unit,
+    showSearch: Boolean = false,
+    searchValue: String = "",
+    onSearchChange: (String) -> Unit = {},
     content: @Composable () -> Unit,
 ) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
@@ -130,15 +133,15 @@ fun appScaffoldWithDrawer(
     ) {
         Scaffold(
             topBar = {
-                TopAppBar(
-                    title = { Text(title) },
-                    navigationIcon = {
-                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(Icons.Filled.Menu, contentDescription = stringResource(R.string.open_menu))
-                        }
-                    },
+                appHeader(
+                    title = title,
+                    onMenuClick = { scope.launch { drawerState.open() } },
+                    showSearch = showSearch,
+                    searchValue = searchValue,
+                    onSearchChange = onSearchChange
+
                 )
-            },
+            }
         ) { inner ->
             Box(Modifier.padding(inner)) { content() }
         }
