@@ -1,6 +1,5 @@
 package com.ntg.lmd.mainscreen.ui.components
 
-import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Arrangement
@@ -36,38 +35,36 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import kotlinx.coroutines.launch
+import java.util.Locale
 import kotlin.math.abs
 
-@SuppressLint("ConfigurationScreenWidthHeight")
 @Composable
 fun customBottom(
     orders: List<OrderInfo>,
     modifier: Modifier = Modifier,
-    backgroundColor: Color = MaterialTheme.colorScheme.primary,
     onAddClick: (OrderInfo) -> Unit = {},
     onOrderClick: (OrderInfo) -> Unit = {},
     onCenteredOrderChange: (order: OrderInfo, index: Int) -> Unit = { _, _ -> },
 ) {
-    // lazy row state for orders
+    // state for scrolling
     val listState = rememberLazyListState()
 
-    // coroutine scope for smooth map animations when camera focus change
+    // for animating scroll-to-center when a card is tapped
     val scope = rememberCoroutineScope()
 
-    // Card size & spacing
-    val cardWidth: Dp = 300.dp
-    val itemSpacing: Dp = 12.dp
-
-    // Symmetric side padding so a centered item aligns to the screen center
+    // gets the device's width in dp
     val screenWidth = LocalConfiguration.current.screenWidthDp.dp
-    val sidePadding = ((screenWidth - cardWidth) / 2).coerceAtLeast(0.dp)
+
+    // calculates how much empty space is left on the sides when one card is centered on the screen
+    val sidePadding =
+        ((screenWidth - dimensionResource(id = R.dimen.orders_card_width)) / 2).coerceAtLeast(0.dp)
 
     // ensure the lazyrow cards always stop centered on screen when scrolling
     val cardBehavior = rememberSnapFlingBehavior(lazyListState = listState)
@@ -75,17 +72,26 @@ fun customBottom(
     // Track which card index is currently centered in the lazy row
     var lastCenteredIndex by remember { mutableIntStateOf(-1) }
 
+    // launched effect for centered the item when we scroll
     LaunchedEffect(orders, listState) {
         snapshotFlow { listState.layoutInfo }
             .collect { layoutInfo ->
+
+                // skip if there are no orders
                 if (orders.isEmpty() || layoutInfo.visibleItemsInfo.isEmpty()) return@collect
+
+                // calculate the horizontal center of the viewport ( middle of the screen )
                 val viewportCenter =
                     (layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset) / 2
+
+                // find the visible item whose center is closest to the viewport center
                 val nearest =
                     layoutInfo.visibleItemsInfo.minByOrNull { item ->
                         val itemCenter = item.offset + item.size / 2
                         abs(itemCenter - viewportCenter)
                     }
+
+                // if the centered item changed, notify via callback
                 val newIndex = nearest?.index ?: return@collect
                 if (newIndex != lastCenteredIndex && newIndex in orders.indices) {
                     lastCenteredIndex = newIndex
@@ -99,7 +105,7 @@ fun customBottom(
             modifier
                 .fillMaxWidth()
                 .height(250.dp)
-                .background(backgroundColor),
+                .background(MaterialTheme.colorScheme.primary),
     ) {
         // ---- list of orders ----
         LazyRow(
@@ -109,7 +115,7 @@ fun customBottom(
                 Modifier
                     .fillMaxWidth()
                     .align(Alignment.Center),
-            horizontalArrangement = Arrangement.spacedBy(itemSpacing),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding = PaddingValues(horizontal = sidePadding),
         ) {
             itemsIndexed(
@@ -120,7 +126,7 @@ fun customBottom(
                     order = order,
                     onAddClick = onAddClick,
                     onOrderClick = { clicked ->
-                        // Center the clicked item
+                        // when a card is tapped: animate it into the center
                         scope.launch {
                             listState.animateScrollToItem(index = index, scrollOffset = 0)
                         }
@@ -132,7 +138,6 @@ fun customBottom(
     }
 }
 
-@SuppressLint("DefaultLocale")
 @Composable
 private fun orderCard(
     order: OrderInfo,
@@ -168,7 +173,7 @@ private fun orderCard(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = String.format("%.1fkm", order.distanceKm),
+                        text = String.format(Locale.US, "%.1fkm", order.distanceKm),
                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onPrimary,
                     )

@@ -1,8 +1,6 @@
 package com.ntg.lmd.mainscreen.ui.screens
 
 import android.Manifest
-import android.annotation.SuppressLint
-import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -31,8 +29,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.integerResource
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -45,12 +43,25 @@ import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
+import com.ntg.lmd.R
+import com.ntg.lmd.mainscreen.domain.model.HeaderUiModel
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
+import com.ntg.lmd.mainscreen.domain.model.SearchController
 import com.ntg.lmd.mainscreen.ui.components.customBottom
 import com.ntg.lmd.mainscreen.ui.components.customHeader
+import com.ntg.lmd.mainscreen.ui.viewmodel.GeneralPoolUiEvent
 import com.ntg.lmd.mainscreen.ui.viewmodel.GeneralPoolViewModel
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+
+// Map / Camera behavior
+private const val INITIAL_MAP_ZOOM = 12f
+private const val ORDER_FOCUS_ZOOM = 14f
+
+// Madinah Latitude and Longitude
+private const val DEFAULT_CITY_CENTER_LAT = 24.5247
+private const val DEFAULT_CITY_CENTER_LNG = 39.5692
+private val DEFAULT_CITY_CENTER = LatLng(DEFAULT_CITY_CENTER_LAT, DEFAULT_CITY_CENTER_LNG)
 
 @Composable
 fun generalPoolScreen(
@@ -59,106 +70,122 @@ fun generalPoolScreen(
 ) {
     val context = LocalContext.current
     val ui by generalPoolViewModel.ui.collectAsStateWithLifecycle()
-    val madinaCenter = LatLng(24.5247, 39.5692)
+
+    // default camera position
+    val madinaCenter = DEFAULT_CITY_CENTER
 
     // selected order and camera position to it
-    val cameraPositionState =
-        rememberCameraPositionState {
-            position = CameraPosition.fromLatLngZoom(madinaCenter, 12f)
-        }
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(madinaCenter, INITIAL_MAP_ZOOM)
+    }
     val markerState = remember { MarkerState(position = madinaCenter) }
     val scope = rememberCoroutineScope()
 
     // Load Local orders.json from assets
-    LaunchedEffect(Unit) {
-        generalPoolViewModel.loadOrdersFromAssets(context)
-    }
+    LaunchedEffect(Unit) { generalPoolViewModel.loadOrdersFromAssets(context) }
 
-    // Ask for location permission
+    // handle location permission requests
     val permissionLauncher =
-        rememberLauncherForActivityResult(
-            ActivityResultContracts.RequestMultiplePermissions(),
-        ) { result ->
-            val granted =
-                (result[Manifest.permission.ACCESS_FINE_LOCATION] == true) ||
-                        (result[Manifest.permission.ACCESS_COARSE_LOCATION] == true)
-            generalPoolViewModel.onPermissionsResult(granted)
-            if (granted) {
-                generalPoolViewModel.fetchAndApplyDistances(context) // returns Unit
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
+            // Re-sync without prompting again (prevents permission dialog loops)
+            generalPoolViewModel.ensureLocationReady(context, promptIfMissing = false)
+        }
+
+    LaunchedEffect(Unit) {
+        generalPoolViewModel.events.collect { event ->
+            when (event) {
+                is GeneralPoolUiEvent.RequestLocationPermission -> {
+                    permissionLauncher.launch(
+                        arrayOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION,
+                        ),
+                    )
+                }
             }
         }
+    }
 
     LaunchedEffect(Unit) {
-        val granted =
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.ACCESS_FINE_LOCATION,
-            ) == PackageManager.PERMISSION_GRANTED ||
-                    ContextCompat.checkSelfPermission(
-                        context,
-                        Manifest.permission.ACCESS_COARSE_LOCATION,
-                    ) == PackageManager.PERMISSION_GRANTED
+        generalPoolViewModel.ensureLocationReady(
+            context,
+            promptIfMissing = true
+        )
+    }
 
-        generalPoolViewModel.onPermissionsResult(granted)
-        if (granted) {
-            generalPoolViewModel.fetchAndApplyDistances(context)
-        } else {
-            permissionLauncher.launch(
-                arrayOf(
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION,
-                ),
+    // we will use this focusOnOrder when we search orders and click on it to be showing on the map
+    val focusOnOrder: (OrderInfo, Boolean) -> Unit = { order, closeSearch ->
+        // which order is selected
+        generalPoolViewModel.onOrderSelected(order)
+
+        // move the marker on the map to that order's location
+        markerState.position = LatLng(order.lat, order.lng)
+
+        // animate the map camera to zoom in on the order
+        scope.launch {
+            cameraPositionState.animate(
+                CameraUpdateFactory.newLatLngZoom(LatLng(order.lat, order.lng), ORDER_FOCUS_ZOOM),
             )
+        }
+
+        // close the search UI
+        if (closeSearch) {
+            generalPoolViewModel.onSearchingChange(false)
+            generalPoolViewModel.onSearchTextChange("")
         }
     }
 
+    val headerUiModel = remember {
+        HeaderUiModel(
+            title = "General Pool", showStartIcon = true,
+            onStartClick = { navController.popBackStack() }, showEndIcon = true,
+        )
+    }
+
+    val searchController = SearchController(
+        searching = ui.searching, searchText = ui.searchText,
+        onSearchingChange = generalPoolViewModel::onSearchingChange,
+        onSearchTextChange = generalPoolViewModel::onSearchTextChange,
+    )
+
     Scaffold(
+        // custom header with search bar
         topBar = {
-            // ---- custom header with search bar ----
             customHeader(
-                title = "General Pool",
-                showBackIcon = true,
-                onBackClick = { navController.popBackStack() },
-                showEndIcon = true,
                 modifier = Modifier.statusBarsPadding(),
-                searching = ui.searching,
-                onSearchingChange = generalPoolViewModel::onSearchingChange,
-                query = ui.query,
-                onQueryChange = generalPoolViewModel::onQueryChange,
+                uiModel = headerUiModel, search = searchController,
             )
         },
-        // ---- if there's orders, the custom bottom will be shown, if not, it won't be showing ----
+        // bottom list of orders appears only when we have orders
         bottomBar = {
             if (ui.isLoading) {
                 Text(
-                    text = "Loading orders…",
-                    modifier = Modifier.padding(16.dp),
+                    text = "Loading orders…", modifier = Modifier.padding(16.dp),
                     color = MaterialTheme.colorScheme.onBackground,
                 )
             } else if (ui.mapOrders.isNotEmpty()) {
                 customBottom(
                     orders = ui.mapOrders,
                     onOrderClick = { order ->
-                        // select + animate camera to order that we selected
+                        // select + focus camera on tapped order
                         generalPoolViewModel.onOrderSelected(order)
                         markerState.position = LatLng(order.lat, order.lng)
                         scope.launch {
                             cameraPositionState.animate(
                                 CameraUpdateFactory.newLatLngZoom(
-                                    LatLng(order.lat, order.lng),
-                                    14f
+                                    LatLng(order.lat, order.lng), ORDER_FOCUS_ZOOM,
                                 ),
                             )
                         }
                     },
                     onCenteredOrderChange = { order, _ ->
+                        // keep selection/camera in sync with the centered card
                         generalPoolViewModel.onOrderSelected(order)
                         markerState.position = LatLng(order.lat, order.lng)
                         scope.launch {
                             cameraPositionState.animate(
                                 CameraUpdateFactory.newLatLngZoom(
-                                    LatLng(order.lat, order.lng),
-                                    14f
+                                    LatLng(order.lat, order.lng), ORDER_FOCUS_ZOOM,
                                 ),
                             )
                         }
@@ -167,69 +194,25 @@ fun generalPoolScreen(
             }
         },
     ) { innerPadding ->
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
+        Column(modifier = Modifier
+            .fillMaxSize()
+            .padding(innerPadding)
         ) {
-            // animated dropdown list for search results
-            AnimatedVisibility(
-                visible = ui.searching && ui.query.isNotBlank() && ui.filteredOrders.isNotEmpty(),
-                enter = fadeIn() + expandVertically(),
-                exit = fadeOut() + shrinkVertically(),
-            ) {
-                Surface(
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                    tonalElevation = 2.dp,
-                ) {
-                    Column(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp),
-                    ) {
-                        ui.filteredOrders.forEach { order ->
-                            Row(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            // pick order from search
-                                            generalPoolViewModel.onOrderSelected(order)
-                                            markerState.position = LatLng(order.lat, order.lng)
-                                            scope.launch {
-                                                cameraPositionState.animate(
-                                                    CameraUpdateFactory.newLatLngZoom(
-                                                        LatLng(order.lat, order.lng),
-                                                        14f,
-                                                    ),
-                                                )
-                                            }
-                                            generalPoolViewModel.onSearchingChange(false)
-                                            generalPoolViewModel.onQueryChange("")
-                                        }
-                                        .padding(horizontal = 16.dp, vertical = 10.dp),
-                            ) {
-                                Text(
-                                    text = "${order.orderNumber} • ${order.name}",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onBackground,
-                                )
-                            }
-                        }
-                    }
-                }
-            }
+            // Search dropdown: shows filtered orders; picking one focuses the map and closes search
+            searchResultsDropdown(
+                visible = ui.searching && ui.searchText.isNotBlank()
+                        && ui.filteredOrders.isNotEmpty(),
+                orders = ui.filteredOrders, onPick = { focusOnOrder(it, true) },
+            )
 
-            // distance filter slider
+            // Distance filter slider: enabled only after location permission is granted
             distanceFilterBar(
                 maxDistanceKm = ui.distanceThresholdKm,
                 onMaxDistanceKm = generalPoolViewModel::onDistanceChange,
                 enabled = ui.hasLocationPerm,
             )
 
-            // map section with circles and markers
+            // Google Map with circles and a single marker for the selected order
             mapCenter(
                 selected = ui.selected,
                 orders = ui.mapOrders,
@@ -241,7 +224,6 @@ fun generalPoolScreen(
     }
 }
 
-@SuppressLint("UnrememberedMutableState")
 @Composable
 private fun mapCenter(
     selected: OrderInfo?,
@@ -257,12 +239,22 @@ private fun mapCenter(
         modifier = modifier,
         cameraPositionState = cameraPositionState,
     ) {
+        // draw a circle for each order
         orders.forEach { order ->
             val isSelected = selected?.orderNumber == order.orderNumber
 
             // Scale radius inversely with zoom
-            val baseRadius = if (isSelected) 250.0 else 150.0
-            val scaledRadius = baseRadius * (20f / zoom.toDouble())
+            val baseRadius =
+                if (isSelected) {
+                    integerResource(id = R.integer.selected_circle_radius_m)
+                } else {
+                    integerResource(
+                        id = R.integer.unselected_circle_radius_m,
+                    )
+                }
+
+            val scaledRadius =
+                baseRadius * (integerResource(id = R.integer.zoom_normalizer) / zoom.toDouble())
 
             Circle(
                 center = LatLng(order.lat, order.lng),
@@ -284,12 +276,14 @@ private fun mapCenter(
             )
         }
 
+        // keep the marker pinned to the currently selected order
         LaunchedEffect(selected?.lat, selected?.lng) {
             selected?.let { sel ->
                 markerState.position = LatLng(sel.lat, sel.lng)
             }
         }
 
+        // render the single marker only if we have a selection
         selected?.let {
             Marker(
                 state = markerState,
@@ -310,7 +304,13 @@ private fun distanceFilterBar(
     enabled: Boolean,
 ) {
     // Allowed discrete values (0, 10, 20, …, 100)
-    val distanceRangeKm = listOf(0f, 10f, 20f, 30f, 40f, 50f, 60f, 70f, 80f, 90f, 100f)
+    val distanceRangeKm =
+        (
+                integerResource(id = R.integer.min_distance_km)..integerResource(id = R.integer.max_distance_km) step
+                        integerResource(
+                            id = R.integer.step_distance_km,
+                        )
+                ).map { it.toFloat() }
 
     Column(
         modifier =
@@ -350,11 +350,52 @@ private fun distanceFilterBar(
         )
 
         if (!enabled) {
+            // when permission is not yet granted
             Text(
                 text = "Please allow location access to enable distance filtering.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    }
+}
+
+@Composable
+private fun searchResultsDropdown(
+    visible: Boolean,
+    orders: List<OrderInfo>,
+    onPick: (OrderInfo) -> Unit,
+) {
+    AnimatedVisibility(
+        visible,
+        enter = fadeIn() + expandVertically(),
+        exit = fadeOut() + shrinkVertically(),
+    ) {
+        Surface(
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+            tonalElevation = 2.dp,
+        ) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+            ) {
+                orders.forEach { order ->
+                    Row(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable { onPick(order) }
+                                .padding(horizontal = 16.dp, vertical = 10.dp),
+                    ) {
+                        Text(
+                            text = "${order.orderNumber} • ${order.name}",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onBackground,
+                        )
+                    }
+                }
+            }
         }
     }
 }
