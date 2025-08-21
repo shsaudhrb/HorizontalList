@@ -33,6 +33,9 @@
     <!-- General Pool -->
     <string name="search">ابحث...</string>
     <string name="add_to_your_orders">+ أضف إلى طلباتك</string>
+    <string name="location_access_request">يرجى السماح بالوصول إلى الموقع لتمكين تصفية المسافة</string>
+    <string name="kilometer">كيلومتر</string>
+
 
 
 </resources>

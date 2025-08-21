@@ -31,6 +31,8 @@
     <!-- General Pool -->
     <string name="add_to_your_orders">+ Add to your orders</string>
     <string name="search">Search...</string>
+    <string name="location_access_request">Please allow location access to enable distance filtering</string>
+    <string name="kilometer">Km</string>
 
 
 

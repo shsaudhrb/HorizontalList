@@ -38,6 +38,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.ntg.lmd.R
@@ -225,7 +226,7 @@ private fun orderCard(
                 onClick = { onAddClick(order) },
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("+ Add to your orders")
+                Text(stringResource(R.string.add_to_your_orders))
             }
         }
     }

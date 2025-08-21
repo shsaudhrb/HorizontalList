@@ -40,6 +40,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.integerResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.core.content.ContextCompat
@@ -352,8 +353,9 @@ private fun distanceFilterBar(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // Centered label like “100 Km”
+            val context = LocalContext.current
             Text(
-                text = "${value.roundToInt()} Km",
+                text = "${value.roundToInt()} ${context.getString(R.string.kilometer)}",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
             )
@@ -370,7 +372,7 @@ private fun distanceFilterBar(
 
     if (!enabled) {
         Text(
-            text = "Please allow location access to enable distance filtering.",
+            text = stringResource(R.string.location_access_request),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 4.dp),
