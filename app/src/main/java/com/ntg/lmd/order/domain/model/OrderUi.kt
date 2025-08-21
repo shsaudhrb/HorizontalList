@@ -5,5 +5,5 @@ data class OrderUi(
     val customer: String,
     val total: Double,
     val status: OrderStatus,
-    val createdAtMillis: Long
+    val createdAtMillis: Long,
 )
