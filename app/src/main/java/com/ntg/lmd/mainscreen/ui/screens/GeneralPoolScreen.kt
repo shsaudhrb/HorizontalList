@@ -140,7 +140,7 @@ fun generalPoolScreen(
             focusOnOrder = focusOnOrder,
             onMaxDistanceKm = generalPoolViewModel::onDistanceChange,
             mapStates = MapStates(cameraPositionState, markerState),
-            innerPadding = innerPadding
+            innerPadding = innerPadding,
         )
     }
 }
@@ -227,11 +227,11 @@ private fun distanceFilterBar(
     // Allowed discrete values (0, 10, 20, …, 100)
     val distanceRangeKm =
         (
-                integerResource(id = R.integer.min_distance_km)..integerResource(id = R.integer.max_distance_km) step
-                        integerResource(
-                            id = R.integer.step_distance_km,
-                        )
-                ).map { it.toFloat() }
+            integerResource(id = R.integer.min_distance_km)..integerResource(id = R.integer.max_distance_km) step
+                integerResource(
+                    id = R.integer.step_distance_km,
+                )
+        ).map { it.toFloat() }
 
     Column(
         modifier =
@@ -401,7 +401,7 @@ private fun generalPoolContent(
     focusOnOrder: (OrderInfo, Boolean) -> Unit,
     onMaxDistanceKm: (Float) -> Unit,
     mapStates: MapStates,
-    innerPadding: PaddingValues
+    innerPadding: PaddingValues,
 ) {
     Column(
         Modifier
@@ -409,7 +409,8 @@ private fun generalPoolContent(
             .padding(innerPadding),
     ) {
         searchResultsDropdown(
-            visible = ui.searching &&
+            visible =
+                ui.searching &&
                     ui.searchText.isNotBlank() &&
                     ui.filteredOrders.isNotEmpty(),
             orders = ui.filteredOrders,
@@ -434,5 +435,5 @@ private fun generalPoolContent(
 
 data class MapStates(
     val cameraPositionState: CameraPositionState,
-    val markerState: MarkerState
+    val markerState: MarkerState,
 )
