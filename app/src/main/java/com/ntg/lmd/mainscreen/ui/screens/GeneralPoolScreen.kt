@@ -27,6 +27,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.integerResource
@@ -71,81 +72,38 @@ fun generalPoolScreen(
     val context = LocalContext.current
     val ui by generalPoolViewModel.ui.collectAsStateWithLifecycle()
 
-    // default camera position
-    val madinaCenter = DEFAULT_CITY_CENTER
-
     // selected order and camera position to it
-    val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(madinaCenter, INITIAL_MAP_ZOOM)
-    }
-    val markerState = remember { MarkerState(position = madinaCenter) }
+    val cameraPositionState =
+        rememberCameraPositionState {
+            position = CameraPosition.fromLatLngZoom(DEFAULT_CITY_CENTER, INITIAL_MAP_ZOOM)
+        }
+    val markerState = remember { MarkerState(position = DEFAULT_CITY_CENTER) }
     val scope = rememberCoroutineScope()
 
     // Load Local orders.json from assets
     LaunchedEffect(Unit) { generalPoolViewModel.loadOrdersFromAssets(context) }
 
-    // handle location permission requests
-    val permissionLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
-            // Re-sync without prompting again (prevents permission dialog loops)
-            generalPoolViewModel.ensureLocationReady(context, promptIfMissing = false)
-        }
-
-    LaunchedEffect(Unit) {
-        generalPoolViewModel.events.collect { event ->
-            when (event) {
-                is GeneralPoolUiEvent.RequestLocationPermission -> {
-                    permissionLauncher.launch(
-                        arrayOf(
-                            Manifest.permission.ACCESS_FINE_LOCATION,
-                            Manifest.permission.ACCESS_COARSE_LOCATION,
-                        ),
-                    )
-                }
-            }
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        generalPoolViewModel.ensureLocationReady(
-            context,
-            promptIfMissing = true
-        )
-    }
+    // handle location permission
+    locationPermissionGate(viewModel = generalPoolViewModel)
 
     // we will use this focusOnOrder when we search orders and click on it to be showing on the map
-    val focusOnOrder: (OrderInfo, Boolean) -> Unit = { order, closeSearch ->
-        // which order is selected
-        generalPoolViewModel.onOrderSelected(order)
+    val focusOnOrder = rememberFocusOnOrder(
+        viewModel = generalPoolViewModel,
+        markerState = markerState,
+        cameraPositionState = cameraPositionState,
+        scope = scope,
+    )
 
-        // move the marker on the map to that order's location
-        markerState.position = LatLng(order.lat, order.lng)
-
-        // animate the map camera to zoom in on the order
-        scope.launch {
-            cameraPositionState.animate(
-                CameraUpdateFactory.newLatLngZoom(LatLng(order.lat, order.lng), ORDER_FOCUS_ZOOM),
-            )
+    val headerUiModel =
+        remember {
+            HeaderUiModel("General Pool", true, { navController.popBackStack() }, true)
         }
-
-        // close the search UI
-        if (closeSearch) {
-            generalPoolViewModel.onSearchingChange(false)
-            generalPoolViewModel.onSearchTextChange("")
-        }
-    }
-
-    val headerUiModel = remember {
-        HeaderUiModel(
-            title = "General Pool", showStartIcon = true,
-            onStartClick = { navController.popBackStack() }, showEndIcon = true,
-        )
-    }
 
     val searchController = SearchController(
-        searching = ui.searching, searchText = ui.searchText,
-        onSearchingChange = generalPoolViewModel::onSearchingChange,
-        onSearchTextChange = generalPoolViewModel::onSearchTextChange,
+        ui.searching,
+        ui.searchText,
+        generalPoolViewModel::onSearchingChange,
+        generalPoolViewModel::onSearchTextChange,
     )
 
     Scaffold(
@@ -153,56 +111,41 @@ fun generalPoolScreen(
         topBar = {
             customHeader(
                 modifier = Modifier.statusBarsPadding(),
-                uiModel = headerUiModel, search = searchController,
+                uiModel = headerUiModel,
+                search = searchController,
             )
         },
         // bottom list of orders appears only when we have orders
         bottomBar = {
             if (ui.isLoading) {
                 Text(
-                    text = "Loading orders…", modifier = Modifier.padding(16.dp),
+                    "Loading orders…",
+                    Modifier.padding(16.dp),
                     color = MaterialTheme.colorScheme.onBackground,
                 )
             } else if (ui.mapOrders.isNotEmpty()) {
                 customBottom(
                     orders = ui.mapOrders,
-                    onOrderClick = { order ->
-                        // select + focus camera on tapped order
-                        generalPoolViewModel.onOrderSelected(order)
-                        markerState.position = LatLng(order.lat, order.lng)
-                        scope.launch {
-                            cameraPositionState.animate(
-                                CameraUpdateFactory.newLatLngZoom(
-                                    LatLng(order.lat, order.lng), ORDER_FOCUS_ZOOM,
-                                ),
-                            )
-                        }
-                    },
-                    onCenteredOrderChange = { order, _ ->
-                        // keep selection/camera in sync with the centered card
-                        generalPoolViewModel.onOrderSelected(order)
-                        markerState.position = LatLng(order.lat, order.lng)
-                        scope.launch {
-                            cameraPositionState.animate(
-                                CameraUpdateFactory.newLatLngZoom(
-                                    LatLng(order.lat, order.lng), ORDER_FOCUS_ZOOM,
-                                ),
-                            )
-                        }
-                    },
+                    onOrderClick = { order -> focusOnOrder(order, false) },
+                    onCenteredOrderChange = { order, _ -> focusOnOrder(order, false) },
                 )
             }
         },
     ) { innerPadding ->
-        Column(modifier = Modifier
-            .fillMaxSize()
-            .padding(innerPadding)
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
         ) {
             // Search dropdown: shows filtered orders; picking one focuses the map and closes search
             searchResultsDropdown(
-                visible = ui.searching && ui.searchText.isNotBlank()
-                        && ui.filteredOrders.isNotEmpty(),
-                orders = ui.filteredOrders, onPick = { focusOnOrder(it, true) },
+                visible =
+                    ui.searching &&
+                            ui.searchText.isNotBlank() &&
+                            ui.filteredOrders.isNotEmpty(),
+                orders = ui.filteredOrders,
+                onPick = { focusOnOrder(it, true) },
             )
 
             // Distance filter slider: enabled only after location permission is granted
@@ -395,6 +338,80 @@ private fun searchResultsDropdown(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun locationPermissionGate(viewModel: GeneralPoolViewModel) {
+    val context = LocalContext.current
+
+    // Launcher that re-checks readiness without prompting again (prevents loops)
+    val permissionLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+            viewModel.ensureLocationReady(context, promptIfMissing = false)
+        }
+
+    // Listen for VM events that ask for a permission request
+    LaunchedEffect(Unit) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is GeneralPoolUiEvent.RequestLocationPermission -> {
+                    permissionLauncher.launch(
+                        arrayOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION,
+                        ),
+                    )
+                }
+            }
+        }
+    }
+
+    // Initial readiness check (this one is allowed to prompt)
+    LaunchedEffect(Unit) {
+        viewModel.ensureLocationReady(context, promptIfMissing = true)
+    }
+}
+
+// we will use this focusOnOrder when we search orders and click on it to be showing on the map
+@Composable
+fun rememberFocusOnOrder(
+    viewModel: GeneralPoolViewModel,
+    markerState: MarkerState,
+    cameraPositionState: CameraPositionState,
+    scope: kotlinx.coroutines.CoroutineScope,
+    focusZoom: Float = ORDER_FOCUS_ZOOM,
+): (OrderInfo, Boolean) -> Unit {
+    // keep latest references without re-allocating the lambda on every recomposition
+    val vm = rememberUpdatedState(viewModel)
+    val marker = rememberUpdatedState(markerState)
+    val camera = rememberUpdatedState(cameraPositionState)
+    val coroutineScope = rememberUpdatedState(scope)
+
+    return remember {
+        { order: OrderInfo, closeSearch: Boolean ->
+            // which order is selected
+            vm.value.onOrderSelected(order)
+
+            // move the marker on the map to that order's location
+            marker.value.position = LatLng(order.lat, order.lng)
+
+            // animate the map camera to zoom in on the order
+            coroutineScope.value.launch {
+                camera.value.animate(
+                    CameraUpdateFactory.newLatLngZoom(
+                        LatLng(order.lat, order.lng),
+                        focusZoom,
+                    ),
+                )
+            }
+
+            // close the search UI
+            if (closeSearch) {
+                vm.value.onSearchingChange(false)
+                vm.value.onSearchTextChange("")
             }
         }
     }
