@@ -104,7 +104,7 @@ fun appScaffoldWithDrawer(
                     }
                 }
 
-                Spacer(Modifier.height(dimensionResource(R.dimen.space_small)))
+                Spacer(Modifier.height(dimensionResource(R.dimen.smallSpace)))
 
                 // Group 2 (rest)
                 groupCard {
@@ -162,8 +162,8 @@ fun drawerHeader(name: String) {
                 .background(MaterialTheme.colorScheme.error)
                 .height(dimensionResource(R.dimen.drawer_header_height))
                 .padding(
-                    horizontal = dimensionResource(R.dimen.drawer_padding),
-                    vertical = dimensionResource(R.dimen.drawer_padding),
+                    horizontal = dimensionResource(R.dimen.mediumSpace),
+                    vertical = dimensionResource(R.dimen.mediumSpace),
                 ),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -175,7 +175,7 @@ fun drawerHeader(name: String) {
                         .size(dimensionResource(R.dimen.drawer_avatar_size))
                         .clip(CircleShape),
             )
-            Spacer(Modifier.width(dimensionResource(R.dimen.space_small)))
+            Spacer(Modifier.width(dimensionResource(R.dimen.smallSpace)))
             Text(
                 text = name,
                 color = MaterialTheme.colorScheme.onError,
@@ -195,9 +195,9 @@ fun drawerSectionTitle(text: String) {
         fontSize = dimensionResource(R.dimen.drawer_section_title_text_size).value.sp,
         modifier =
             Modifier.padding(
-                start = dimensionResource(R.dimen.drawer_padding),
-                top = dimensionResource(R.dimen.space_small),
-                bottom = dimensionResource(R.dimen.space_xsmall),
+                start = dimensionResource(R.dimen.mediumSpace),
+                top = dimensionResource(R.dimen.smallSpace),
+                bottom = dimensionResource(R.dimen.smallerSpace),
             ),
     )
 }
@@ -207,10 +207,10 @@ private fun groupCard(content: @Composable ColumnScope.() -> Unit) {
     Column(
         modifier =
             Modifier
-                .padding(horizontal = dimensionResource(R.dimen.drawer_group_outer_padding))
+                .padding(horizontal = dimensionResource(R.dimen.smallSpace))
                 .clip(RoundedCornerShape(dimensionResource(R.dimen.card_radius)))
                 .background(CupertinoCellBackground)
-                .padding(vertical = dimensionResource(R.dimen.group_vertical_padding)),
+                .padding(vertical = dimensionResource(R.dimen.smallSpace)),
         content = content,
     )
 }
@@ -240,8 +240,8 @@ fun drawerItemRow(
                 .fillMaxWidth()
                 .clickable(enabled = entry.enabled, onClick = onClick)
                 .padding(
-                    horizontal = dimensionResource(R.dimen.drawer_padding),
-                    vertical = dimensionResource(R.dimen.drawer_item_vertical_padding),
+                    horizontal = dimensionResource(R.dimen.mediumSpace),
+                    vertical = dimensionResource(R.dimen.smallSpace),
                 ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -255,7 +255,7 @@ fun drawerItemRow(
                     .size(dimensionResource(R.dimen.drawer_icon_size))
                     .graphicsLayer(alpha = iconAlpha),
         )
-        Spacer(Modifier.width(dimensionResource(R.dimen.space_small)))
+        Spacer(Modifier.width(dimensionResource(R.dimen.smallSpace)))
 
         // Label
         Text(
@@ -272,7 +272,7 @@ fun drawerItemRow(
                 color = CupertinoLabelSecondary,
                 fontSize = dimensionResource(R.dimen.drawer_badge_text_size).value.sp,
             )
-            Spacer(Modifier.width(dimensionResource(R.dimen.space_xsmall)))
+            Spacer(Modifier.width(dimensionResource(R.dimen.smallerSpace)))
         }
 
         // Chevron for navigable rows
