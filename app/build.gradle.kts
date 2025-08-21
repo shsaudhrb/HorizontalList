@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -107,7 +109,7 @@ dependencies {
     // Play Services for current location
     implementation(libs.play.services.location)
     // Icons
-    implementation("androidx.compose.material:material-icons-extended:1.7.8")
+    implementation(libs.androidx.material.icons.extended)
 }
 
 // Custom tasks for code quality checks

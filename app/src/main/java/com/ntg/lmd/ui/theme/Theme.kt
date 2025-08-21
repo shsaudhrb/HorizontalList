@@ -12,7 +12,7 @@ import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme =
     darkColorScheme(
-        primary = DeepRedDark,
+        primary = PrimaryRed,
         onPrimary = WhiteDark,
         background = DarkBackground,
         onBackground = LightText,
@@ -24,11 +24,11 @@ private val DarkColorScheme =
 
 private val LightColorScheme =
     lightColorScheme(
-        primary = DeepRed,
+        primary = PrimaryRed,
         onPrimary = White,
         background = LightGray,
         onBackground = DarkGray,
-        surface = White,
+        surface = surfaceWhite,
         onSurface = DarkGray,
         error = ErrorRed,
         onError = White,
@@ -38,7 +38,7 @@ private val LightColorScheme =
 fun lmdTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val colorScheme =

@@ -4,6 +4,8 @@ import androidx.compose.ui.graphics.Color
 
 val DeepRed = Color(0xFFD52D1F) // Primary color (buttons, headers)
 
+val PrimaryRed = Color(0xFFE50000) // Primary color (buttons, headers)
+val surfaceWhite = Color(0xFFF3EFEF) // OnPrimary (text/icons on red), backgrounds
 val White = Color(0xFFFFFFFF) // OnPrimary (text/icons on red), backgrounds
 val LightGray = Color(0xFFF5F5F5) // Background
 val DarkGray = Color(0xFF333333) // Default text
