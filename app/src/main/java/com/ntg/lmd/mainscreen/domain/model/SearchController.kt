@@ -1,9 +1,11 @@
 package com.ntg.lmd.mainscreen.domain.model
 
+import androidx.compose.runtime.MutableState
+
 data class SearchController(
-    val searching: Boolean,
-    val searchText: String,
-    val onSearchingChange: (Boolean) -> Unit,
-    val onSearchTextChange: (String) -> Unit,
-    val onSubmit: (String) -> Unit = {},
+    val searching: MutableState<Boolean>,
+    val text: MutableState<String>,
+    val onSubmit: (String) -> Unit,
+    val onToggle: (Boolean) -> Unit,
+    val onTextChange: (String) -> Unit,
 )

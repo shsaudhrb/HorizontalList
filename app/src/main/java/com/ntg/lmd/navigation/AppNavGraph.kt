@@ -2,6 +2,8 @@ package com.ntg.lmd.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -87,17 +89,42 @@ private fun drawerHost(onLogout: () -> Unit) {
             else -> "App"
         }
 
+    // which screens the search icon should appear
+    val showSearchIcon =
+        currentRoute in
+            setOf(
+                Screen.GeneralPool.route,
+                Screen.MyOrders.route,
+            )
+
+    val searchingState = remember { mutableStateOf(false) }
+    val searchTextState = remember { mutableStateOf("") }
+
     appScaffoldWithDrawer(
-        navController = drawerNavController,
-        currentRoute = currentRoute,
+        navConfig =
+            AppNavConfig(
+                navController = drawerNavController,
+                currentRoute = currentRoute,
+            ),
         title = title,
         onLogout = onLogout,
+        searchConfig =
+            AppSearchConfig(
+                enabled = showSearchIcon,
+                searchingState = searchingState,
+                searchTextState = searchTextState,
+                onSearchSubmit = { text ->
+                    drawerNavController.currentBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("search_submit", text)
+                },
+            ),
     ) {
         NavHost(
             navController = drawerNavController,
             startDestination = Screen.GeneralPool.route,
         ) {
-            composable(Screen.GeneralPool.route) { generalPoolScreen() }
+            composable(Screen.GeneralPool.route) { generalPoolScreen(drawerNavController) }
             composable(Screen.MyOrders.route) { myOrdersScreen(drawerNavController) }
             composable(Screen.OrdersHistory.route) { ordersHistoryScreen(drawerNavController) }
             composable(Screen.Notifications.route) { notificationScreen(drawerNavController) }

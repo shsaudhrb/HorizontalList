@@ -9,6 +9,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -16,10 +17,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -29,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.integerResource
@@ -47,11 +47,9 @@ import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.domain.model.GeneralPoolUiState
-import com.ntg.lmd.mainscreen.domain.model.HeaderUiModel
+import com.ntg.lmd.mainscreen.domain.model.MapStates
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
-import com.ntg.lmd.mainscreen.domain.model.SearchController
 import com.ntg.lmd.mainscreen.ui.components.customBottom
-import com.ntg.lmd.mainscreen.ui.components.customHeader
 import com.ntg.lmd.mainscreen.ui.viewmodel.GeneralPoolUiEvent
 import com.ntg.lmd.mainscreen.ui.viewmodel.GeneralPoolViewModel
 import kotlinx.coroutines.launch
@@ -81,6 +79,7 @@ fun generalPoolScreen(
         }
     val markerState = remember { MarkerState(position = DEFAULT_CITY_CENTER) }
     val scope = rememberCoroutineScope()
+
     // Load Local orders.json from assets
     LaunchedEffect(Unit) { generalPoolViewModel.loadOrdersFromAssets(context) }
 
@@ -96,52 +95,60 @@ fun generalPoolScreen(
             scope = scope,
         )
 
-    val headerUiModel =
-        remember {
-            HeaderUiModel("General Pool", true, { navController.popBackStack() }, true)
+    // react to the app-bar "searching" on/off
+    LaunchedEffect(Unit) {
+        val handle = navController.currentBackStackEntry?.savedStateHandle ?: return@LaunchedEffect
+        handle.getStateFlow("searching", false).collect { searching ->
+            generalPoolViewModel.onSearchingChange(searching)
+            if (!searching) generalPoolViewModel.onSearchTextChange("")
         }
+    }
 
-    val searchController =
-        SearchController(
-            ui.searching,
-            ui.searchText,
-            generalPoolViewModel::onSearchingChange,
-            generalPoolViewModel::onSearchTextChange,
-        )
+    // live text from the app-bar TextField
+    LaunchedEffect(Unit) {
+        val handle = navController.currentBackStackEntry?.savedStateHandle ?: return@LaunchedEffect
+        handle.getStateFlow("search_text", "").collect { text ->
+            generalPoolViewModel.onSearchTextChange(text)
+        }
+    }
+    // react when user presses IME search
+    LaunchedEffect(Unit) {
+        val handle = navController.currentBackStackEntry?.savedStateHandle ?: return@LaunchedEffect
+        handle.getStateFlow("search_submit", "").collect { _ ->
+        }
+    }
 
-    Scaffold(
-        // custom header with search bar
-        topBar = {
-            customHeader(
-                modifier = Modifier.statusBarsPadding(),
-                uiModel = headerUiModel,
-                search = searchController,
-            )
-        },
-        // bottom list of orders appears only when we have orders
-        bottomBar = {
-            if (ui.isLoading) {
-                Text(
-                    "Loading orders…",
-                    Modifier.padding(16.dp),
-                    color = MaterialTheme.colorScheme.onBackground,
-                )
-            } else if (ui.mapOrders.isNotEmpty()) {
-                customBottom(
-                    orders = ui.mapOrders,
-                    onOrderClick = { order -> focusOnOrder(order, false) },
-                    onCenteredOrderChange = { order, _ -> focusOnOrder(order, false) },
-                )
-            }
-        },
-    ) { innerPadding ->
+    Box(Modifier.fillMaxSize()) {
         generalPoolContent(
             ui = ui,
             focusOnOrder = focusOnOrder,
             onMaxDistanceKm = generalPoolViewModel::onDistanceChange,
             mapStates = MapStates(cameraPositionState, markerState),
-            innerPadding = innerPadding,
+            innerPadding = PaddingValues(0.dp),
         )
+
+        // Bottom list of orders
+        when {
+            ui.isLoading -> {
+                Text(
+                    text = "Loading orders…",
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(16.dp),
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+            }
+
+            ui.mapOrders.isNotEmpty() -> {
+                customBottom(
+                    orders = ui.mapOrders,
+                    onOrderClick = { order -> focusOnOrder(order, false) },
+                    onCenteredOrderChange = { order, _ -> focusOnOrder(order, false) },
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                )
+            }
+        }
     }
 }
 
@@ -362,6 +369,7 @@ fun rememberFocusOnOrder(
     scope: kotlinx.coroutines.CoroutineScope,
     focusZoom: Float = ORDER_FOCUS_ZOOM,
 ): (OrderInfo, Boolean) -> Unit {
+
     // keep latest references without re-allocating the lambda on every recomposition
     val vm = rememberUpdatedState(viewModel)
     val marker = rememberUpdatedState(markerState)
@@ -409,10 +417,7 @@ private fun generalPoolContent(
             .padding(innerPadding),
     ) {
         searchResultsDropdown(
-            visible =
-                ui.searching &&
-                    ui.searchText.isNotBlank() &&
-                    ui.filteredOrders.isNotEmpty(),
+            visible = ui.searching && ui.searchText.isNotBlank() && ui.filteredOrders.isNotEmpty(),
             orders = ui.filteredOrders,
             onPick = { focusOnOrder(it, true) },
         )
@@ -432,8 +437,3 @@ private fun generalPoolContent(
         )
     }
 }
-
-data class MapStates(
-    val cameraPositionState: CameraPositionState,
-    val markerState: MarkerState,
-)
