@@ -184,8 +184,7 @@ private fun drawerContent(
             }
         }
 
-                Spacer(Modifier.height(dimensionResource(R.dimen.smallSpace)))
-        Spacer(Modifier.height(dimensionResource(R.dimen.space_small)))
+        Spacer(Modifier.height(dimensionResource(R.dimen.smallSpace)))
 
         groupCard {
             grouped.second.forEachIndexed { i, item ->
