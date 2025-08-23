@@ -2,8 +2,8 @@ package com.ntg.lmd.navigation
 
 import androidx.navigation.NavHostController
 
-// Navigation-related
+// ---------- Minimal app-level nav config ----------
 data class AppNavConfig(
     val navController: NavHostController,
-    val currentRoute: String,
+    val currentRoute: String?,
 )
