@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">نظام توصيل</string>
-        <!-- Section titles -->
-        <string name="drawer_section_orders">الطلبات</string>
-        <!-- Drawer items -->
-        <string name="menu_general_pool">المخزن العام</string>
-        <string name="menu_my_orders">طلباتي</string>
-        <string name="menu_order_history">سجل الطلبات</string>
-        <string name="menu_notifications">الإشعارات</string>
-        <string name="menu_deliveries_log">سجل التوصيلات</string>
-        <string name="menu_settings">الإعدادات</string>
-        <string name="menu_chat">المحادثة</string>
-        <string name="menu_logout">تسجيل الخروج</string>
+    <!-- Section titles -->
+    <string name="drawer_section_orders">الطلبات</string>
+    <!-- Drawer items -->
+    <string name="menu_general_pool">المخزن العام</string>
+    <string name="menu_my_orders">طلباتي</string>
+    <string name="menu_order_history">سجل الطلبات</string>
+    <string name="menu_notifications">الإشعارات</string>
+    <string name="menu_deliveries_log">سجل التوصيلات</string>
+    <string name="menu_settings">الإعدادات</string>
+    <string name="menu_chat">المحادثة</string>
+    <string name="menu_logout">تسجيل الخروج</string>
     <string name="open_menu"> افتح القائمة</string>
     <string name="title_order_history">سجل الطلبات</string>
     <string name="export_pdf">تصدير PDF</string>
@@ -31,4 +31,13 @@
     <string name="time_m_ago">منذ %1$d د</string>
     <string name="topbar_more">المزيد</string>
     <string name="drawer_user_placeholder">مستخدم</string>
+    <string name="sort_by_age">فرز حسب العمر</string>
+    <string name="statuses">الحالات</string>
+    <string name="delivered">تم التسليم</string>
+    <string name="cancelled">ملغي</string>
+    <string name="failed">فشل</string>
+    <string name="sort_asc">تصاعدي (الأقدم أولاً)</string>
+    <string name="sort_desc">تنازلي (الأحدث أولاً)</string>
+    <string name="apply">تطبيق</string>
+    <string name="cancel">إلغاء</string>
 </resources>

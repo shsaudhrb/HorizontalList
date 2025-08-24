@@ -36,4 +36,7 @@
     <dimen name="pdf_col_status">110dp</dimen>
     <dimen name="pdf_col_age">50dp</dimen>
     <dimen name="pdf_text_size">12sp</dimen>
+    <dimen name="menu_corner_radius">16dp</dimen>
+    <dimen name="menu_width">220dp</dimen>
+    <dimen name="dialog_corner_radius">20dp</dimen>
 </resources>

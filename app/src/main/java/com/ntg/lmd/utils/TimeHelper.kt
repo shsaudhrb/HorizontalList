@@ -1,4 +1,4 @@
-package com.ntg.lmd.order.ui.components
+package com.ntg.lmd.utils
 
 import android.content.Context
 import com.ntg.lmd.R

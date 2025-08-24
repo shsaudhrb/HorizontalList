@@ -10,7 +10,8 @@ import android.graphics.pdf.PdfDocument
 import android.net.Uri
 import androidx.core.content.FileProvider
 import com.ntg.lmd.R
-import com.ntg.lmd.order.domain.model.OrderUi
+import com.ntg.lmd.order.domain.model.OrderHistoryUi
+import com.ntg.lmd.utils.timeHelper
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
@@ -18,9 +19,9 @@ import java.util.Date
 import java.util.Locale
 
 @SuppressLint("SimpleDateFormat")
-fun exportOrdersPdf(
+fun exportOrdersHistoryPdf(
     context: Context,
-    orders: List<OrderUi>,
+    orders: List<OrderHistoryUi>,
 ): Uri? {
     if (orders.isEmpty()) return null
 

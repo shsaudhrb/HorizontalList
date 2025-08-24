@@ -24,10 +24,19 @@
     <string name="pdf_header_status">Status</string>
     <string name="pdf_header_age">Age</string>
     <string name="pdf_share_title">Share orders PDF</string>
-        <string name="time_just_now">just now</string>
-        <string name="time_h_m_ago">%1$dh %2$dm ago</string>
-        <string name="time_d_h_ago">%1$dd %2$dh ago</string>
-        <string name="time_m_ago">%1$dm ago</string>
+    <string name="time_just_now">just now</string>
+    <string name="time_h_m_ago">%1$dh %2$dm ago</string>
+    <string name="time_d_h_ago">%1$dd %2$dh ago</string>
+    <string name="time_m_ago">%1$dm ago</string>
     <string name="topbar_more">More</string>
     <string name="drawer_user_placeholder">User</string>
+    <string name="sort_by_age">Sort by Age</string>
+    <string name="statuses">Statuses</string>
+    <string name="delivered">Delivered</string>
+    <string name="cancelled">Cancelled</string>
+    <string name="failed">Failed</string>
+    <string name="sort_asc">Ascending (oldest first)</string>
+    <string name="sort_desc">Descending (newest first)</string>
+    <string name="apply">Apply</string>
+    <string name="cancel">Cancel</string>
 </resources>
