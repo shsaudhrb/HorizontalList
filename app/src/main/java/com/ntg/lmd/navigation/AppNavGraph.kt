@@ -50,7 +50,7 @@ fun appNavGraph(rootNavController: NavHostController) {
 
         // ---------- Auth ----------
         composable(Screen.Login.route) {
-            LoginScreen()
+            LoginScreen(navController = rootNavController)
         }
         composable(Screen.Register.route) {
             RegisterScreen(

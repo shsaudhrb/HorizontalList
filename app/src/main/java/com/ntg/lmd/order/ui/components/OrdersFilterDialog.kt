@@ -32,10 +32,10 @@ fun ordersFilterDialog(
     onApply: (Set<OrderHistoryStatus>) -> Unit,
 ) {
     var allowed by remember { mutableStateOf(currentAllowed) }
-    val pad = dimensionResource(R.dimen.text_spacing_medium)
-    val gapSm = dimensionResource(R.dimen.space_small)
     val radius = dimensionResource(R.dimen.dialog_corner_radius)
     val elev = dimensionResource(R.dimen.elevation_small)
+    val pad = dimensionResource(R.dimen.mediumSpace)
+    val gapSm = dimensionResource(R.dimen.smallSpace)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -92,7 +92,7 @@ private fun statusCheckbox(
     val checked = status in selected
     Row(verticalAlignment = Alignment.CenterVertically) {
         Checkbox(checked = checked, onCheckedChange = { onChange(status, it) })
-        Spacer(Modifier.width(dimensionResource(R.dimen.space_xsmall)))
+        Spacer(Modifier.width(dimensionResource(R.dimen.smallerSpace)))
         Text(label)
     }
 }

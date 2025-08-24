@@ -33,14 +33,14 @@ fun orderHistoryCard(
     context: Context,
     order: OrderHistoryUi,
 ) {
-    val pad = dimensionResource(R.dimen.text_spacing_medium)
+    val pad = dimensionResource(R.dimen.mediumSpace)
+    val gapSm = dimensionResource(R.dimen.smallSpace)
+    val gapXs = dimensionResource(R.dimen.smallerSpace)
     val radius = dimensionResource(R.dimen.card_radius)
     val hair = dimensionResource(R.dimen.hairline)
-    val gapXs = dimensionResource(R.dimen.space_xsmall)
-    val gapSm = dimensionResource(R.dimen.space_small)
     val elev = dimensionResource(R.dimen.elevation_small)
     val currency = stringResource(R.string.currency_egp)
-    val gapV = dimensionResource(R.dimen.group_vertical_padding)
+    val gapV = dimensionResource(R.dimen.smallestSpace)
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(radius),

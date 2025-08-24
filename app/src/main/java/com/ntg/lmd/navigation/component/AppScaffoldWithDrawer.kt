@@ -118,7 +118,6 @@ private fun drawerContent(
 
         drawerGroup(items = grouped.first, currentRoute = currentRoute, onEntryClick = onEntryClick)
 
-        Spacer(Modifier.height(dimensionResource(R.dimen.space_small)))
                 Spacer(Modifier.height(dimensionResource(R.dimen.smallSpace)))
 
         drawerGroup(items = grouped.second, currentRoute = currentRoute, onEntryClick = onEntryClick)

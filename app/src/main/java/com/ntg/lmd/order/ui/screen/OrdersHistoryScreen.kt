@@ -120,7 +120,7 @@ fun ordersHistoryContent(
         modifier =
             Modifier
                 .fillMaxSize()
-                .padding(dimensionResource(R.dimen.text_spacing_medium)),
+                .padding(dimensionResource(R.dimen.mediumSpace)),
     ) {
         items(orders, key = { it.number }) {
             orderHistoryCard(ctx, order = it)
@@ -129,7 +129,7 @@ fun ordersHistoryContent(
         if (isLoadingMore) {
             item("loading_footer") {
                 Row(
-                    Modifier.fillMaxWidth().padding(dimensionResource(R.dimen.text_spacing_small)),
+                    Modifier.fillMaxWidth().padding(dimensionResource(R.dimen.smallerSpace)),
                     horizontalArrangement = Arrangement.Center,
                 ) { CircularProgressIndicator() }
             }
@@ -138,7 +138,7 @@ fun ordersHistoryContent(
         if (endReached && orders.isNotEmpty()) {
             item("end_footer") {
                 Box(
-                    Modifier.fillMaxWidth().padding(dimensionResource(R.dimen.text_spacing_small)),
+                    Modifier.fillMaxWidth().padding(dimensionResource(R.dimen.smallSpace)),
                     contentAlignment = Alignment.Center,
                 ) { Text("• End of list •") }
             }

@@ -32,8 +32,8 @@ fun ordersSortDialog(
     onApply: (Boolean) -> Unit,
 ) {
     var ageAsc by remember { mutableStateOf(currentAscending) }
-    val gapSm = dimensionResource(R.dimen.space_small)
-    val pad = dimensionResource(R.dimen.text_spacing_medium)
+    val pad = dimensionResource(R.dimen.mediumSpace)
+    val gapSm = dimensionResource(R.dimen.smallSpace)
     val radius = dimensionResource(R.dimen.dialog_corner_radius)
     val elev = dimensionResource(R.dimen.elevation_small)
 
