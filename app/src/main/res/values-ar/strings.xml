@@ -38,7 +38,7 @@
     <string name="location_access_request">يرجى السماح بالوصول إلى الموقع لتمكين تصفية المسافة</string>
     <string name="kilometer">كيلومتر</string>
     <string name="loading_text">جاري التحميل...</string>
-
+    <string name="no_orders">لا توجد طلبات</string>
 
 
 </resources>

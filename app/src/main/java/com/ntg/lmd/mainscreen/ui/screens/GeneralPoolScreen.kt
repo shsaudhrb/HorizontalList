@@ -40,7 +40,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.integerResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -74,7 +73,7 @@ private const val INITIAL_MAP_ZOOM = 12f
 private const val ORDER_FOCUS_ZOOM = 14f
 
 // Slider constraints
-private const val DISTANCE_MIN_KM: Double = 1.0
+private const val DISTANCE_MIN_KM: Double = 0.0
 private const val DISTANCE_MAX_KM: Double = 100.0
 
 // screen height
@@ -101,6 +100,8 @@ fun generalPoolScreen(
         }
     val markerState = remember { MarkerState(position = DEFAULT_CITY_CENTER) }
     val scope = rememberCoroutineScope()
+
+    val deviceLatLng by generalPoolViewModel.deviceLatLng.collectAsStateWithLifecycle()
 
     // Load Local orders.json from assets
     LaunchedEffect(Unit) { generalPoolViewModel.loadOrdersFromAssets(context) }
@@ -146,30 +147,26 @@ fun generalPoolScreen(
             focusOnOrder = focusOnOrder,
             onMaxDistanceKm = generalPoolViewModel::onDistanceChange,
             mapStates = MapStates(cameraPositionState, markerState),
-            innerPadding = PaddingValues(0.dp),
+            deviceLatLng = deviceLatLng,
         )
 
         // Bottom list of orders
-        when {
-            ui.isLoading -> {
-                Text(
-                    text = stringResource(R.string.loading_text),
-                    modifier =
-                        Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(16.dp),
-                    color = MaterialTheme.colorScheme.onBackground,
-                )
-            }
-
-            ui.mapOrders.isNotEmpty() -> {
-                customBottom(
-                    orders = ui.mapOrders,
-                    onOrderClick = { order -> focusOnOrder(order, false) },
-                    onCenteredOrderChange = { order, _ -> focusOnOrder(order, false) },
-                    modifier = Modifier.align(Alignment.BottomCenter),
-                )
-            }
+        if (ui.isLoading) {
+            Text(
+                text = stringResource(R.string.loading_text),
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(16.dp),
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+        } else {
+            customBottom(
+                orders = ui.mapOrders,
+                onOrderClick = { order -> focusOnOrder(order, false) },
+                onCenteredOrderChange = { order, _ -> focusOnOrder(order, false) },
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
         }
     }
 }
@@ -180,19 +177,17 @@ private fun generalPoolContent(
     focusOnOrder: (OrderInfo, Boolean) -> Unit,
     onMaxDistanceKm: (Double) -> Unit,
     mapStates: MapStates,
-    innerPadding: PaddingValues,
+    deviceLatLng: LatLng?,
 ) {
     Box(
         Modifier
-            .fillMaxSize()
-            .padding(innerPadding),
+            .fillMaxSize(),
     ) {
-        // Map at the bottom layer
+        // Map at the bottom layer (≤5 params now)
         mapCenter(
-            selected = ui.selected,
-            orders = ui.mapOrders,
-            cameraPositionState = mapStates.cameraPositionState,
-            markerState = mapStates.markerState,
+            ui = ui,
+            mapStates = mapStates,
+            deviceLatLng = deviceLatLng,
             modifier = Modifier.fillMaxSize(),
         )
 
@@ -249,26 +244,19 @@ private fun generalPoolContent(
 
 @Composable
 private fun mapCenter(
-    selected: OrderInfo?,
-    orders: List<OrderInfo>,
+    ui: GeneralPoolUiState,
+    mapStates: MapStates,
+    deviceLatLng: LatLng?,
     modifier: Modifier = Modifier,
-    markerState: MarkerState,
-    cameraPositionState: CameraPositionState,
 ) {
-    // for zoom in & zoom out
-    val zoom = cameraPositionState.position.zoom
+    val (cameraPositionState, markerState) = mapStates
 
     // Screen-aware padding so map UI (incl. +/- and my-location button) isn't hidden
     val cfg = LocalConfiguration.current
     val screenH = cfg.screenHeightDp.dp
 
     val topOverlayHeight = (screenH * TOP_OVERLAY_RATIO).coerceIn(48.dp, 96.dp)
-    val bottomBarHeight =
-        if (orders.isNotEmpty()) {
-            (screenH * BOTTOM_BAR_RATIO).coerceIn(128.dp, 280.dp)
-        } else {
-            0.dp
-        }
+    val bottomBarHeight = (screenH * BOTTOM_BAR_RATIO).coerceIn(128.dp, 280.dp)
 
     // Enable blue dot only if we have location permission (prevents SecurityException)
     val context = LocalContext.current
@@ -290,55 +278,42 @@ private fun mapCenter(
         // Blue dot + target button
         properties = MapProperties(isMyLocationEnabled = canShowMyLocation),
         uiSettings = MapUiSettings(zoomControlsEnabled = true, myLocationButtonEnabled = true),
-        contentPadding =
-            PaddingValues(top = topOverlayHeight, bottom = bottomBarHeight),
+        contentPadding = PaddingValues(top = topOverlayHeight, bottom = bottomBarHeight),
     ) {
-        // draw a circle for each order
-        orders.forEach { order ->
-            val isSelected = selected?.orderNumber == order.orderNumber
-
-            // Scale radius inversely with zoom
-            val baseRadius =
-                if (isSelected) {
-                    integerResource(id = R.integer.selected_circle_radius_m)
-                } else {
-                    integerResource(
-                        id = R.integer.unselected_circle_radius_m,
-                    )
-                }
-
-            val scaledRadius =
-                baseRadius * (integerResource(id = R.integer.zoom_normalizer) / zoom.toDouble())
-
+        // Filter radius circle
+        if (deviceLatLng != null && ui.distanceThresholdKm > 0.0) {
             Circle(
-                center = LatLng(order.lat, order.lng),
-                radius = scaledRadius,
-                strokeWidth = if (isSelected) 4f else 2f,
-                strokeColor =
-                    if (isSelected) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.65f)
-                    },
-                fillColor =
-                    if (isSelected) {
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
-                    } else {
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
-                    },
-                zIndex = if (isSelected) 1f else 0f,
+                center = deviceLatLng,
+                radius = ui.distanceThresholdKm * 1000.0, // km -> meters
+                strokeWidth = 3f,
+                strokeColor = MaterialTheme.colorScheme.primary,
+                fillColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                zIndex = 0.5f,
             )
         }
 
+        // Markers for every order (except the selected one; it has its own marker)
+        ui.mapOrders.forEach { order ->
+            val isSelected = ui.selected?.orderNumber == order.orderNumber
+            if (!isSelected) {
+                Marker(
+                    state = MarkerState(position = LatLng(order.lat, order.lng)),
+                    title = order.name,
+                    snippet = order.orderNumber,
+                    zIndex = 0f,
+                )
+            }
+        }
+
         // keep the marker pinned to the currently selected order
-        LaunchedEffect(selected?.lat, selected?.lng) {
-            selected?.let { sel ->
+        LaunchedEffect(ui.selected?.lat, ui.selected?.lng) {
+            ui.selected?.let { sel ->
                 markerState.position = LatLng(sel.lat, sel.lng)
             }
         }
 
-        // render the single marker only if we have a selection
-        selected?.let {
+        // render the single marker only if we have a selection (special/high zIndex)
+        ui.selected?.let {
             Marker(
                 state = markerState,
                 title = it.name,
@@ -362,7 +337,6 @@ private fun distanceFilterBar(
     // Do not draw anything if not enabled (no location permission)
     if (!enabled) return
 
-    // clamp to [1, 100]
     val value = maxDistanceKm.coerceIn(DISTANCE_MIN_KM, DISTANCE_MAX_KM)
 
     Surface(
@@ -379,7 +353,6 @@ private fun distanceFilterBar(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // Centered label like “100 Km”
             val context = LocalContext.current
             Text(
                 text = "${value.roundToInt()} ${context.getString(R.string.kilometer)}",

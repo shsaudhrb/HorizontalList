@@ -68,8 +68,6 @@ fun customBottom(
     val sidePadding =
         ((screenWidth - dimensionResource(id = R.dimen.orders_card_width)) / 2).coerceAtLeast(0.dp)
 
-    val startPadding = 16.dp
-
     // ensure the lazyrow cards always stop centered on screen when scrolling
     val cardBehavior = rememberSnapFlingBehavior(lazyListState = listState)
 
@@ -78,30 +76,28 @@ fun customBottom(
 
     // launched effect for centered the item when we scroll
     LaunchedEffect(orders, listState) {
-        snapshotFlow { listState.layoutInfo }
-            .collect { layoutInfo ->
+        snapshotFlow { listState.layoutInfo }.collect { layoutInfo ->
+            // skip if there are no orders
+            if (orders.isEmpty() || layoutInfo.visibleItemsInfo.isEmpty()) return@collect
 
-                // skip if there are no orders
-                if (orders.isEmpty() || layoutInfo.visibleItemsInfo.isEmpty()) return@collect
+            // calculate the horizontal center of the viewport ( middle of the screen )
+            val viewportCenter =
+                (layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset) / 2
 
-                // calculate the horizontal center of the viewport ( middle of the screen )
-                val viewportCenter =
-                    (layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset) / 2
-
-                // find the visible item whose center is closest to the viewport center
-                val nearest =
-                    layoutInfo.visibleItemsInfo.minByOrNull { item ->
-                        val itemCenter = item.offset + item.size / 2
-                        abs(itemCenter - viewportCenter)
-                    }
-
-                // if the centered item changed, notify via callback
-                val newIndex = nearest?.index ?: return@collect
-                if (newIndex != lastCenteredIndex && newIndex in orders.indices) {
-                    lastCenteredIndex = newIndex
-                    onCenteredOrderChange(orders[newIndex], newIndex)
+            // find the visible item whose center is closest to the viewport center
+            val nearest =
+                layoutInfo.visibleItemsInfo.minByOrNull { item ->
+                    val itemCenter = item.offset + item.size / 2
+                    abs(itemCenter - viewportCenter)
                 }
+
+            // if the centered item changed, notify via callback
+            val newIndex = nearest?.index ?: return@collect
+            if (newIndex != lastCenteredIndex && newIndex in orders.indices) {
+                lastCenteredIndex = newIndex
+                onCenteredOrderChange(orders[newIndex], newIndex)
             }
+        }
     }
 
     Box(
@@ -109,45 +105,56 @@ fun customBottom(
             modifier
                 .fillMaxWidth()
                 .height(200.dp)
-                .background(MaterialTheme.colorScheme.primary),
+                .background(MaterialTheme.colorScheme.primary)
     ) {
-        // ---- list of orders ----
-        LazyRow(
-            state = listState,
-            flingBehavior = cardBehavior,
-            modifier =
-                Modifier
+        if (orders.isEmpty()) {
+            // empty list
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = stringResource(R.string.no_orders),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                )
+            }
+        } else {
+            // list of orders
+            LazyRow(
+                state = listState,
+                flingBehavior = cardBehavior,
+                modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.Center),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding =
-                PaddingValues(
-                    start = startPadding,
-                    end = sidePadding,
-                ),
-        ) {
-            itemsIndexed(
-                items = orders,
-                key = { _, item -> item.orderNumber },
-            ) { index, order ->
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(start = dimensionResource(id = R.dimen.start_padding),
+                    end = sidePadding),
+            ) {
+                itemsIndexed(
+                    items = orders,
+                    key = { _, item -> item.orderNumber },
+                ) { index, order ->
+                    val densityPx = LocalDensity.current
+                    val sidePaddingPx = with(densityPx) { sidePadding.roundToPx() }
 
-                val densityPx = LocalDensity.current
-                val sidePaddingPx = with(densityPx) { sidePadding.roundToPx() }
-
-                orderCard(
-                    order = order,
-                    onAddClick = onAddClick,
-                    onOrderClick = { clicked ->
-                        // when a card is tapped: animate it into the center
-                        scope.launch {
-                            listState.animateScrollToItem(
-                                index = index,
-                                scrollOffset = -sidePaddingPx,
-                            ) // negative to pull it to center
-                        }
-                        onOrderClick(clicked)
-                    },
-                )
+                    orderCard(
+                        order = order,
+                        onAddClick = onAddClick,
+                        onOrderClick = { clicked ->
+                            // when a card is tapped: animate it into the center
+                            scope.launch {
+                                listState.animateScrollToItem(
+                                    index = index,
+                                    scrollOffset = -sidePaddingPx
+                                ) // negative to pull it to center
+                            }
+                            onOrderClick(clicked)
+                        },
+                    )
+                }
             }
         }
     }

@@ -11,6 +11,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
+import com.google.android.gms.maps.model.LatLng
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
 import com.google.gson.reflect.TypeToken
@@ -38,6 +39,10 @@ class GeneralPoolViewModel : ViewModel() {
     // events for permission
     private val _events = MutableSharedFlow<GeneralPoolUiEvent>(extraBufferCapacity = 1)
     val events: SharedFlow<GeneralPoolUiEvent> = _events.asSharedFlow()
+
+    // hold the device lat/lng
+    private val _deviceLatLng = MutableStateFlow<LatLng?>(null)
+    val deviceLatLng: StateFlow<LatLng?> = _deviceLatLng.asStateFlow()
 
     // meters -> kilometers
     companion object {
@@ -147,9 +152,11 @@ class GeneralPoolViewModel : ViewModel() {
         if (currentOrders.isEmpty()) return
 
         fun applyFrom(loc: Location) {
+            _deviceLatLng.value = LatLng(loc.latitude, loc.longitude) // <— NEW
             _ui.update { it.copy(orders = currentOrders.withDistancesFrom(loc)) }
             ensureSelectedStillVisible()
         }
+
         fused.lastLocation
             .addOnSuccessListener { last ->
                 if (last != null) applyFrom(last)
