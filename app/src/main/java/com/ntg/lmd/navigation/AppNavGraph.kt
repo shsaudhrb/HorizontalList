@@ -7,11 +7,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.domain.model.SearchController
 import com.ntg.lmd.mainscreen.ui.screens.chatScreen
 import com.ntg.lmd.mainscreen.ui.screens.deliveriesLogScreen
@@ -74,7 +76,7 @@ private fun drawerHost(onLogout: () -> Unit) {
 
     // ---- Search state (kept at nav layer so it's shared across screens) ----
     val searchingState = remember { mutableStateOf(false) } // search on/off
-    val searchTextState = remember { mutableStateOf("") }   // current query
+    val searchTextState = remember { mutableStateOf("") } // current query
 
     // Build a UI "spec" for the current route
     val spec = buildRouteUiSpec(currentRoute, drawerNavController)
@@ -151,6 +153,7 @@ private fun drawerHost(onLogout: () -> Unit) {
 }
 
 // ---------- Route UI Spec ----------
+@Composable
 private fun buildRouteUiSpec(
     currentRoute: String,
     nav: NavHostController,
@@ -158,45 +161,60 @@ private fun buildRouteUiSpec(
     when (currentRoute) {
         Screen.GeneralPool.route ->
             RouteUiSpec(
-                title = "General Pool",
+                title = stringResource(R.string.menu_general_pool),
                 showSearchIcon = true,
-                searchPlaceholder = "Search by order no. or customer name",
-                actionButtonLabel = "MY POOL",
+                searchPlaceholder = stringResource(R.string.search_order_number_customer_name),
+                actionButtonLabel = stringResource(R.string.my_pool),
                 onActionButtonClick = { nav.navigateSingleTop(Screen.MyPool.route) },
             )
 
         Screen.MyPool.route ->
             RouteUiSpec(
-                title = "My Pool",
+                title = stringResource(R.string.my_pool),
                 showSearchIcon = false,
-                actionButtonLabel = "GENERAL POOL",
+                actionButtonLabel = stringResource(R.string.menu_general_pool),
                 onActionButtonClick = { nav.navigateSingleTop(Screen.GeneralPool.route) },
             )
 
         Screen.MyOrders.route ->
             RouteUiSpec(
-                title = "My Orders",
+                title = stringResource(R.string.menu_my_orders),
                 showSearchIcon = true,
-                searchPlaceholder = "Search by order number",
+                searchPlaceholder = stringResource(R.string.search_order_number),
             )
 
         Screen.DeliveriesLog.route ->
             RouteUiSpec(
-                title = "Deliveries Log",
+                title = stringResource(R.string.menu_deliveries_log),
                 showSearchIcon = true,
-                searchPlaceholder = "Search by order number",
+                searchPlaceholder = stringResource(R.string.search_order_number),
             )
 
         Screen.OrdersHistory.route ->
             RouteUiSpec(
-                title = "Order History",
+                title = stringResource(R.string.menu_order_history),
                 showSearchIcon = false,
                 actionIcon = Icons.Filled.MoreVert,
                 onActionIconClick = { /* TODO show menu */ },
             )
 
-        Screen.Notifications.route -> RouteUiSpec(title = "Notifications", showSearchIcon = false)
-        Screen.Settings.route -> RouteUiSpec(title = "Settings", showSearchIcon = false)
-        Screen.Chat.route -> RouteUiSpec(title = "Chat", showSearchIcon = false)
-        else -> RouteUiSpec(title = "App", showSearchIcon = false)
+        Screen.Notifications.route ->
+            RouteUiSpec(
+                title = stringResource(R.string.menu_notifications),
+                showSearchIcon = false,
+            )
+
+        Screen.Settings.route ->
+            RouteUiSpec(
+                title = stringResource(R.string.menu_settings),
+                showSearchIcon = false,
+            )
+
+        Screen.Chat.route ->
+            RouteUiSpec(
+                title = stringResource(R.string.menu_chat),
+                showSearchIcon = false,
+            )
+
+        else -> RouteUiSpec(title = stringResource(R.string.app_name), showSearchIcon = false)
     }

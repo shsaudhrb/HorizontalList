@@ -232,7 +232,7 @@ private fun appTopBar(
 
     TopAppBar(
         colors = colors,
-        // Left side icon (hamburger vs search icon)
+        // Left side icon (menu vs search icon)
         navigationIcon = {
             if (!search.searching.value) {
                 IconButton(onClick = onOpenDrawer, modifier = Modifier.padding(start = 8.dp)) {
@@ -241,7 +241,7 @@ private fun appTopBar(
             } else {
                 Icon(
                     imageVector = Icons.Filled.Search,
-                    contentDescription = stringResource(R.string.search),
+                    contentDescription = stringResource(R.string.search_order_number_customer_name),
                     tint = MaterialTheme.colorScheme.onPrimary,
                     modifier = Modifier.padding(start = 8.dp),
                 )
@@ -257,7 +257,9 @@ private fun appTopBar(
             if (config.showSearchIcon && search.searching.value) {
                 searchTextField(
                     search = search,
-                    placeholder = config.searchPlaceholder ?: stringResource(R.string.search),
+                    placeholder =
+                        config.searchPlaceholder
+                            ?: stringResource(R.string.search_order_number_customer_name),
                     focusRequester = focusRequester,
                     focusManager = focusManager,
                 )
@@ -387,7 +389,10 @@ private fun topBarActions(
         // NEW: Optional search icon, fully controlled by nav layer
         config.searchActionIcon?.let { icon ->
             IconButton(onClick = { config.onSearchIconClick?.invoke() }) {
-                Icon(icon, contentDescription = stringResource(R.string.search))
+                Icon(
+                    icon,
+                    contentDescription = stringResource(R.string.search_order_number_customer_name),
+                )
             }
         }
     }

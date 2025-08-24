@@ -152,7 +152,7 @@ fun generalPoolScreen(
         when {
             ui.isLoading -> {
                 Text(
-                    text = "Loading orders…",
+                    text = stringResource(R.string.loading_text),
                     modifier =
                         Modifier
                             .align(Alignment.BottomStart)
