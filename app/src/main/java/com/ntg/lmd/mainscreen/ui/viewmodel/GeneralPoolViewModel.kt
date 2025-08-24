@@ -51,7 +51,7 @@ class GeneralPoolViewModel : ViewModel() {
     fun onSearchTextChange(value: String) = _ui.update { it.copy(searchText = value) }
 
     // change the max distance, used to filter map orders
-    fun onDistanceChange(km: Float) {
+    fun onDistanceChange(km: Double) {
         _ui.update { it.copy(distanceThresholdKm = km) }
         ensureSelectedStillVisible()
     }

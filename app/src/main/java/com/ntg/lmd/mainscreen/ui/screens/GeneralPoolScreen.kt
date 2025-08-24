@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -73,8 +74,8 @@ private const val INITIAL_MAP_ZOOM = 12f
 private const val ORDER_FOCUS_ZOOM = 14f
 
 // Slider constraints
-private const val DISTANCE_MIN_KM = 1.0F
-private const val DISTANCE_MAX_KM = 100.0F
+private const val DISTANCE_MIN_KM: Double = 1.0
+private const val DISTANCE_MAX_KM: Double = 100.0
 
 // screen height
 private const val TOP_OVERLAY_RATIO = 0.09f // 9% of screen height
@@ -177,7 +178,7 @@ fun generalPoolScreen(
 private fun generalPoolContent(
     ui: GeneralPoolUiState,
     focusOnOrder: (OrderInfo, Boolean) -> Unit,
-    onMaxDistanceKm: (Float) -> Unit,
+    onMaxDistanceKm: (Double) -> Unit,
     mapStates: MapStates,
     innerPadding: PaddingValues,
 ) {
@@ -354,8 +355,8 @@ private fun mapCenter(
 // used to select max distance in km for filtering orders
 @Composable
 private fun distanceFilterBar(
-    maxDistanceKm: Float,
-    onMaxDistanceKm: (Float) -> Unit,
+    maxDistanceKm: Double,
+    onMaxDistanceKm: (Double) -> Unit,
     enabled: Boolean,
 ) {
     // Do not draw anything if not enabled (no location permission)
@@ -370,9 +371,7 @@ private fun distanceFilterBar(
                 .width(280.dp)
                 .padding(vertical = 8.dp),
         color = MaterialTheme.colorScheme.onPrimary,
-        shape =
-            androidx.compose.foundation.shape
-                .RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(12.dp),
         tonalElevation = 6.dp,
         shadowElevation = 6.dp,
     ) {
@@ -401,9 +400,9 @@ private fun distanceFilterBar(
 
 @Composable
 fun circleSlider(
-    value: Float,
-    onValueChange: (Float) -> Unit,
-    valueRange: ClosedFloatingPointRange<Float> = DISTANCE_MIN_KM..DISTANCE_MAX_KM,
+    value: Double,
+    onValueChange: (Double) -> Unit,
+    valueRange: ClosedFloatingPointRange<Double> = DISTANCE_MIN_KM..DISTANCE_MAX_KM,
     enabled: Boolean = true,
 ) {
     val trackWidth = 220.dp
@@ -440,10 +439,13 @@ fun circleSlider(
                                 detectDragGestures { change, _ ->
                                     change.consume()
                                     val posX = change.position.x.coerceIn(0f, size.width.toFloat())
-                                    val fraction = posX / size.width
+                                    val fraction = posX / size.width // Float 0..1
                                     val newValue =
                                         valueRange.start +
-                                            fraction * (valueRange.endInclusive - valueRange.start)
+                                            (
+                                                fraction.toDouble() *
+                                                    (valueRange.endInclusive - valueRange.start)
+                                            )
                                     onValueChange(newValue)
                                 }
                             }
@@ -454,7 +456,7 @@ fun circleSlider(
         ) {
             val fraction =
                 (value - valueRange.start) / (valueRange.endInclusive - valueRange.start)
-            val x = size.width * fraction
+            val x = size.width * fraction.toFloat()
             drawCircle(
                 color = thumbColor,
                 radius = thumbRadius.toPx(),
