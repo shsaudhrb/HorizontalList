@@ -13,9 +13,10 @@ import androidx.navigation.compose.rememberNavController
 import com.ntg.lmd.mainscreen.ui.screens.chatScreen
 import com.ntg.lmd.mainscreen.ui.screens.deliveriesLogScreen
 import com.ntg.lmd.mainscreen.ui.screens.generalPoolScreen
+import com.ntg.lmd.mainscreen.ui.screens.myOrdersScreen
 import com.ntg.lmd.mainscreen.ui.screens.myPoolScreen
-import com.ntg.lmd.mainscreen.ui.screens.orders.myOrdersScreen
 import com.ntg.lmd.mainscreen.ui.screens.ordersHistoryScreen
+import com.ntg.lmd.navigation.component.AppBarConfig
 import com.ntg.lmd.navigation.component.appScaffoldWithDrawer
 import com.ntg.lmd.notification.ui.screens.notificationScreen
 import com.ntg.lmd.settings.ui.screens.settingsOptions
@@ -96,11 +97,14 @@ private fun drawerHost(onLogout: () -> Unit) {
     appScaffoldWithDrawer(
         navController = drawerNavController,
         currentRoute = currentRoute,
-        title = title,
+        appBar =
+            AppBarConfig(
+                title = title,
+                showSearch = showSearch,
+                searchValue = search,
+                onSearchChange = { text -> search = text },
+            ),
         onLogout = onLogout,
-        showSearch = showSearch,
-        searchValue = search,
-        onSearchChange = { text -> search = text },
     ) {
         NavHost(
             navController = drawerNavController,

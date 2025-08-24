@@ -15,8 +15,12 @@
     <dimen name="drawer_divider_inset">56dp</dimen>
     <dimen name="hairline">0.5dp</dimen>
 
-    <dimen name="space_xsmall">8dp</dimen>
-    <dimen name="space_small">12dp</dimen>
+    <dimen name="space_xsmall">4dp</dimen>
+    <dimen name="space_small">8dp</dimen>
+    <dimen name="space_medium">12dp</dimen>
+    <dimen name="space_large">16dp</dimen>
+    <dimen name="space_xlarge">20dp</dimen>
+    <dimen name="space_screen_padding">16dp</dimen>
 
     <dimen name="drawer_header_text_size">20sp</dimen>
     <dimen name="drawer_section_title_text_size">12sp</dimen>

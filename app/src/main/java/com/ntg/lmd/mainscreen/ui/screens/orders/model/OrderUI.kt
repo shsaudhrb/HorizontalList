@@ -21,6 +21,7 @@ data class Order(
 data class MyOrdersUiState(
     val orders: List<OrderUI> = emptyList(),
     val isLoading: Boolean = false,
+    val isLoadingMore: Boolean = false,
     val isGpsAvailable: Boolean = true,
     val query: String = "",
     val emptyMessage: String? = null,

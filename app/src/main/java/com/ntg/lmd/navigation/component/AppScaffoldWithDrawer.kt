@@ -53,16 +53,23 @@ const val ENABLED_ICON = 1f
 const val DISABLED_ICON = 0.38f
 private const val FIRST_GROUP_SIZE = 3
 
+/**
+ * Bundle app-bar/search params to avoid LongParameterList.
+ */
+data class AppBarConfig(
+    val title: String,
+    val showSearch: Boolean = false,
+    val searchValue: String = "",
+    val onSearchChange: (String) -> Unit = {},
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun appScaffoldWithDrawer(
     navController: NavHostController,
     currentRoute: String,
-    title: String,
+    appBar: AppBarConfig,
     onLogout: () -> Unit,
-    showSearch: Boolean = false,
-    searchValue: String = "",
-    onSearchChange: (String) -> Unit = {},
     content: @Composable () -> Unit,
 ) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
@@ -83,7 +90,6 @@ fun appScaffoldWithDrawer(
             ) {
                 drawerHeader(name = "Sherif")
 
-                // Section label
                 drawerSectionTitle(stringResource(R.string.drawer_section_orders))
 
                 groupCard {
@@ -106,9 +112,7 @@ fun appScaffoldWithDrawer(
 
                 Spacer(Modifier.height(dimensionResource(R.dimen.space_small)))
 
-                // Group 2 (rest)
                 groupCard {
-                    // val rest = drawerItems.drop(FIRST_GROUP_SIZE)
                     groupedDrawerItems.second.forEachIndexed { index, item ->
                         drawerItemRow(
                             entry = item,
@@ -131,11 +135,11 @@ fun appScaffoldWithDrawer(
         Scaffold(
             topBar = {
                 appHeader(
-                    title = title,
+                    title = appBar.title,
                     onMenuClick = { scope.launch { drawerState.open() } },
-                    showSearch = showSearch,
-                    searchValue = searchValue,
-                    onSearchChange = onSearchChange,
+                    showSearch = appBar.showSearch,
+                    searchValue = appBar.searchValue,
+                    onSearchChange = appBar.onSearchChange,
                 )
             },
         ) { inner ->
@@ -244,7 +248,6 @@ fun drawerItemRow(
                 ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Leading icon
         Icon(
             imageVector = entry.icon,
             contentDescription = null,
@@ -256,7 +259,6 @@ fun drawerItemRow(
         )
         Spacer(Modifier.width(dimensionResource(R.dimen.space_small)))
 
-        // Label
         Text(
             text = label,
             color = textColor,
@@ -264,7 +266,6 @@ fun drawerItemRow(
             modifier = Modifier.weight(1f),
         )
 
-        // Optional right count (plain text, not a badge)
         entry.badgeCount?.let {
             Text(
                 text = it.toString(),
@@ -274,7 +275,6 @@ fun drawerItemRow(
             Spacer(Modifier.width(dimensionResource(R.dimen.space_xsmall)))
         }
 
-        // Chevron for navigable rows
         if (entry.enabled && entry.route != Screen.Logout.route) {
             Icon(
                 imageVector = Icons.Filled.ChevronRight,
