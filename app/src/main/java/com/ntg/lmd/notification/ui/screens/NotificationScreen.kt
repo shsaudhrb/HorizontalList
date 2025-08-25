@@ -1,28 +1,362 @@
 package com.ntg.lmd.notification.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AttachMoney
+import androidx.compose.material.icons.outlined.LocalShipping
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material3.Button
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
+import androidx.paging.LoadState
+import androidx.paging.compose.LazyPagingItems
+import androidx.paging.compose.collectAsLazyPagingItems
+import com.ntg.lmd.R
+import com.ntg.lmd.notification.data.dataSource.remote.ServiceLocator
+import com.ntg.lmd.notification.data.repository.seedNotifications
+import com.ntg.lmd.notification.domain.model.AgentNotification
+import com.ntg.lmd.notification.domain.model.NotificationFilter
+import com.ntg.lmd.notification.ui.components.filterRow
+import com.ntg.lmd.notification.ui.components.notificationPlaceholder
+import com.ntg.lmd.notification.ui.model.NotificationUi
+import com.ntg.lmd.notification.ui.model.relativeAgeLabel
+import com.ntg.lmd.notification.ui.viewmodel.NotificationsVMFactory
+import com.ntg.lmd.notification.ui.viewmodel.NotificationsViewModel
+import kotlinx.coroutines.delay
+import kotlin.OptIn
+
+private const val MILLIS_PER_MINUTE = 60_000L
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun notificationScreen(
+    viewModel: NotificationsViewModel =
+        androidx.lifecycle.viewmodel.compose
+            .viewModel(factory = NotificationsVMFactory()),
+) {
+    val filter by viewModel.filter.collectAsState()
+    val pagingFlow = viewModel.pagingDataFlow
+    val lazyPagingItems = pagingFlow.collectAsLazyPagingItems()
+
+    // Seed once
+    seedNotificationsOnce()
+
+    val isRefreshing =
+        lazyPagingItems.loadState.refresh is LoadState.Loading &&
+            lazyPagingItems.itemCount > 0
+
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = {
+            viewModel.addDummyAndRefresh()
+            lazyPagingItems.refresh()
+        },
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(horizontal = dimensionResource(R.dimen.space_small)),
+    ) {
+        notificationContent(
+            lazyPagingItems = lazyPagingItems,
+            filter = filter,
+            onFilterChange = { viewModel.setFilter(it) },
+        )
+    }
+}
 
 @Composable
-@Suppress("UNUSED_PARAMETER")
-fun notificationScreen(navController: NavController) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
+private fun notificationCard(item: NotificationUi) {
+    val nowMs = rememberNowMillis(MILLIS_PER_MINUTE) // update every minute
+    val ageLabel =
+        remember(nowMs, item.timestampMs) {
+            relativeAgeLabel(nowMs, item.timestampMs)
+        }
+
+    val accent =
+        when (item.type) {
+            AgentNotification.Type.ORDER_STATUS -> MaterialTheme.colorScheme.primary
+            AgentNotification.Type.WALLET -> MaterialTheme.colorScheme.tertiary
+            AgentNotification.Type.OTHER -> MaterialTheme.colorScheme.secondary
+        }
+    val icon =
+        when (item.type) {
+            AgentNotification.Type.ORDER_STATUS -> Icons.Outlined.LocalShipping
+            AgentNotification.Type.WALLET -> Icons.Outlined.AttachMoney
+            AgentNotification.Type.OTHER -> Icons.Outlined.Notifications
+        }
+
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(text = "Notifications Screen")
+            Box(
+                modifier =
+                    Modifier
+                        .size(42.dp)
+                        .background(accent.copy(alpha = 0.15f), shape = CircleShape),
+                contentAlignment = Alignment.Center,
+            ) { Icon(icon, contentDescription = null, tint = accent) }
+
+            Spacer(Modifier.width(12.dp))
+
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = item.message,
+                    style = MaterialTheme.typography.bodyLarge,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = ageLabel, // ← realtime
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            Spacer(
+                Modifier
+                    .width(4.dp)
+                    .height(IntrinsicSize.Max)
+                    .background(
+                        accent.copy(alpha = 0.8f),
+                        RoundedCornerShape(topStart = 6.dp, bottomStart = 6.dp),
+                    ),
+            )
         }
     }
+}
+
+@Composable
+private fun seedNotificationsOnce() {
+    val seeded = rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        if (!seeded.value) {
+            seedNotifications(ServiceLocator.saveIncomingNotificationUseCase)
+            seeded.value = true
+        }
+    }
+}
+
+@Composable
+private fun notificationContent(
+    lazyPagingItems: LazyPagingItems<NotificationUi>,
+    filter: NotificationFilter,
+    onFilterChange: (NotificationFilter) -> Unit,
+) {
+    when {
+        // full-screen initial loading
+        lazyPagingItems.loadState.refresh is LoadState.Loading &&
+            lazyPagingItems.itemCount == 0 -> {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator()
+            }
+        }
+
+        // full-screen error on initial load
+        lazyPagingItems.loadState.refresh is LoadState.Error -> {
+            val e = (lazyPagingItems.loadState.refresh as LoadState.Error).error
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                errorSection(
+                    message = e.message ?: "Unable to load notifications.",
+                    onRetry = { lazyPagingItems.retry() },
+                )
+            }
+        }
+
+        // empty state
+        lazyPagingItems.itemCount == 0 -> {
+            emptySection()
+        }
+
+        else -> {
+            notificationListWithFooter(
+                lazyPagingItems = lazyPagingItems,
+                filter = filter,
+                onFilterChange = onFilterChange,
+            )
+        }
+    }
+}
+
+@Composable
+private fun notificationListWithFooter(
+    lazyPagingItems: LazyPagingItems<NotificationUi>,
+    filter: NotificationFilter,
+    onFilterChange: (NotificationFilter) -> Unit,
+) {
+    Column(Modifier.fillMaxSize()) {
+        filterRow(filter = filter, onFilterChange = onFilterChange)
+        Spacer(Modifier.height(dimensionResource(R.dimen.space_small)))
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            items(
+                count = lazyPagingItems.itemCount,
+                key = { index -> lazyPagingItems[index]?.id ?: index.toLong() },
+            ) { index ->
+                lazyPagingItems[index]?.let {
+                    notificationCard(it)
+                } ?: notificationPlaceholder()
+            }
+
+            // ✅ now this compiles because it's an extension on LazyListScope
+            footerAppendState(lazyPagingItems)
+        }
+    }
+}
+
+// ✅ Change receiver to LazyListScope
+private fun LazyListScope.footerAppendState(lazyPagingItems: LazyPagingItems<NotificationUi>) {
+    when (val state = lazyPagingItems.loadState.append) {
+        is LoadState.Loading -> {
+            item {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center,
+                ) { CircularProgressIndicator() }
+            }
+        }
+
+        is LoadState.Error -> {
+            item {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        text = state.error.message ?: "Loading more failed",
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Button(onClick = { lazyPagingItems.retry() }) {
+                        Text("Retry")
+                    }
+                }
+            }
+        }
+
+        is LoadState.NotLoading -> {
+            if (state.endOfPaginationReached) {
+                item {
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            "You’re all caught up 🎉",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun emptySection() {
+    Column(
+        Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Icon(
+            Icons.Outlined.Notifications,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(48.dp),
+        )
+        Spacer(Modifier.height(8.dp))
+        Text("No notifications available.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun errorSection(
+    message: String,
+    onRetry: () -> Unit,
+) {
+    Column(
+        Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(message, color = MaterialTheme.colorScheme.error)
+        Spacer(Modifier.height(8.dp))
+        Button(onClick = onRetry) { Text("Retry") }
+    }
+}
+
+@Composable
+private fun rememberNowMillis(tickMillis: Long = MILLIS_PER_MINUTE): Long {
+    var now by remember { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(tickMillis) {
+        while (true) {
+            delay(tickMillis)
+            now = System.currentTimeMillis()
+        }
+    }
+    return now
 }

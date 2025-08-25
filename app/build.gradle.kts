@@ -11,7 +11,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.lmd"
+        applicationId = "com.ntg.lmd"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
@@ -101,6 +101,10 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     // Icons
     implementation("androidx.compose.material:material-icons-extended:1.7.8")
+
+    // Paging 3
+    implementation(libs.paging.runtime.ktx)
+    implementation(libs.paging.compose)
 }
 
 // Custom tasks for code quality checks

@@ -13,5 +13,6 @@
         <string name="menu_chat">المحادثة</string>
         <string name="menu_logout">تسجيل الخروج</string>
     <string name="open_menu"> افتح القائمة</string>
+    <string name="notification_title">اشعار</string>
 
 </resources>
