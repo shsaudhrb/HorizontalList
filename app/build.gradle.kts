@@ -12,13 +12,16 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.lmd"
+        applicationId = "com.ntg.lmd"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        val mapsKey = (project.findProperty("MAPS_API_KEY") as String?) ?: System.getenv("MAPS_API_KEY") ?: ""
+        manifestPlaceholders["MAPS_API_KEY"] = mapsKey
     }
 
     buildTypes {
@@ -101,8 +104,16 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     // Icons
     implementation(libs.androidx.material.icons.extended)
+    // animation
+    implementation(libs.androidx.animation)
+    // Google Maps
+    implementation(libs.play.services.maps)
+    implementation(libs.maps.compose)
+    // Play Services for current location
+    implementation(libs.play.services.location)
+    // Icons
+    implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.material)
-
 }
 
 // Custom tasks for code quality checks
