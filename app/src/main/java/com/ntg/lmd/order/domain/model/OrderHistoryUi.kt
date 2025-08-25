@@ -9,9 +9,10 @@ data class OrderHistoryUi(
     val isLoading: Boolean = false,
     val isLoadingMore: Boolean = false,
 )
+
 data class OrdersHistoryUiState(
     val orders: List<OrderHistoryUi> = emptyList(),
     val isLoadingMore: Boolean = false,
     val endReached: Boolean = false,
-    val isRefreshing: Boolean = false
+    val isRefreshing: Boolean = false,
 )

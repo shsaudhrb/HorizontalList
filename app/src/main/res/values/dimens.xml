@@ -38,6 +38,12 @@
     <dimen name="drawer_item_text_size">16sp</dimen>
     <dimen name="drawer_badge_text_size">14sp</dimen>
 
+    <dimen name="header_height">90dp</dimen>
+    <dimen name="orders_card_width">300dp</dimen>
+
+    <dimen name="start_padding">16dp</dimen>
+
+
 
     <dimen name="list_item_spacing">12dp</dimen>
     <dimen name="menu_offset_y">6dp</dimen>

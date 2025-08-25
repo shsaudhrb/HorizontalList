@@ -1,6 +1,5 @@
 <resources>
     <string name="app_name">LMD</string>
-
     <!-- Login screen-->
     <string name="welcome_back">Welcome Back</string>
     <string name="agentId">Agent ID</string>
@@ -21,6 +20,7 @@
     <string name="drawer_section_orders">ORDERS</string>
     <!-- Drawer items -->
     <string name="menu_general_pool">General Pool</string>
+    <string name="my_pool">My Pool</string>
     <string name="menu_my_orders">My Orders</string>
     <string name="menu_order_history">Order History</string>
     <string name="menu_notifications">Notifications</string>
@@ -56,4 +56,13 @@
     <string name="sort_desc">Descending (newest first)</string>
     <string name="apply">Apply</string>
     <string name="cancel">Cancel</string>
+    <!-- General Pool -->
+    <string name="add_to_your_orders">+ Add to your orders</string>
+    <string name="search_order_number_customer_name">Search by order no. or customer name</string>
+    <string name="search_order_number">Search by order number</string>
+    <string name="location_access_request">Please allow location access to enable distance filtering</string>
+    <string name="kilometer">Km</string>
+    <string name="loading_text">Loading Text...</string>
+    <string name="no_orders">No orders Found</string>
+
 </resources>

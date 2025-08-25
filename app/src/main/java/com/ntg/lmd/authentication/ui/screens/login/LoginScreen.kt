@@ -44,6 +44,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.ntg.lmd.R
 import com.ntg.lmd.authentication.ui.components.appLogo
@@ -64,19 +65,18 @@ private const val CARD_ELEVATION_DEFAULT = 2f
 @Composable
 fun loginScreen(
     navController: NavController,
-    viewModel: LoginViewModel =
-        androidx.lifecycle.viewmodel.compose
-            .viewModel(),
+    viewModel: LoginViewModel = viewModel(),
 ) {
     val focus = LocalFocusManager.current
     val ui by viewModel.uiState.collectAsState()
     // Tracks anyFieldFocused locally to drive card animation (scale/elevation).
     var anyFieldFocused by remember { mutableStateOf(false) }
 
-    val transition = updateTransition(
-        targetState = anyFieldFocused,
-        label = "focusTransition"
-    )
+    val transition =
+        updateTransition(
+            targetState = anyFieldFocused,
+            label = "focusTransition",
+        )
 
     val cardScale by transition.animateFloat(label = "cardScale") { focused ->
         if (focused) CARD_SCALE_FOCUSED else CARD_SCALE_DEFAULT
@@ -86,9 +86,10 @@ fun loginScreen(
         if (focused) CARD_ELEVATION_FOCUSED else CARD_ELEVATION_DEFAULT
     }
 
-    val cardUi = remember(cardScale, cardElevation) {
-        CardUi(scale = cardScale, elevation = cardElevation)
-    }
+    val cardUi =
+        remember(cardScale, cardElevation) {
+            CardUi(scale = cardScale, elevation = cardElevation)
+        }
 
     CompositionLocalProvider(
         LocalOnFocusForUsername provides { f ->
@@ -133,7 +134,7 @@ private fun loginScaffold(
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         ) {
             appLogo()
             messageBanner(messageRes)
@@ -176,8 +177,7 @@ private fun authCard(
                 .graphicsLayer {
                     scaleX = cardScale
                     scaleY = cardScale
-                }
-                .shadow(cardElevation.dp, shape, clip = false)
+                }.shadow(cardElevation.dp, shape, clip = false)
                 .clip(shape),
         shape = shape,
         border =
