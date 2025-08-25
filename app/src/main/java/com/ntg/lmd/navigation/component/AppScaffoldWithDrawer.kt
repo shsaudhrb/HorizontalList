@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -29,6 +30,7 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -59,15 +61,48 @@ private const val FIRST_GROUP_SIZE = 3
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun appScaffoldWithDrawer(
-    navController: NavHostController,
-    currentRoute: String,
-    title: String,
-    onLogout: () -> Unit,
+    config: AppScaffoldConfig,
+    actions: AppScaffoldActions,
     content: @Composable () -> Unit,
 ) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    val groupedDrawerItems =
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            drawerContent(
+                userName = config.userName.ifBlank { stringResource(R.string.drawer_user_placeholder) },
+                currentRoute = config.currentRoute,
+                onEntryClick = { route ->
+                    scope.launch { drawerState.close() }
+                    if (route == Screen.Logout.route) actions.onLogout() else actions.onNavigate(route)
+                },
+            )
+        },
+    ) {
+        Scaffold(
+            topBar = {
+                appTopBar(
+                    title = config.title,
+                    showOrdersMenu = config.showOrdersMenu && actions.onOrdersMenuClick != null,
+                    onOpenDrawer = { scope.launch { drawerState.open() } },
+                    onOrdersMenuClick = actions.onOrdersMenuClick,
+                )
+            },
+        ) { inner ->
+            Box(Modifier.padding(inner)) { content() }
+        }
+    }
+}
+
+@Composable
+private fun drawerContent(
+    userName: String,
+    currentRoute: String,
+    onEntryClick: (String) -> Unit,
+) {
+    val grouped =
         remember {
             Pair(
                 drawerItems.take(FIRST_GROUP_SIZE),
@@ -75,74 +110,68 @@ fun appScaffoldWithDrawer(
             )
         }
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            ModalDrawerSheet(
-                drawerContainerColor = CupertinoSystemBackground,
-            ) {
-                drawerHeader(name = "Sherif")
+    ModalDrawerSheet(drawerContainerColor = CupertinoSystemBackground) {
+        drawerHeader(name = userName)
 
-                // Section label
-                drawerSectionTitle(stringResource(R.string.drawer_section_orders))
+        // Section label
+        drawerSectionTitle(text = stringResource(R.string.drawer_section_orders))
 
-                groupCard {
-                    groupedDrawerItems.first.forEachIndexed { index, item ->
-                        drawerItemRow(
-                            entry = item,
-                            selected = currentRoute == item.route,
-                            onClick = {
-                                scope.launch { drawerState.close() }
-                                if (item.route == Screen.Logout.route) {
-                                    onLogout()
-                                } else {
-                                    navController.navigateSingleTop(item.route)
-                                }
-                            },
-                        )
-                        if (index != groupedDrawerItems.first.lastIndex) insetDivider()
-                    }
-                }
+        drawerGroup(items = grouped.first, currentRoute = currentRoute, onEntryClick = onEntryClick)
 
                 Spacer(Modifier.height(dimensionResource(R.dimen.smallSpace)))
 
-                // Group 2 (rest)
-                groupCard {
-                    // val rest = drawerItems.drop(FIRST_GROUP_SIZE)
-                    groupedDrawerItems.second.forEachIndexed { index, item ->
-                        drawerItemRow(
-                            entry = item,
-                            selected = currentRoute == item.route,
-                            onClick = {
-                                scope.launch { drawerState.close() }
-                                if (item.route == Screen.Logout.route) {
-                                    onLogout()
-                                } else {
-                                    navController.navigateSingleTop(item.route)
-                                }
-                            },
-                        )
-                        if (index != groupedDrawerItems.second.lastIndex) insetDivider()
-                    }
+        drawerGroup(items = grouped.second, currentRoute = currentRoute, onEntryClick = onEntryClick)
+    }
+}
+
+@Composable
+private fun drawerGroup(
+    items: List<DrawerItem>,
+    currentRoute: String,
+    onEntryClick: (String) -> Unit,
+) {
+    groupCard {
+        items.forEachIndexed { index, item ->
+            drawerItemRow(
+                entry = item,
+                selected = currentRoute == item.route,
+                onClick = { onEntryClick(item.route) },
+            )
+            if (index != items.lastIndex) insetDivider()
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun appTopBar(
+    title: String,
+    showOrdersMenu: Boolean,
+    onOpenDrawer: () -> Unit,
+    onOrdersMenuClick: (() -> Unit)?,
+) {
+    TopAppBar(
+        title = { Text(title) },
+        navigationIcon = {
+            IconButton(onClick = onOpenDrawer) {
+                Icon(Icons.Filled.Menu, contentDescription = stringResource(R.string.open_menu))
+            }
+        },
+        actions = {
+            if (showOrdersMenu && onOrdersMenuClick != null) {
+                IconButton(onClick = onOrdersMenuClick) {
+                    Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.topbar_more))
                 }
             }
         },
-    ) {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text(title) },
-                    navigationIcon = {
-                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(Icons.Filled.Menu, contentDescription = stringResource(R.string.open_menu))
-                        }
-                    },
-                )
-            },
-        ) { inner ->
-            Box(Modifier.padding(inner)) { content() }
-        }
-    }
+        colors =
+            TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                actionIconContentColor = MaterialTheme.colorScheme.onPrimary,
+            ),
+    )
 }
 
 fun NavHostController.navigateSingleTop(route: String) {
