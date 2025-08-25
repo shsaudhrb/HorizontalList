@@ -341,9 +341,7 @@ private fun errorSection(
 
 @Composable
 private fun emptySection() {
-    val iconSize =
-        dimensionResource(R.dimen.appLogoSize) / 6 // reuse existing; 300/6 = 50dp approx
-    val gap8 = dimensionResource(R.dimen.smallerSpace)
+    val iconSize = dimensionResource(R.dimen.appLogoSize)
 
     Column(
         Modifier.fillMaxSize(),
@@ -356,7 +354,7 @@ private fun emptySection() {
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(iconSize),
         )
-        Spacer(Modifier.height(gap8))
+        Spacer(Modifier.height(dimensionResource(R.dimen.smallerSpace)))
         Text(
             stringResource(R.string.empty_notifications),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
