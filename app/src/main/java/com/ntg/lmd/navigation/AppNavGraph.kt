@@ -34,7 +34,7 @@ import com.ntg.lmd.authentication.ui.screens.splash.splashScreen as SplashScreen
 fun appNavGraph(rootNavController: NavHostController) {
     NavHost(
         navController = rootNavController,
-        startDestination = Screen.Drawer.route,
+        startDestination = Screen.Splash.route,
     ) {
         // ---------- Splash ----------
         composable(Screen.Splash.route) {
