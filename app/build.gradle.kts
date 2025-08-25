@@ -101,6 +101,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     // Icons
     implementation(libs.androidx.material.icons.extended)
+    implementation(libs.androidx.material)
+
 }
 
 // Custom tasks for code quality checks

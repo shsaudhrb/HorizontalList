@@ -23,11 +23,11 @@ class OrderHistoryViewModel : ViewModel() {
     }
 
     private var all: List<OrderHistoryUi> = emptyList()
-
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing
     private val _filter = MutableStateFlow(OrdersHistoryFilter())
     val filter: StateFlow<OrdersHistoryFilter> = _filter
 
-    // UI list (paged)
     private val _orders = MutableStateFlow<List<OrderHistoryUi>>(emptyList())
     val orders: StateFlow<List<OrderHistoryUi>> = _orders
 
@@ -57,7 +57,6 @@ class OrderHistoryViewModel : ViewModel() {
         }
     }
 
-    // ----- public controls -----
     fun setAllowedStatuses(statuses: Set<OrderHistoryStatus>) {
         _filter.value = _filter.value.copy(allowed = statuses)
         recomputeAndResetPaging()
@@ -73,7 +72,6 @@ class OrderHistoryViewModel : ViewModel() {
         if (lastVisibleIndex >= _orders.value.size - PREFETCH_THRESHOLD) loadMore()
     }
 
-    // ----- internals -----
     private fun recomputeAndResetPaging() {
         _endReached.value = false
         val filtered = currentFilteredSorted()
@@ -97,6 +95,20 @@ class OrderHistoryViewModel : ViewModel() {
                 if (_orders.value.size >= filtered.size) _endReached.value = true
             } finally {
                 _isLoadingMore.value = false
+            }
+        }
+    }
+    fun refreshOrders() {
+        if (_isRefreshing.value) return
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            try {
+                // TODO: fetch latest from  API
+                delay(600)
+                all = all.shuffled()
+                recomputeAndResetPaging()
+            } finally {
+                _isRefreshing.value = false
             }
         }
     }
