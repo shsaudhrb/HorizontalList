@@ -25,14 +25,9 @@ fun filterRow(
     filter: NotificationFilter,
     onFilterChange: (NotificationFilter) -> Unit,
 ) {
-    val gap8 = dimensionResource(R.dimen.smallerSpace) // 8dp
-    val chipR = dimensionResource(R.dimen.chipRoundCorner)
-    val bw1 = dimensionResource(R.dimen.smallestStrokeWidth)
-    val bw2 = dimensionResource(R.dimen.smallStrokeWidth)
-
     Row(
         Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(gap8),
+        horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.smallerSpace)),
     ) {
         @Composable
         fun chip(
@@ -44,7 +39,7 @@ fun filterRow(
                 selected = selected,
                 onClick = { onFilterChange(value) },
                 label = { Text(text = label, style = MaterialTheme.typography.labelMedium) },
-                shape = RoundedCornerShape(chipR),
+                shape = RoundedCornerShape(dimensionResource(R.dimen.chipRoundCorner)),
                 colors =
                     FilterChipDefaults.filterChipColors(
                         containerColor = Color.Transparent,
@@ -58,8 +53,8 @@ fun filterRow(
                         selected = selected,
                         borderColor = MaterialTheme.colorScheme.outlineVariant,
                         selectedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.80f),
-                        borderWidth = bw1,
-                        selectedBorderWidth = bw2,
+                        borderWidth = dimensionResource(R.dimen.smallestStrokeWidth),
+                        selectedBorderWidth = dimensionResource(R.dimen.smallStrokeWidth),
                     ),
             )
         }

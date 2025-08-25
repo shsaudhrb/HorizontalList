@@ -36,7 +36,6 @@ class FcmService : FirebaseMessagingService() {
         private const val CHANNEL_DESC = "Notifications about agent updates and orders"
         private const val TAG = "FCM"
 
-        // ✅ No magic numbers
         private const val REQUEST_CODE_CONTENT = 2001
         private const val DEFAULT_DEEPLINK = "myapp://notifications"
     }
@@ -65,7 +64,6 @@ class FcmService : FirebaseMessagingService() {
                         deepLink = payload.deepLink,
                     )
                 } catch (_: SecurityException) {
-                    // ignored
                 }
             }
         }
@@ -144,7 +142,7 @@ class FcmService : FirebaseMessagingService() {
         val contentIntent =
             PendingIntent.getActivity(
                 this,
-                REQUEST_CODE_CONTENT, // ✅ no magic number
+                REQUEST_CODE_CONTENT,
                 clickIntent,
                 flags,
             )
@@ -161,14 +159,12 @@ class FcmService : FirebaseMessagingService() {
                 .setCategory(NotificationCompat.CATEGORY_MESSAGE)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
 
-        // Optional large icon
         val large = BitmapFactory.decodeResource(resources, R.drawable.ic_notification)
         builder.setLargeIcon(large)
 
         NotificationManagerCompat.from(this).notify(Random.nextInt(), builder.build())
     }
 
-    /** فحص إذن الإشعارات + تفعيلها للتطبيق */
     private fun canPostNotifications(): Boolean {
         val enabled = NotificationManagerCompat.from(this).areNotificationsEnabled()
         if (!enabled) return false
@@ -183,7 +179,6 @@ class FcmService : FirebaseMessagingService() {
         }
     }
 
-    /** إنشاء القناة (Android O+) */
     private fun ensureChannel() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager

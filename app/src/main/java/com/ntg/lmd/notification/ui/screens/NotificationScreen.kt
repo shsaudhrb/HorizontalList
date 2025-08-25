@@ -120,38 +120,29 @@ private fun notificationCard(item: NotificationUi) {
             AgentNotification.Type.OTHER -> Icons.Outlined.Notifications
         }
 
-    val cardCorner = dimensionResource(R.dimen.cardRoundCorner) // 28dp
-    val contentPad = dimensionResource(R.dimen.smallSpace) // 12dp
-    val gapSmall = dimensionResource(R.dimen.smallSpace) // 12dp
-    val gapTiny = dimensionResource(R.dimen.tinySpace) // 6dp
-    val iconBox = dimensionResource(R.dimen.notificationIconBox) // 42dp
-    val accentBarW = dimensionResource(R.dimen.extraSmallSpace) // 4dp
-    val accentBarR = dimensionResource(R.dimen.notificationAccentBarRadius) // 6dp
-    val smallElev = dimensionResource(R.dimen.smallElevation) // 2dp
-
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(cardCorner),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = smallElev),
+        shape = RoundedCornerShape(dimensionResource(R.dimen.cardRoundCorner)),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = dimensionResource(R.dimen.smallElevation)),
     ) {
         Row(
             Modifier
                 .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.surface)
-                .padding(contentPad),
+                .padding(dimensionResource(R.dimen.smallSpace)),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier =
                     Modifier
-                        .size(iconBox)
+                        .size(dimensionResource(R.dimen.notificationIconBox))
                         .background(accent.copy(alpha = 0.15f), shape = CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(icon, contentDescription = null, tint = accent)
             }
 
-            Spacer(Modifier.width(gapSmall))
+            Spacer(Modifier.width(dimensionResource(R.dimen.smallSpace)))
 
             Column(Modifier.weight(1f)) {
                 Text(
@@ -160,7 +151,7 @@ private fun notificationCard(item: NotificationUi) {
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Spacer(Modifier.height(gapTiny))
+                Spacer(Modifier.height(dimensionResource(R.dimen.tinySpace)))
                 Text(
                     text = ageLabel,
                     style = MaterialTheme.typography.labelMedium,
@@ -170,11 +161,14 @@ private fun notificationCard(item: NotificationUi) {
 
             Spacer(
                 Modifier
-                    .width(accentBarW)
+                    .width(dimensionResource(R.dimen.extraSmallSpace))
                     .height(IntrinsicSize.Max)
                     .background(
                         accent.copy(alpha = 0.8f),
-                        RoundedCornerShape(topStart = accentBarR, bottomStart = accentBarR),
+                        RoundedCornerShape(
+                            topStart = dimensionResource(R.dimen.notificationAccentBarRadius),
+                            bottomStart = dimensionResource(R.dimen.notificationAccentBarRadius),
+                        ),
                     ),
             )
         }
@@ -188,7 +182,6 @@ private fun notificationContent(
     onFilterChange: (NotificationFilter) -> Unit,
 ) {
     when {
-        // full-screen initial loading
         lazyPagingItems.loadState.refresh is LoadState.Loading &&
             lazyPagingItems.itemCount == 0 -> {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -196,7 +189,6 @@ private fun notificationContent(
             }
         }
 
-        // full-screen error on initial load
         lazyPagingItems.loadState.refresh is LoadState.Error -> {
             val e = (lazyPagingItems.loadState.refresh as LoadState.Error).error
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
