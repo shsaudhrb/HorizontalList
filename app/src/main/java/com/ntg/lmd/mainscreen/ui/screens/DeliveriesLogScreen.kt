@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.TabRowDefaults.Divider
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -19,30 +20,64 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.ntg.lmd.mainscreen.ui.viewmodel.DeliveriesLogViewModel
+import com.ntg.lmd.mainscreen.ui.viewmodel.DeliveryState
 import com.ntg.lmd.ui.theme.SuccessGreen
-
-data class DeliveryLog(
-    val orderDate: String,
-    val deliveryTime: String,
-    val orderId: String
-)
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 @Composable
 @Suppress("UNUSED_PARAMETER")
-fun deliveriesLogScreen(navController: NavController) {
-    val logs = listOf(
-        DeliveryLog("15/9/2019 3:00 PM", "20 mins ago", "#2345645645643"),
-        DeliveryLog("16/9/2019 5:00 PM", "25 mins ago", "#2345645645214"),
-        DeliveryLog("17/9/2019 5:00 PM", "30 mins ago", "#53456445214")
-    )
+fun deliveriesLogScreen(
+    navController: NavController,
+    vm: DeliveriesLogViewModel = viewModel()
+) {
+
+    val context = LocalContext.current
+    LaunchedEffect(Unit) { vm.loadFromAssets(context) }
+
+    val backStackEntry = navController.currentBackStackEntry
+
+    LaunchedEffect(backStackEntry) {
+        val h = backStackEntry?.savedStateHandle ?: return@LaunchedEffect
+        val searchingFlow = h.getStateFlow("searching", false)
+        val textFlow = h.getStateFlow("search_text", "")
+
+        combine(searchingFlow, textFlow) { enabled, text ->
+            if (enabled) text else "" // when search is closed, reset
+        }
+            .distinctUntilChanged()
+            .collect { query -> vm.searchById(query) }
+    }
+
+    LaunchedEffect(backStackEntry) {
+        val h = backStackEntry?.savedStateHandle ?: return@LaunchedEffect
+        h.getStateFlow("searching", false).collect { enabled ->
+            if (!enabled) vm.searchById("") // restore full list
+        }
+    }
+
+    LaunchedEffect(backStackEntry) {
+        val h = backStackEntry?.savedStateHandle ?: return@LaunchedEffect
+        h.getStateFlow("search_submit", "").collect { submitted ->
+            if (submitted.isNotEmpty()) vm.searchById(submitted)
+        }
+    }
+
+    val logs by vm.logs.collectAsState()
 
     val iconWidth = 60.dp
     val detailsWidth = 220.dp
@@ -112,14 +147,28 @@ fun deliveriesLogScreen(navController: NavController) {
                             modifier = Modifier.width(iconWidth),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                imageVector = Icons.Filled.CheckCircle,
-                                contentDescription = "Delivered",
-                                tint = SuccessGreen
-                            )
+                            when (log.state) {
+                                DeliveryState.DELIVERED -> Icon(
+                                    imageVector = Icons.Filled.CheckCircle,
+                                    contentDescription = "Delivered",
+                                    tint = SuccessGreen
+                                )
+
+                                DeliveryState.CANCELLED, DeliveryState.FAILED -> Icon(
+                                    imageVector = Icons.Filled.Cancel,
+                                    contentDescription = "Not delivered",
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+
+                                else -> Icon(
+                                    imageVector = Icons.Filled.CheckCircle,
+                                    contentDescription = "Other",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
 
-                        // Order details: date + order ID stacked vertically
+                        // Order details: date + order ID
                         Column(
                             modifier = Modifier.width(detailsWidth),
                             horizontalAlignment = Alignment.CenterHorizontally
@@ -142,7 +191,11 @@ fun deliveriesLogScreen(navController: NavController) {
                         // Delivery time
                         Text(
                             text = log.deliveryTime,
-                            color = SuccessGreen,
+                            color = when (log.state) {
+                                DeliveryState.DELIVERED -> SuccessGreen
+                                DeliveryState.CANCELLED, DeliveryState.FAILED -> MaterialTheme.colorScheme.error
+                                else -> MaterialTheme.colorScheme.onSurfaceVariant
+                            },
                             modifier = Modifier.width(timeWidth),
                             textAlign = TextAlign.Center
                         )
