@@ -28,6 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -50,111 +51,91 @@ import kotlin.math.abs
 @Composable
 fun customBottom(
     orders: List<OrderInfo>,
-    modifier: Modifier = Modifier,
+    selectedOrderNumber: String?,
     onAddClick: (OrderInfo) -> Unit = {},
     onOrderClick: (OrderInfo) -> Unit = {},
-    onCenteredOrderChange: (order: OrderInfo, index: Int) -> Unit = { _, _ -> },
+    onCenteredOrderChange: (OrderInfo, Int) -> Unit = { _, _ -> },
 ) {
-    // state for scrolling
     val listState = rememberLazyListState()
-
-    // for animating scroll-to-center when a card is tapped
     val scope = rememberCoroutineScope()
-
-    // gets the device's width in dp
-    val screenWidth = LocalConfiguration.current.screenWidthDp.dp
-
-    // calculates how much empty space is left on the sides when one card is centered on the screen
     val sidePadding =
-        ((screenWidth - dimensionResource(id = R.dimen.orders_card_width)) / 2).coerceAtLeast(0.dp)
+        ((LocalConfiguration.current.screenWidthDp.dp - dimensionResource(id = R.dimen.orders_card_width)) / 2)
+            .coerceAtLeast(0.dp)
+    var lastCentered by remember { mutableIntStateOf(-1) }
+    var programmatic by remember { mutableStateOf(false) }
+    val px = with(LocalDensity.current) { sidePadding.roundToPx() }
 
-    // ensure the lazyrow cards always stop centered on screen when scrolling
-    val cardBehavior = rememberSnapFlingBehavior(lazyListState = listState)
-
-    // Track which card index is currently centered in the lazy row
-    var lastCenteredIndex by remember { mutableIntStateOf(-1) }
-
-    // launched effect for centered the item when we scroll
-    LaunchedEffect(orders, listState) {
-        snapshotFlow { listState.layoutInfo }.collect { layoutInfo ->
-            // skip if there are no orders
-            if (orders.isEmpty() || layoutInfo.visibleItemsInfo.isEmpty()) return@collect
-
-            // calculate the horizontal center of the viewport ( middle of the screen )
-            val viewportCenter =
-                (layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset) / 2
-
-            // find the visible item whose center is closest to the viewport center
-            val nearest =
-                layoutInfo.visibleItemsInfo.minByOrNull { item ->
-                    val itemCenter = item.offset + item.size / 2
-                    abs(itemCenter - viewportCenter)
+    // Jump to the externally selected order
+    LaunchedEffect(selectedOrderNumber, orders) {
+        if (!selectedOrderNumber.isNullOrEmpty()) {
+            val i = orders.indexOfFirst { it.orderNumber == selectedOrderNumber }
+            if (i >= 0) {
+                programmatic = true
+                try {
+                    listState.animateScrollToItem(i, -px)
+                } finally {
+                    programmatic = false
                 }
-
-            // if the centered item changed, notify via callback
-            val newIndex = nearest?.index ?: return@collect
-            if (newIndex != lastCenteredIndex && newIndex in orders.indices) {
-                lastCenteredIndex = newIndex
-                onCenteredOrderChange(orders[newIndex], newIndex)
+                lastCentered = i
+                onCenteredOrderChange(orders[i], i)
             }
         }
     }
 
-    Box(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .height(200.dp)
-                .background(MaterialTheme.colorScheme.primary)
-    ) {
-        if (orders.isEmpty()) {
-            // empty list
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = stringResource(R.string.no_orders),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                )
-            }
-        } else {
-            // list of orders
-            LazyRow(
-                state = listState,
-                flingBehavior = cardBehavior,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.Center),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(start = dimensionResource(id = R.dimen.start_padding),
-                    end = sidePadding),
-            ) {
-                itemsIndexed(
-                    items = orders,
-                    key = { _, item -> item.orderNumber },
-                ) { index, order ->
-                    val densityPx = LocalDensity.current
-                    val sidePaddingPx = with(densityPx) { sidePadding.roundToPx() }
-
-                    orderCard(
-                        order = order,
-                        onAddClick = onAddClick,
-                        onOrderClick = { clicked ->
-                            // when a card is tapped: animate it into the center
-                            scope.launch {
-                                listState.animateScrollToItem(
-                                    index = index,
-                                    scrollOffset = -sidePaddingPx
-                                ) // negative to pull it to center
-                            }
-                            onOrderClick(clicked)
-                        },
-                    )
+    // When the list stops moving, compute the centered item and notify
+    LaunchedEffect(orders, listState) {
+        snapshotFlow { listState.isScrollInProgress }.collect { moving ->
+            if (!moving && !programmatic && orders.isNotEmpty()) {
+                val info = listState.layoutInfo
+                val center = (info.viewportStartOffset + info.viewportEndOffset) / 2
+                val nearest =
+                    info.visibleItemsInfo.minByOrNull { abs((it.offset + it.size / 2) - center) }
+                        ?: return@collect
+                val idx = nearest.index
+                if (idx in orders.indices && idx != lastCentered) {
+                    lastCentered = idx
+                    onCenteredOrderChange(orders[idx], idx)
                 }
+            }
+        }
+    }
+
+    if (orders.isEmpty()) return
+
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(200.dp)
+            .background(MaterialTheme.colorScheme.primary),
+    ) {
+        LazyRow(
+            state = listState,
+            flingBehavior = rememberSnapFlingBehavior(lazyListState = listState),
+            modifier = Modifier.fillMaxWidth().align(Alignment.Center),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(start = sidePadding, end = sidePadding),
+        ) {
+            itemsIndexed(orders, key = { _, order -> order.orderNumber }) { index, order ->
+                orderCard(
+                    order = order,
+                    onAddClick = onAddClick,
+                    onOrderClick = { clicked ->
+                        scope.launch {
+                            programmatic = true
+                            try {
+                                listState.animateScrollToItem(index, -px)
+                            } finally {
+                                programmatic = false
+                            }
+                            // Explicitly notify after snapping
+                            if (index in orders.indices) {
+                                lastCentered = index
+                                onCenteredOrderChange(orders[index], index)
+                            }
+                        }
+                        onOrderClick(clicked)
+                    },
+                )
             }
         }
     }
@@ -170,9 +151,9 @@ private fun orderCard(
     Card(
         onClick = { onOrderClick(order) }, // click on selected order
         shape = RoundedCornerShape(14.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        modifier = modifier.size(width = 270.dp, height = 150.dp),
+        modifier =
+            modifier.size(width = 270.dp, height = 150.dp),
     ) {
         Column(
             modifier =
