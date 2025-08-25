@@ -14,7 +14,7 @@
   { "name": "Isabella Lewis",  "orderNumber": "#12", "timeAgo": "1 hour ago",     "itemsCount": 2, "lat": 24.597625, "lng": 39.62748 },
   { "name": "Ethan Young",     "orderNumber": "#13", "timeAgo": "3 hours ago",    "itemsCount": 1, "lat": 24.554658, "lng": 39.654546 },
   { "name": "Mia Hall",        "orderNumber": "#14", "timeAgo": "7 minutes ago",  "itemsCount": 4, "lat": 24.505142, "lng": 39.6423 },
-  { "name": "Noah Allen",      "orderNumber": "#15", "timeAgo": "2 hours ago",    "itemsCount": 3, "lat": 24.472142, "lng": 39.596855 },
+
   { "name": "Ava King",        "orderNumber": "#16", "timeAgo": "11 minutes ago", "itemsCount": 2, "lat": 24.471425, "lng": 39.53765 },
   { "name": "Lucas Wright",    "orderNumber": "#17", "timeAgo": "4 hours ago",    "itemsCount": 5, "lat": 24.502435, "lng": 39.494116 },
   { "name": "Charlotte Scott", "orderNumber": "#18", "timeAgo": "28 minutes ago", "itemsCount": 1, "lat": 24.551781, "lng": 39.480636 },

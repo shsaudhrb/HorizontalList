@@ -1,7 +1,6 @@
 package com.ntg.lmd.mainscreen.ui.screens
 
 import android.Manifest
-import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -16,7 +15,6 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -30,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
@@ -38,24 +37,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.CameraPositionState
-import com.google.maps.android.compose.Circle
-import com.google.maps.android.compose.GoogleMap
-import com.google.maps.android.compose.MapProperties
-import com.google.maps.android.compose.MapUiSettings
-import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.ntg.lmd.R
@@ -63,6 +54,7 @@ import com.ntg.lmd.mainscreen.domain.model.GeneralPoolUiState
 import com.ntg.lmd.mainscreen.domain.model.MapStates
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.ui.components.customBottom
+import com.ntg.lmd.mainscreen.ui.components.mapCenter
 import com.ntg.lmd.mainscreen.ui.viewmodel.GeneralPoolUiEvent
 import com.ntg.lmd.mainscreen.ui.viewmodel.GeneralPoolViewModel
 import kotlinx.coroutines.launch
@@ -73,17 +65,8 @@ private const val INITIAL_MAP_ZOOM = 12f
 private const val ORDER_FOCUS_ZOOM = 14f
 
 // Slider constraints
-private const val DISTANCE_MIN_KM: Double = 0.0
+private const val DISTANCE_MIN_KM: Double = 1.0
 private const val DISTANCE_MAX_KM: Double = 100.0
-
-// screen height
-private const val TOP_OVERLAY_RATIO = 0.09f // 9% of screen height
-private const val BOTTOM_BAR_RATIO = 0.22f // 22% of screen height
-
-// Madinah Latitude and Longitude
-private const val DEFAULT_CITY_CENTER_LAT = 24.5247
-private const val DEFAULT_CITY_CENTER_LNG = 39.5692
-private val DEFAULT_CITY_CENTER = LatLng(DEFAULT_CITY_CENTER_LAT, DEFAULT_CITY_CENTER_LNG)
 
 @Composable
 fun generalPoolScreen(
@@ -94,14 +77,23 @@ fun generalPoolScreen(
     val ui by generalPoolViewModel.ui.collectAsStateWithLifecycle()
 
     // selected order and camera position to it
-    val cameraPositionState =
-        rememberCameraPositionState {
-            position = CameraPosition.fromLatLngZoom(DEFAULT_CITY_CENTER, INITIAL_MAP_ZOOM)
-        }
-    val markerState = remember { MarkerState(position = DEFAULT_CITY_CENTER) }
+    val cameraPositionState = rememberCameraPositionState()
+    val markerState = remember { MarkerState(position = LatLng(0.0, 0.0)) }
     val scope = rememberCoroutineScope()
 
     val deviceLatLng by generalPoolViewModel.deviceLatLng.collectAsStateWithLifecycle()
+
+    val hasCenteredOnDevice = remember { mutableStateOf(false) }
+
+    LaunchedEffect(deviceLatLng, ui.selected) {
+        val loc = deviceLatLng
+        if (loc != null && ui.selected == null && !hasCenteredOnDevice.value) {
+            cameraPositionState.move(
+                CameraUpdateFactory.newLatLngZoom(loc, INITIAL_MAP_ZOOM),
+            )
+            hasCenteredOnDevice.value = true
+        }
+    }
 
     // Load Local orders.json from assets
     LaunchedEffect(Unit) { generalPoolViewModel.loadOrdersFromAssets(context) }
@@ -161,12 +153,15 @@ fun generalPoolScreen(
                 color = MaterialTheme.colorScheme.onBackground,
             )
         } else {
-            customBottom(
-                orders = ui.mapOrders,
-                onOrderClick = { order -> focusOnOrder(order, false) },
-                onCenteredOrderChange = { order, _ -> focusOnOrder(order, false) },
-                modifier = Modifier.align(Alignment.BottomCenter),
-            )
+            Box(Modifier.align(Alignment.BottomCenter)) {
+                customBottom(
+                    orders = ui.mapOrders,
+                    selectedOrderNumber = ui.selected?.orderNumber, // ← drives auto-centering
+                    onOrderClick = { order -> focusOnOrder(order, false) },
+                    onCenteredOrderChange = { order, _ -> focusOnOrder(order, false) },
+                    onAddClick = { },
+                )
+            }
         }
     }
 }
@@ -223,7 +218,7 @@ private fun generalPoolContent(
         }
 
         // Search results should be ON TOP of both map and filter
-        if (ui.searching && ui.searchText.isNotBlank() && ui.filteredOrders.isNotEmpty()) {
+        if (ui.searching && ui.searchText.isNotBlank()) {
             Box(
                 modifier =
                     Modifier
@@ -234,7 +229,7 @@ private fun generalPoolContent(
             ) {
                 searchResultsDropdown(
                     visible = true,
-                    orders = ui.filteredOrders,
+                    orders = ui.filteredOrdersInRange,
                     onPick = { focusOnOrder(it, true) },
                 )
             }
@@ -242,91 +237,6 @@ private fun generalPoolContent(
     }
 }
 
-@Composable
-private fun mapCenter(
-    ui: GeneralPoolUiState,
-    mapStates: MapStates,
-    deviceLatLng: LatLng?,
-    modifier: Modifier = Modifier,
-) {
-    val (cameraPositionState, markerState) = mapStates
-
-    // Screen-aware padding so map UI (incl. +/- and my-location button) isn't hidden
-    val cfg = LocalConfiguration.current
-    val screenH = cfg.screenHeightDp.dp
-
-    val topOverlayHeight = (screenH * TOP_OVERLAY_RATIO).coerceIn(48.dp, 96.dp)
-    val bottomBarHeight = (screenH * BOTTOM_BAR_RATIO).coerceIn(128.dp, 280.dp)
-
-    // Enable blue dot only if we have location permission (prevents SecurityException)
-    val context = LocalContext.current
-    val hasFine =
-        ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.ACCESS_FINE_LOCATION,
-        ) == PackageManager.PERMISSION_GRANTED
-    val hasCoarse =
-        ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.ACCESS_COARSE_LOCATION,
-        ) == PackageManager.PERMISSION_GRANTED
-    val canShowMyLocation = hasFine || hasCoarse
-
-    GoogleMap(
-        modifier = modifier,
-        cameraPositionState = cameraPositionState,
-        // Blue dot + target button
-        properties = MapProperties(isMyLocationEnabled = canShowMyLocation),
-        uiSettings = MapUiSettings(zoomControlsEnabled = true, myLocationButtonEnabled = true),
-        contentPadding = PaddingValues(top = topOverlayHeight, bottom = bottomBarHeight),
-    ) {
-        // Filter radius circle
-        if (deviceLatLng != null && ui.distanceThresholdKm > 0.0) {
-            Circle(
-                center = deviceLatLng,
-                radius = ui.distanceThresholdKm * 1000.0, // km -> meters
-                strokeWidth = 3f,
-                strokeColor = MaterialTheme.colorScheme.primary,
-                fillColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                zIndex = 0.5f,
-            )
-        }
-
-        // Markers for every order (except the selected one; it has its own marker)
-        ui.mapOrders.forEach { order ->
-            val isSelected = ui.selected?.orderNumber == order.orderNumber
-            if (!isSelected) {
-                Marker(
-                    state = MarkerState(position = LatLng(order.lat, order.lng)),
-                    title = order.name,
-                    snippet = order.orderNumber,
-                    zIndex = 0f,
-                )
-            }
-        }
-
-        // keep the marker pinned to the currently selected order
-        LaunchedEffect(ui.selected?.lat, ui.selected?.lng) {
-            ui.selected?.let { sel ->
-                markerState.position = LatLng(sel.lat, sel.lng)
-            }
-        }
-
-        // render the single marker only if we have a selection (special/high zIndex)
-        ui.selected?.let {
-            Marker(
-                state = markerState,
-                title = it.name,
-                snippet = it.orderNumber,
-                zIndex = 1f,
-            )
-        }
-    }
-}
-
-// -------------------- Distance Filter --------------------
-
-// distance filter component
 // used to select max distance in km for filtering orders
 @Composable
 private fun distanceFilterBar(
@@ -459,19 +369,28 @@ private fun searchResultsDropdown(
                     .fillMaxWidth()
                     .padding(vertical = 8.dp),
             ) {
-                orders.forEach { order ->
-                    Row(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .clickable { onPick(order) }
-                                .padding(horizontal = 16.dp, vertical = 10.dp),
-                    ) {
-                        Text(
-                            text = "${order.orderNumber} • ${order.name}",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onBackground,
-                        )
+                if (orders.isEmpty()) {
+                    Text(
+                        text = stringResource(R.string.no_orders),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                    )
+                } else {
+                    orders.forEach { order ->
+                        Row(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onPick(order) }
+                                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                        ) {
+                            Text(
+                                text = "${order.orderNumber} • ${order.name}",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onBackground,
+                            )
+                        }
                     }
                 }
             }

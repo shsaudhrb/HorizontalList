@@ -36,6 +36,6 @@
     <string name="location_access_request">Please allow location access to enable distance filtering</string>
     <string name="kilometer">Km</string>
     <string name="loading_text">Loading Text...</string>
-    <string name="no_orders">No orders</string>
+    <string name="no_orders">No orders Found</string>
 
 </resources>

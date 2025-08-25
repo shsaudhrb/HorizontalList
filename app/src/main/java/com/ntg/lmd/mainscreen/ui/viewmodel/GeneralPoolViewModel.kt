@@ -9,6 +9,7 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.maps.model.LatLng
@@ -44,6 +45,9 @@ class GeneralPoolViewModel : ViewModel() {
     private val _deviceLatLng = MutableStateFlow<LatLng?>(null)
     val deviceLatLng: StateFlow<LatLng?> = _deviceLatLng.asStateFlow()
 
+    // location client held as a property and cleared in onCleared()
+    private var fusedLocationClient: FusedLocationProviderClient? = null
+
     // meters -> kilometers
     companion object {
         private const val METERS_IN_KILOMETER = 1000.0
@@ -69,20 +73,6 @@ class GeneralPoolViewModel : ViewModel() {
         context: Context,
         promptIfMissing: Boolean,
     ) {
-        val granted = isLocationGranted(context)
-        _ui.update { it.copy(hasLocationPerm = granted) }
-
-        if (granted) {
-            // permission already granted -> fetch device location and distances
-            fetchAndApplyDistances(context)
-        } else if (promptIfMissing) {
-            // permission missing -> ask UI layer to request it
-            _events.tryEmit(GeneralPoolUiEvent.RequestLocationPermission)
-        }
-    }
-
-    // check if location permission is granted
-    private fun isLocationGranted(context: Context): Boolean {
         val fine =
             ContextCompat.checkSelfPermission(
                 context,
@@ -93,7 +83,21 @@ class GeneralPoolViewModel : ViewModel() {
                 context,
                 Manifest.permission.ACCESS_COARSE_LOCATION,
             ) == PackageManager.PERMISSION_GRANTED
-        return fine || coarse
+        val granted = fine || coarse
+
+        _ui.update { it.copy(hasLocationPerm = granted) }
+
+        if (granted) {
+            // permission already granted -> fetch device location and distances
+            if (fusedLocationClient == null) {
+                val appCtx = context.applicationContext
+                fusedLocationClient = LocationServices.getFusedLocationProviderClient(appCtx)
+            }
+            fetchAndApplyDistances()
+        } else if (promptIfMissing) {
+            // permission missing -> ask UI layer to request it
+            _events.tryEmit(GeneralPoolUiEvent.RequestLocationPermission)
+        }
     }
 
     // for loading orders from assets (orders.json)
@@ -140,30 +144,34 @@ class GeneralPoolViewModel : ViewModel() {
 
     // fetch device location, compute distance to each order, and sort by nearest first
     @SuppressLint("MissingPermission")
-    fun fetchAndApplyDistances(context: Context) {
-        val fused = LocationServices.getFusedLocationProviderClient(context)
+    fun fetchAndApplyDistances() {
+        val client = fusedLocationClient ?: return
+        val currentOrders = _ui.value.orders
+        if (currentOrders.isEmpty()) return
 
         fun List<OrderInfo>.withDistancesFrom(loc: Location): List<OrderInfo> =
             map { o ->
                 o.copy(distanceKm = calculateDistanceKm(loc.latitude, loc.longitude, o.lat, o.lng))
             }.sortedBy { it.distanceKm }
 
-        val currentOrders = _ui.value.orders
-        if (currentOrders.isEmpty()) return
-
         fun applyFrom(loc: Location) {
-            _deviceLatLng.value = LatLng(loc.latitude, loc.longitude) // <— NEW
+            _deviceLatLng.value = LatLng(loc.latitude, loc.longitude)
             _ui.update { it.copy(orders = currentOrders.withDistancesFrom(loc)) }
             ensureSelectedStillVisible()
         }
 
-        fused.lastLocation
+        // lastLocation (fast, may be null/outdated)
+        client.lastLocation
             .addOnSuccessListener { last ->
                 if (last != null) applyFrom(last)
             }
-        fused
-            .getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, null)
-            .addOnSuccessListener { loc ->
+
+        // getCurrentLocation
+        client
+            .getCurrentLocation(
+                Priority.PRIORITY_BALANCED_POWER_ACCURACY,
+                null,
+            ).addOnSuccessListener { loc ->
                 if (loc != null) applyFrom(loc)
             }.addOnFailureListener {
             }
@@ -178,4 +186,10 @@ class GeneralPoolViewModel : ViewModel() {
                 s
             }
         }
+
+    // clean up
+    override fun onCleared() {
+        super.onCleared()
+        fusedLocationClient = null
+    }
 }

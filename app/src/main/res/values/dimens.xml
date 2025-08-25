@@ -41,5 +41,7 @@
     <dimen name="header_height">90dp</dimen>
     <dimen name="orders_card_width">300dp</dimen>
 
+    <dimen name="start_padding">16dp</dimen>
+
 
 </resources>

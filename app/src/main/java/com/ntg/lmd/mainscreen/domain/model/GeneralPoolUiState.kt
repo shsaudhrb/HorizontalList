@@ -3,7 +3,7 @@ package com.ntg.lmd.mainscreen.domain.model
 data class GeneralPoolUiState(
     val isLoading: Boolean = true,
     val hasLocationPerm: Boolean = false,
-    val distanceThresholdKm: Double = 0.0,
+    val distanceThresholdKm: Double = 100.0,
     val orders: List<OrderInfo> = emptyList(),
     val searchText: String = "",
     val searching: Boolean = false,
@@ -31,6 +31,17 @@ data class GeneralPoolUiState(
                 emptyList()
             } else {
                 orders.filter {
+                    it.distanceKm.isFinite() && it.distanceKm <= distanceThresholdKm + DISTANCE_EPSILON
+                }
+            }
+
+    // orders in range filter for the dropdown
+    val filteredOrdersInRange: List<OrderInfo>
+        get() =
+            if (distanceThresholdKm <= 0.0) {
+                emptyList()
+            } else {
+                filteredOrders.filter {
                     it.distanceKm.isFinite() && it.distanceKm <= distanceThresholdKm + DISTANCE_EPSILON
                 }
             }
