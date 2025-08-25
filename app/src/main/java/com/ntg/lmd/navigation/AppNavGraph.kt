@@ -5,9 +5,6 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -22,7 +19,6 @@ import com.ntg.lmd.mainscreen.ui.screens.myOrdersScreen
 import com.ntg.lmd.mainscreen.ui.screens.myPoolScreen
 import com.ntg.lmd.mainscreen.ui.screens.ordersHistoryScreen
 import com.ntg.lmd.navigation.component.appScaffoldWithDrawer
-import com.ntg.lmd.navigation.component.navigateSingleTop
 import com.ntg.lmd.notification.ui.screens.notificationScreen
 import com.ntg.lmd.settings.ui.screens.settingsOptions
 import com.ntg.lmd.authentication.ui.screens.login.loginScreen as LoginScreen

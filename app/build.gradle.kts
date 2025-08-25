@@ -113,6 +113,8 @@ dependencies {
     implementation(libs.play.services.location)
     // Icons
     implementation(libs.androidx.material.icons.extended)
+    implementation(libs.androidx.material)
+
 }
 
 // Custom tasks for code quality checks

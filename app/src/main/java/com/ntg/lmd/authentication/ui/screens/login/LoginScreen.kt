@@ -28,6 +28,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
@@ -43,6 +44,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import com.ntg.lmd.R
 import com.ntg.lmd.authentication.ui.components.appLogo
 import com.ntg.lmd.authentication.ui.components.gradientPrimaryButton
@@ -52,6 +54,7 @@ import com.ntg.lmd.authentication.ui.model.CardUi
 import com.ntg.lmd.authentication.ui.model.InputProps
 import com.ntg.lmd.authentication.ui.model.LoginUiState
 import com.ntg.lmd.authentication.ui.viewmodel.login.LoginViewModel
+import com.ntg.lmd.navigation.Screen
 
 private const val CARD_SCALE_FOCUSED = 1.02f
 private const val CARD_SCALE_DEFAULT = 1f
@@ -60,6 +63,7 @@ private const val CARD_ELEVATION_DEFAULT = 2f
 
 @Composable
 fun loginScreen(
+    navController: NavController,
     viewModel: LoginViewModel =
         androidx.lifecycle.viewmodel.compose
             .viewModel(),
@@ -101,6 +105,7 @@ fun loginScreen(
             messageRes = ui.message,
         ) {
             authFields(
+                navController = navController,
                 ui = ui,
                 onUsername = viewModel::updateUsername,
                 onPassword = viewModel::updatePassword,
@@ -189,6 +194,7 @@ private fun authCard(
 // Card Fields & Button
 @Composable
 private fun authFields(
+    navController: NavController,
     ui: LoginUiState,
     onUsername: (String) -> Unit,
     onPassword: (String) -> Unit,
@@ -237,6 +243,14 @@ private fun authFields(
         loading = ui.isLoading,
         onClick = onSubmit,
     )
+    LaunchedEffect(ui.loginSuccess) {
+        if (ui.loginSuccess) {
+            navController.navigate(Screen.Drawer.route) {
+                popUpTo(Screen.Login.route) { inclusive = true }
+                launchSingleTop = true
+            }
+        }
+    }
 }
 
 private val LocalOnFocusForUsername = compositionLocalOf<(Boolean) -> Unit> { {} }
