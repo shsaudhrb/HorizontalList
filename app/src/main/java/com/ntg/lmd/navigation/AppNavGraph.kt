@@ -5,6 +5,10 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -17,9 +21,10 @@ import com.ntg.lmd.mainscreen.ui.screens.deliveriesLogScreen
 import com.ntg.lmd.mainscreen.ui.screens.generalPoolScreen
 import com.ntg.lmd.mainscreen.ui.screens.myOrdersScreen
 import com.ntg.lmd.mainscreen.ui.screens.myPoolScreen
-import com.ntg.lmd.mainscreen.ui.screens.ordersHistoryScreen
 import com.ntg.lmd.navigation.component.appScaffoldWithDrawer
+import com.ntg.lmd.navigation.component.navigateSingleTop
 import com.ntg.lmd.notification.ui.screens.notificationScreen
+import com.ntg.lmd.order.ui.screen.ordersHistoryRoute
 import com.ntg.lmd.settings.ui.screens.settingsOptions
 import com.ntg.lmd.authentication.ui.screens.login.loginScreen as LoginScreen
 import com.ntg.lmd.authentication.ui.screens.register.registerScreen as RegisterScreen
@@ -45,7 +50,9 @@ fun appNavGraph(rootNavController: NavHostController) {
         }
 
         // ---------- Auth ----------
-        composable(Screen.Login.route) { LoginScreen() }
+        composable(Screen.Login.route) {
+            LoginScreen(navController = rootNavController)
+        }
         composable(Screen.Register.route) {
             RegisterScreen(navController = rootNavController)
         }
@@ -74,52 +81,53 @@ private fun drawerHost(onLogout: () -> Unit) {
     val searchingState = remember { mutableStateOf(false) } // search on/off
     val searchTextState = remember { mutableStateOf("") } // current query
 
+    // --- a place to store Orders History menu opener ---
+    var openOrdersHistoryMenu by remember { mutableStateOf<(() -> Unit)?>(null) }
+
     // Build a UI "spec" for the current route
-    val spec = buildRouteUiSpec(currentRoute, drawerNavController)
+    val spec = buildRouteUiSpec(currentRoute, drawerNavController, openOrdersHistoryMenu)
 
     // Controller that wires the app bar search field <-> VM via savedStateHandle
-    val search =
-        remember(searchingState, searchTextState) {
-            SearchController(
-                searching = searchingState,
-                text = searchTextState,
-                // Called when user hits IME search
-                onSubmit = { query ->
-                    drawerNavController.currentBackStackEntry
-                        ?.savedStateHandle
-                        ?.set("search_submit", query)
-                },
-                // Called when search mode is toggled (open/close)
-                onToggle = { enabled ->
-                    searchingState.value = enabled
-                    drawerNavController.currentBackStackEntry
-                        ?.savedStateHandle
-                        ?.set("searching", enabled)
-                },
-                // Called on every keystroke in the search field
-                onTextChange = { t ->
-                    searchTextState.value = t
-                    drawerNavController.currentBackStackEntry
-                        ?.savedStateHandle
-                        ?.set("search_text", t)
-                },
-            )
-        }
+    val search = remember(searchingState, searchTextState) {
+        SearchController(
+            searching = searchingState,
+            text = searchTextState,
+            // Called when user hits IME search
+            onSubmit = { query ->
+                drawerNavController.currentBackStackEntry?.savedStateHandle?.set(
+                    "search_submit",
+                    query
+                )
+            },
+            // Called when search mode is toggled (open/close)
+            onToggle = { enabled ->
+                searchingState.value = enabled
+                drawerNavController.currentBackStackEntry?.savedStateHandle?.set(
+                    "searching",
+                    enabled
+                )
+            },
+            // Called on every keystroke in the search field
+            onTextChange = { t ->
+                searchTextState.value = t
+                drawerNavController.currentBackStackEntry?.savedStateHandle?.set("search_text", t)
+            },
+        )
+    }
 
     // ---- TopBar config passed into the scaffold ----
-    val topBar =
-        TopBarConfigWithTitle(
-            title = spec.title,
-            search = search,
-            showSearchIcon = spec.showSearchIcon,
-            actionButtonLabel = spec.actionButtonLabel,
-            onActionButtonClick = spec.onActionButtonClick,
-            actionIcon = spec.actionIcon,
-            onActionIconClick = spec.onActionIconClick,
-            searchPlaceholder = spec.searchPlaceholder,
-            searchActionIcon = if (spec.showSearchIcon) Icons.Filled.Search else null,
-            onSearchIconClick = { search.onToggle(true) },
-        )
+    val topBar = TopBarConfigWithTitle(
+        title = spec.title,
+        search = search,
+        showSearchIcon = spec.showSearchIcon,
+        actionButtonLabel = spec.actionButtonLabel,
+        onActionButtonClick = spec.onActionButtonClick,
+        actionIcon = spec.actionIcon,
+        onActionIconClick = spec.onActionIconClick,
+        searchPlaceholder = spec.searchPlaceholder,
+        searchActionIcon = if (spec.showSearchIcon) Icons.Filled.Search else null,
+        onSearchIconClick = { search.onToggle(true) },
+    )
 
     // ---- Scaffold (drawer + top bar + nested nav graph) ----
     appScaffoldWithDrawer(
@@ -138,7 +146,10 @@ private fun drawerHost(onLogout: () -> Unit) {
         ) {
             composable(Screen.GeneralPool.route) { generalPoolScreen(drawerNavController) }
             composable(Screen.MyOrders.route) { myOrdersScreen(drawerNavController) }
-            composable(Screen.OrdersHistory.route) { ordersHistoryScreen(drawerNavController) }
+            composable(Screen.OrdersHistory.route) {
+                ordersHistoryRoute(
+                    registerOpenMenu = { setter -> openOrdersHistoryMenu = setter })
+            }
             composable(Screen.Notifications.route) { notificationScreen(drawerNavController) }
             composable(Screen.DeliveriesLog.route) { deliveriesLogScreen(drawerNavController) }
             composable(Screen.Settings.route) { settingsOptions(drawerNavController) }
@@ -153,6 +164,7 @@ private fun drawerHost(onLogout: () -> Unit) {
 private fun buildRouteUiSpec(
     currentRoute: String,
     nav: NavHostController,
+    openOrdersHistoryMenu: (() -> Unit)?
 ): RouteUiSpec =
     when (currentRoute) {
         Screen.GeneralPool.route ->
@@ -191,7 +203,7 @@ private fun buildRouteUiSpec(
                 title = stringResource(R.string.menu_order_history),
                 showSearchIcon = false,
                 actionIcon = Icons.Filled.MoreVert,
-                onActionIconClick = { /* TODO show menu */ },
+                onActionIconClick = { openOrdersHistoryMenu?.invoke() },
             )
 
         Screen.Notifications.route ->

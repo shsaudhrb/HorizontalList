@@ -156,7 +156,7 @@ private fun drawerContent(
         // Section title ("Orders")
         Text(
             text = stringResource(R.string.drawer_section_orders),
-            color = MaterialTheme.colorScheme.error,
+            color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.SemiBold,
             fontSize = dimensionResource(R.dimen.drawer_section_title_text_size).value.sp,
             modifier =
@@ -405,7 +405,7 @@ fun drawerHeader(name: String) {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.error)
+                .background(MaterialTheme.colorScheme.primary)
                 .height(dimensionResource(R.dimen.drawer_header_height))
                 .padding(
                     horizontal = dimensionResource(R.dimen.mediumSpace),
@@ -426,7 +426,7 @@ fun drawerHeader(name: String) {
             // Username
             Text(
                 text = name,
-                color = MaterialTheme.colorScheme.onError,
+                color = MaterialTheme.colorScheme.onPrimary,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = dimensionResource(R.dimen.drawer_header_text_size).value.sp,
             )

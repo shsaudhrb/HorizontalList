@@ -254,7 +254,7 @@ private fun distanceFilterBar(
             Modifier
                 .width(280.dp)
                 .padding(vertical = 8.dp),
-        color = MaterialTheme.colorScheme.onPrimary,
+        color = MaterialTheme.colorScheme.background,
         shape = RoundedCornerShape(12.dp),
         tonalElevation = 6.dp,
         shadowElevation = 6.dp,

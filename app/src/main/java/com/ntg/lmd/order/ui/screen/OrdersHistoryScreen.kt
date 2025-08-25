@@ -137,6 +137,7 @@ fun ordersHistoryContent(
             contentPadding = PaddingValues(
                 start = dimensionResource(R.dimen.mediumSpace),
                 end = dimensionResource(R.dimen.mediumSpace),
+                top = dimensionResource(R.dimen.smallSpace),
                 bottom = dimensionResource(R.dimen.mediumSpace)
             ),
             verticalArrangement = Arrangement.spacedBy(
