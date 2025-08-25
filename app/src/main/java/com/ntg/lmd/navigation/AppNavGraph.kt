@@ -88,46 +88,48 @@ private fun drawerHost(onLogout: () -> Unit) {
     val spec = buildRouteUiSpec(currentRoute, drawerNavController, openOrdersHistoryMenu)
 
     // Controller that wires the app bar search field <-> VM via savedStateHandle
-    val search = remember(searchingState, searchTextState) {
-        SearchController(
-            searching = searchingState,
-            text = searchTextState,
-            // Called when user hits IME search
-            onSubmit = { query ->
-                drawerNavController.currentBackStackEntry?.savedStateHandle?.set(
-                    "search_submit",
-                    query
-                )
-            },
-            // Called when search mode is toggled (open/close)
-            onToggle = { enabled ->
-                searchingState.value = enabled
-                drawerNavController.currentBackStackEntry?.savedStateHandle?.set(
-                    "searching",
-                    enabled
-                )
-            },
-            // Called on every keystroke in the search field
-            onTextChange = { t ->
-                searchTextState.value = t
-                drawerNavController.currentBackStackEntry?.savedStateHandle?.set("search_text", t)
-            },
-        )
-    }
+    val search =
+        remember(searchingState, searchTextState) {
+            SearchController(
+                searching = searchingState,
+                text = searchTextState,
+                // Called when user hits IME search
+                onSubmit = { query ->
+                    drawerNavController.currentBackStackEntry?.savedStateHandle?.set(
+                        "search_submit",
+                        query,
+                    )
+                },
+                // Called when search mode is toggled (open/close)
+                onToggle = { enabled ->
+                    searchingState.value = enabled
+                    drawerNavController.currentBackStackEntry?.savedStateHandle?.set(
+                        "searching",
+                        enabled,
+                    )
+                },
+                // Called on every keystroke in the search field
+                onTextChange = { t ->
+                    searchTextState.value = t
+                    drawerNavController.currentBackStackEntry?.savedStateHandle?.set("search_text", t)
+                },
+            )
+        }
 
     // ---- TopBar config passed into the scaffold ----
-    val topBar = TopBarConfigWithTitle(
-        title = spec.title,
-        search = search,
-        showSearchIcon = spec.showSearchIcon,
-        actionButtonLabel = spec.actionButtonLabel,
-        onActionButtonClick = spec.onActionButtonClick,
-        actionIcon = spec.actionIcon,
-        onActionIconClick = spec.onActionIconClick,
-        searchPlaceholder = spec.searchPlaceholder,
-        searchActionIcon = if (spec.showSearchIcon) Icons.Filled.Search else null,
-        onSearchIconClick = { search.onToggle(true) },
-    )
+    val topBar =
+        TopBarConfigWithTitle(
+            title = spec.title,
+            search = search,
+            showSearchIcon = spec.showSearchIcon,
+            actionButtonLabel = spec.actionButtonLabel,
+            onActionButtonClick = spec.onActionButtonClick,
+            actionIcon = spec.actionIcon,
+            onActionIconClick = spec.onActionIconClick,
+            searchPlaceholder = spec.searchPlaceholder,
+            searchActionIcon = if (spec.showSearchIcon) Icons.Filled.Search else null,
+            onSearchIconClick = { search.onToggle(true) },
+        )
 
     // ---- Scaffold (drawer + top bar + nested nav graph) ----
     appScaffoldWithDrawer(
@@ -148,7 +150,8 @@ private fun drawerHost(onLogout: () -> Unit) {
             composable(Screen.MyOrders.route) { myOrdersScreen(drawerNavController) }
             composable(Screen.OrdersHistory.route) {
                 ordersHistoryRoute(
-                    registerOpenMenu = { setter -> openOrdersHistoryMenu = setter })
+                    registerOpenMenu = { setter -> openOrdersHistoryMenu = setter },
+                )
             }
             composable(Screen.Notifications.route) { notificationScreen(drawerNavController) }
             composable(Screen.DeliveriesLog.route) { deliveriesLogScreen(drawerNavController) }
@@ -164,7 +167,7 @@ private fun drawerHost(onLogout: () -> Unit) {
 private fun buildRouteUiSpec(
     currentRoute: String,
     nav: NavHostController,
-    openOrdersHistoryMenu: (() -> Unit)?
+    openOrdersHistoryMenu: (() -> Unit)?,
 ): RouteUiSpec =
     when (currentRoute) {
         Screen.GeneralPool.route ->
