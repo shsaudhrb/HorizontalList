@@ -38,4 +38,21 @@
     <dimen name="drawer_item_text_size">16sp</dimen>
     <dimen name="drawer_badge_text_size">14sp</dimen>
 
+
+    <dimen name="list_item_spacing">12dp</dimen>
+    <dimen name="menu_offset_y">6dp</dimen>
+    <dimen name="elevation_small">3dp</dimen>
+    <dimen name="pdf_margin">40dp</dimen>
+    <dimen name="pdf_line_height">24dp</dimen>
+    <dimen name="pdf_header_spacing">10dp</dimen>
+    <dimen name="pdf_page_width">595pt</dimen>
+    <dimen name="pdf_page_height">842pt</dimen>
+    <dimen name="pdf_col_customer">70dp</dimen>
+    <dimen name="pdf_col_total">180dp</dimen>
+    <dimen name="pdf_col_status">110dp</dimen>
+    <dimen name="pdf_col_age">50dp</dimen>
+    <dimen name="pdf_text_size">12sp</dimen>
+    <dimen name="menu_corner_radius">16dp</dimen>
+    <dimen name="menu_width">220dp</dimen>
+    <dimen name="dialog_corner_radius">20dp</dimen>
 </resources>

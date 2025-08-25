@@ -30,5 +30,31 @@
     <string name="menu_chat">المحادثة</string>
     <string name="menu_logout">تسجيل الخروج</string>
     <string name="open_menu"> افتح القائمة</string>
-
+    <string name="title_order_history">سجل الطلبات</string>
+    <string name="export_pdf">تصدير PDF</string>
+    <string name="filter">تصفية</string>
+    <string name="sort">فرز</string>
+    <string name="currency_egp">ج.م</string>
+    <string name="pdf_title">سجل الطلبات</string>
+    <string name="pdf_header_no">رقم</string>
+    <string name="pdf_header_customer">العميل</string>
+    <string name="pdf_header_total">الإجمالي</string>
+    <string name="pdf_header_status">الحالة</string>
+    <string name="pdf_header_age">العمر</string>
+    <string name="pdf_share_title">مشاركة ملف الطلبات</string>
+    <string name="time_just_now">الآن</string>
+    <string name="time_h_m_ago">منذ %1$d س %2$d د</string>
+    <string name="time_d_h_ago">منذ %1$d ي %2$d س</string>
+    <string name="time_m_ago">منذ %1$d د</string>
+    <string name="topbar_more">المزيد</string>
+    <string name="drawer_user_placeholder">مستخدم</string>
+    <string name="sort_by_age">فرز حسب العمر</string>
+    <string name="statuses">الحالات</string>
+    <string name="delivered">تم التسليم</string>
+    <string name="cancelled">ملغي</string>
+    <string name="failed">فشل</string>
+    <string name="sort_asc">تصاعدي (الأقدم أولاً)</string>
+    <string name="sort_desc">تنازلي (الأحدث أولاً)</string>
+    <string name="apply">تطبيق</string>
+    <string name="cancel">إلغاء</string>
 </resources>

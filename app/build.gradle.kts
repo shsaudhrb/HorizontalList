@@ -107,6 +107,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     // Icons
     implementation(libs.androidx.material.icons.extended)
+    implementation(libs.androidx.material)
+
     implementation("androidx.compose.material:material-icons-extended:1.7.8")
 
     // Coroutines
