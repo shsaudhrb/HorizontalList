@@ -1,6 +1,5 @@
 package com.ntg.lmd.notification.ui.screens
 
-import android.R.attr.onClick
 import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -231,18 +230,15 @@ private fun notificationListWithFooter(
     filter: NotificationFilter,
     onFilterChange: (NotificationFilter) -> Unit,
 ) {
-    val smallSpace = dimensionResource(R.dimen.smallSpace) // 12dp
-    val bottomPad = dimensionResource(R.dimen.smallSpace) // 12dp
-    val itemSpacing = dimensionResource(R.dimen.smallSpace) // 12dp
 
     Column(Modifier.fillMaxSize()) {
         filterRow(filter = filter, onFilterChange = onFilterChange)
-        Spacer(Modifier.height(smallSpace))
+        Spacer(Modifier.height(dimensionResource(R.dimen.smallSpace) ))
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = bottomPad),
-            verticalArrangement = Arrangement.spacedBy(itemSpacing),
+            contentPadding = PaddingValues(bottom = dimensionResource(R.dimen.smallSpace) ),
+            verticalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.smallSpace) ),
         ) {
             items(
                 count = lazyPagingItems.itemCount,
