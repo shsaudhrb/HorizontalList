@@ -180,36 +180,74 @@ private fun notificationContent(
     filter: NotificationFilter,
     onFilterChange: (NotificationFilter) -> Unit,
 ) {
-    when {
-        lazyPagingItems.loadState.refresh is LoadState.Loading &&
-            lazyPagingItems.itemCount == 0 -> {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-        }
+    Column(Modifier.fillMaxSize()) {
+        filterRow(filter = filter, onFilterChange = onFilterChange)
+        Spacer(Modifier.height(dimensionResource(R.dimen.smallSpace)))
 
-        lazyPagingItems.loadState.refresh is LoadState.Error -> {
-            val e = (lazyPagingItems.loadState.refresh as LoadState.Error).error
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                errorSection(
-                    message = e.message ?: stringResource(R.string.unable_load_notifications),
-                    onRetry = { lazyPagingItems.retry() },
+        when {
+            lazyPagingItems.loadState.refresh is LoadState.Loading && lazyPagingItems.itemCount == 0 -> {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center,
+                ) { CircularProgressIndicator() }
+            }
+
+            lazyPagingItems.loadState.refresh is LoadState.Error -> {
+                val e = (lazyPagingItems.loadState.refresh as LoadState.Error).error
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    errorSection(
+                        message = e.message ?: stringResource(R.string.unable_load_notifications),
+                        onRetry = { lazyPagingItems.retry() },
+                    )
+                }
+            }
+
+            lazyPagingItems.itemCount == 0 -> {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center,
+                ) { emptySection() }
+            }
+
+            else -> {
+                notificationList(
+                    lazyPagingItems = lazyPagingItems,
+                    modifier = Modifier.weight(1f),
                 )
             }
         }
+    }
+}
 
-        // empty state
-        lazyPagingItems.itemCount == 0 -> {
-            emptySection()
+@Composable
+private fun notificationList(
+    lazyPagingItems: LazyPagingItems<NotificationUi>,
+    modifier: Modifier = Modifier,
+) {
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(bottom = dimensionResource(R.dimen.smallSpace)),
+        verticalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.smallSpace)),
+    ) {
+        items(
+            count = lazyPagingItems.itemCount,
+            key = { index -> lazyPagingItems[index]?.id ?: index.toLong() },
+        ) { index ->
+            lazyPagingItems[index]?.let {
+                notificationCard(it)
+            } ?: notificationPlaceholder()
         }
 
-        else -> {
-            notificationListWithFooter(
-                lazyPagingItems = lazyPagingItems,
-                filter = filter,
-                onFilterChange = onFilterChange,
-            )
-        }
+        footerAppendState(lazyPagingItems)
     }
 }
 
@@ -220,36 +258,6 @@ private fun seedNotificationsOnce() {
         if (!seeded.value) {
             seedNotifications(ServiceLocator.saveIncomingNotificationUseCase)
             seeded.value = true
-        }
-    }
-}
-
-@Composable
-private fun notificationListWithFooter(
-    lazyPagingItems: LazyPagingItems<NotificationUi>,
-    filter: NotificationFilter,
-    onFilterChange: (NotificationFilter) -> Unit,
-) {
-
-    Column(Modifier.fillMaxSize()) {
-        filterRow(filter = filter, onFilterChange = onFilterChange)
-        Spacer(Modifier.height(dimensionResource(R.dimen.smallSpace) ))
-
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = dimensionResource(R.dimen.smallSpace) ),
-            verticalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.smallSpace) ),
-        ) {
-            items(
-                count = lazyPagingItems.itemCount,
-                key = { index -> lazyPagingItems[index]?.id ?: index.toLong() },
-            ) { index ->
-                lazyPagingItems[index]?.let {
-                    notificationCard(it)
-                } ?: notificationPlaceholder()
-            }
-
-            footerAppendState(lazyPagingItems)
         }
     }
 }
