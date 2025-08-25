@@ -11,11 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.pullrefresh.PullRefreshIndicator
-import androidx.compose.material.pullrefresh.pullRefresh
-import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
@@ -80,15 +75,16 @@ fun ordersHistoryRoute(registerOpenMenu: ((() -> Unit) -> Unit)? = null) {
     }
 
     ordersHistoryContent(
-        state = OrdersHistoryUiState(
-            orders = orders,
-            isLoadingMore = isLoadingMore,
-            endReached = endReached,
-            isRefreshing = isRefreshing
-        ),
+        state =
+            OrdersHistoryUiState(
+                orders = orders,
+                isLoadingMore = isLoadingMore,
+                endReached = endReached,
+                isRefreshing = isRefreshing,
+            ),
         listState = listState,
         ctx = ctx,
-        onRefresh = { vm.refreshOrders() }
+        onRefresh = { vm.refreshOrders() },
     )
 
     ordersHistoryDialogs(
@@ -120,30 +116,33 @@ fun ordersHistoryRoute(registerOpenMenu: ((() -> Unit) -> Unit)? = null) {
         },
     )
 }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ordersHistoryContent(
     state: OrdersHistoryUiState,
     listState: LazyListState,
     ctx: Context,
-    onRefresh: () -> Unit
+    onRefresh: () -> Unit,
 ) {
     PullToRefreshBox(
         isRefreshing = state.isRefreshing,
-        onRefresh = onRefresh
+        onRefresh = onRefresh,
     ) {
         LazyColumn(
             state = listState,
-            contentPadding = PaddingValues(
-                start = dimensionResource(R.dimen.mediumSpace),
-                end = dimensionResource(R.dimen.mediumSpace),
-                bottom = dimensionResource(R.dimen.mediumSpace)
-            ),
-            verticalArrangement = Arrangement.spacedBy(
-                dimensionResource(R.dimen.list_item_spacing)
-            ),
-            modifier = Modifier.fillMaxSize()
-        ){
+            contentPadding =
+                PaddingValues(
+                    start = dimensionResource(R.dimen.mediumSpace),
+                    end = dimensionResource(R.dimen.mediumSpace),
+                    bottom = dimensionResource(R.dimen.mediumSpace),
+                ),
+            verticalArrangement =
+                Arrangement.spacedBy(
+                    dimensionResource(R.dimen.list_item_spacing),
+                ),
+            modifier = Modifier.fillMaxSize(),
+        ) {
             items(state.orders, key = { it.number }) {
                 orderHistoryCard(ctx, order = it)
             }

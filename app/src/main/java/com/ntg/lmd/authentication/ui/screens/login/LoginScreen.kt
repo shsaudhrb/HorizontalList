@@ -73,10 +73,11 @@ fun loginScreen(
     // Tracks anyFieldFocused locally to drive card animation (scale/elevation).
     var anyFieldFocused by remember { mutableStateOf(false) }
 
-    val transition = updateTransition(
-        targetState = anyFieldFocused,
-        label = "focusTransition"
-    )
+    val transition =
+        updateTransition(
+            targetState = anyFieldFocused,
+            label = "focusTransition",
+        )
 
     val cardScale by transition.animateFloat(label = "cardScale") { focused ->
         if (focused) CARD_SCALE_FOCUSED else CARD_SCALE_DEFAULT
@@ -86,9 +87,10 @@ fun loginScreen(
         if (focused) CARD_ELEVATION_FOCUSED else CARD_ELEVATION_DEFAULT
     }
 
-    val cardUi = remember(cardScale, cardElevation) {
-        CardUi(scale = cardScale, elevation = cardElevation)
-    }
+    val cardUi =
+        remember(cardScale, cardElevation) {
+            CardUi(scale = cardScale, elevation = cardElevation)
+        }
 
     CompositionLocalProvider(
         LocalOnFocusForUsername provides { f ->
@@ -133,7 +135,7 @@ private fun loginScaffold(
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         ) {
             appLogo()
             messageBanner(messageRes)
@@ -176,8 +178,7 @@ private fun authCard(
                 .graphicsLayer {
                     scaleX = cardScale
                     scaleY = cardScale
-                }
-                .shadow(cardElevation.dp, shape, clip = false)
+                }.shadow(cardElevation.dp, shape, clip = false)
                 .clip(shape),
         shape = shape,
         border =

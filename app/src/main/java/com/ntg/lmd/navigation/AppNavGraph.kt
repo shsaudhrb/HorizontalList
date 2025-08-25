@@ -24,13 +24,14 @@ import com.ntg.lmd.mainscreen.ui.screens.deliveriesLogScreen
 import com.ntg.lmd.mainscreen.ui.screens.generalPoolScreen
 import com.ntg.lmd.mainscreen.ui.screens.myOrdersScreen
 import com.ntg.lmd.mainscreen.ui.screens.myPoolScreen
+import com.ntg.lmd.mainscreen.ui.screens.ordersHistoryScreen
 import com.ntg.lmd.navigation.component.AppScaffoldActions
 import com.ntg.lmd.navigation.component.AppScaffoldConfig
 import com.ntg.lmd.navigation.component.appScaffoldWithDrawer
 import com.ntg.lmd.navigation.component.navigateSingleTop
 import com.ntg.lmd.notification.ui.screens.notificationScreen
-import com.ntg.lmd.order.ui.screen.ordersHistoryRoute
 import com.ntg.lmd.notification.ui.viewmodel.DeepLinkViewModel
+import com.ntg.lmd.order.ui.screen.ordersHistoryRoute
 import com.ntg.lmd.settings.ui.screens.settingsOptions
 import com.ntg.lmd.authentication.ui.screens.login.loginScreen as LoginScreen
 import com.ntg.lmd.authentication.ui.screens.register.registerScreen as RegisterScreen
@@ -128,7 +129,6 @@ private fun drawerHost(
         }
     }
 
-    val title =
     val openOrdersMenu = remember { mutableStateOf<(() -> Unit)?>(null) }
 
     val titleRes =
@@ -175,7 +175,7 @@ private fun drawerHost(
                     registerOpenMenu = { opener -> openOrdersMenu.value = opener },
                 )
             }
-            composable(Screen.Notifications.route) { notificationScreen(drawerNavController) }
+            composable(Screen.Notifications.route) { notificationScreen() }
             composable(Screen.DeliveriesLog.route) { deliveriesLogScreen(drawerNavController) }
             composable(Screen.Settings.route) { settingsOptions(drawerNavController) }
             composable(Screen.MyPool.route) { myPoolScreen(drawerNavController) }

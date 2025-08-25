@@ -98,12 +98,12 @@ class OrderHistoryViewModel : ViewModel() {
             }
         }
     }
+
     fun refreshOrders() {
         if (_isRefreshing.value) return
         viewModelScope.launch {
             _isRefreshing.value = true
             try {
-                // TODO: fetch latest from  API
                 delay(600)
                 all = all.shuffled()
                 recomputeAndResetPaging()

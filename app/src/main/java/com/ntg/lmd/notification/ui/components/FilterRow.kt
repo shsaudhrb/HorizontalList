@@ -15,7 +15,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.res.stringResource
+import com.ntg.lmd.R
 import com.ntg.lmd.notification.domain.model.NotificationFilter
 
 @Composable
@@ -23,9 +25,14 @@ fun filterRow(
     filter: NotificationFilter,
     onFilterChange: (NotificationFilter) -> Unit,
 ) {
+    val gap8 = dimensionResource(R.dimen.smallerSpace) // 8dp
+    val chipR = dimensionResource(R.dimen.chipRoundCorner)
+    val bw1 = dimensionResource(R.dimen.smallestStrokeWidth)
+    val bw2 = dimensionResource(R.dimen.smallStrokeWidth)
+
     Row(
         Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(gap8),
     ) {
         @Composable
         fun chip(
@@ -36,13 +43,8 @@ fun filterRow(
             FilterChip(
                 selected = selected,
                 onClick = { onFilterChange(value) },
-                label = {
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.labelMedium,
-                    )
-                },
-                shape = RoundedCornerShape(30),
+                label = { Text(text = label, style = MaterialTheme.typography.labelMedium) },
+                shape = RoundedCornerShape(chipR),
                 colors =
                     FilterChipDefaults.filterChipColors(
                         containerColor = Color.Transparent,
@@ -56,26 +58,29 @@ fun filterRow(
                         selected = selected,
                         borderColor = MaterialTheme.colorScheme.outlineVariant,
                         selectedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.80f),
-                        borderWidth = 1.dp,
-                        selectedBorderWidth = 2.dp,
+                        borderWidth = bw1,
+                        selectedBorderWidth = bw2,
                     ),
             )
         }
 
-        chip("All", NotificationFilter.All)
-        chip("Orders", NotificationFilter.Orders)
-        chip("Wallet", NotificationFilter.Wallet)
-        chip("Other", NotificationFilter.Other)
+        chip(stringResource(R.string.filter_all), NotificationFilter.All)
+        chip(stringResource(R.string.filter_orders), NotificationFilter.Orders)
+        chip(stringResource(R.string.filter_wallet), NotificationFilter.Wallet)
+        chip(stringResource(R.string.filter_other), NotificationFilter.Other)
     }
 }
 
 @Composable
 fun notificationPlaceholder() {
+    val height = dimensionResource(R.dimen.notificationPlaceholderHeight) // 72dp
+    val radius = dimensionResource(R.dimen.card_radius) // 12dp
+
     Box(
         Modifier
             .fillMaxWidth()
-            .height(72.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .height(height)
+            .clip(RoundedCornerShape(radius))
             .background(MaterialTheme.colorScheme.surfaceVariant),
     )
 }

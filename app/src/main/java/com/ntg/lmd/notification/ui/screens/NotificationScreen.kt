@@ -1,5 +1,7 @@
 package com.ntg.lmd.notification.ui.screens
 
+import android.R.attr.onClick
+import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,7 +18,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -36,6 +37,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -43,8 +45,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
@@ -60,7 +62,6 @@ import com.ntg.lmd.notification.ui.model.relativeAgeLabel
 import com.ntg.lmd.notification.ui.viewmodel.NotificationsVMFactory
 import com.ntg.lmd.notification.ui.viewmodel.NotificationsViewModel
 import kotlinx.coroutines.delay
-import kotlin.OptIn
 
 private const val MILLIS_PER_MINUTE = 60_000L
 
@@ -91,7 +92,7 @@ fun notificationScreen(
         modifier =
             Modifier
                 .fillMaxSize()
-                .padding(horizontal = dimensionResource(R.dimen.space_small)),
+                .padding(horizontal = dimensionResource(R.dimen.smallSpace)),
     ) {
         notificationContent(
             lazyPagingItems = lazyPagingItems,
@@ -103,11 +104,8 @@ fun notificationScreen(
 
 @Composable
 private fun notificationCard(item: NotificationUi) {
-    val nowMs = rememberNowMillis(MILLIS_PER_MINUTE) // update every minute
-    val ageLabel =
-        remember(nowMs, item.timestampMs) {
-            relativeAgeLabel(nowMs, item.timestampMs)
-        }
+    val nowMs = rememberNowMillis(MILLIS_PER_MINUTE)
+    val ageLabel = relativeAgeLabel(nowMs, item.timestampMs)
 
     val accent =
         when (item.type) {
@@ -122,27 +120,38 @@ private fun notificationCard(item: NotificationUi) {
             AgentNotification.Type.OTHER -> Icons.Outlined.Notifications
         }
 
+    val cardCorner = dimensionResource(R.dimen.cardRoundCorner) // 28dp
+    val contentPad = dimensionResource(R.dimen.smallSpace) // 12dp
+    val gapSmall = dimensionResource(R.dimen.smallSpace) // 12dp
+    val gapTiny = dimensionResource(R.dimen.tinySpace) // 6dp
+    val iconBox = dimensionResource(R.dimen.notificationIconBox) // 42dp
+    val accentBarW = dimensionResource(R.dimen.extraSmallSpace) // 4dp
+    val accentBarR = dimensionResource(R.dimen.notificationAccentBarRadius) // 6dp
+    val smallElev = dimensionResource(R.dimen.smallElevation) // 2dp
+
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(cardCorner),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = smallElev),
     ) {
         Row(
             Modifier
                 .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.surface)
-                .padding(12.dp),
+                .padding(contentPad),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier =
                     Modifier
-                        .size(42.dp)
+                        .size(iconBox)
                         .background(accent.copy(alpha = 0.15f), shape = CircleShape),
                 contentAlignment = Alignment.Center,
-            ) { Icon(icon, contentDescription = null, tint = accent) }
+            ) {
+                Icon(icon, contentDescription = null, tint = accent)
+            }
 
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(gapSmall))
 
             Column(Modifier.weight(1f)) {
                 Text(
@@ -151,9 +160,9 @@ private fun notificationCard(item: NotificationUi) {
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(gapTiny))
                 Text(
-                    text = ageLabel, // ← realtime
+                    text = ageLabel,
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -161,24 +170,13 @@ private fun notificationCard(item: NotificationUi) {
 
             Spacer(
                 Modifier
-                    .width(4.dp)
+                    .width(accentBarW)
                     .height(IntrinsicSize.Max)
                     .background(
                         accent.copy(alpha = 0.8f),
-                        RoundedCornerShape(topStart = 6.dp, bottomStart = 6.dp),
+                        RoundedCornerShape(topStart = accentBarR, bottomStart = accentBarR),
                     ),
             )
-        }
-    }
-}
-
-@Composable
-private fun seedNotificationsOnce() {
-    val seeded = rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        if (!seeded.value) {
-            seedNotifications(ServiceLocator.saveIncomingNotificationUseCase)
-            seeded.value = true
         }
     }
 }
@@ -193,10 +191,7 @@ private fun notificationContent(
         // full-screen initial loading
         lazyPagingItems.loadState.refresh is LoadState.Loading &&
             lazyPagingItems.itemCount == 0 -> {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
         }
@@ -204,12 +199,9 @@ private fun notificationContent(
         // full-screen error on initial load
         lazyPagingItems.loadState.refresh is LoadState.Error -> {
             val e = (lazyPagingItems.loadState.refresh as LoadState.Error).error
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 errorSection(
-                    message = e.message ?: "Unable to load notifications.",
+                    message = e.message ?: stringResource(R.string.unable_load_notifications),
                     onRetry = { lazyPagingItems.retry() },
                 )
             }
@@ -231,19 +223,34 @@ private fun notificationContent(
 }
 
 @Composable
+private fun seedNotificationsOnce() {
+    val seeded = rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        if (!seeded.value) {
+            seedNotifications(ServiceLocator.saveIncomingNotificationUseCase)
+            seeded.value = true
+        }
+    }
+}
+
+@Composable
 private fun notificationListWithFooter(
     lazyPagingItems: LazyPagingItems<NotificationUi>,
     filter: NotificationFilter,
     onFilterChange: (NotificationFilter) -> Unit,
 ) {
+    val smallSpace = dimensionResource(R.dimen.smallSpace) // 12dp
+    val bottomPad = dimensionResource(R.dimen.smallSpace) // 12dp
+    val itemSpacing = dimensionResource(R.dimen.smallSpace) // 12dp
+
     Column(Modifier.fillMaxSize()) {
         filterRow(filter = filter, onFilterChange = onFilterChange)
-        Spacer(Modifier.height(dimensionResource(R.dimen.space_small)))
+        Spacer(Modifier.height(smallSpace))
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(bottom = bottomPad),
+            verticalArrangement = Arrangement.spacedBy(itemSpacing),
         ) {
             items(
                 count = lazyPagingItems.itemCount,
@@ -254,13 +261,11 @@ private fun notificationListWithFooter(
                 } ?: notificationPlaceholder()
             }
 
-            // ✅ now this compiles because it's an extension on LazyListScope
             footerAppendState(lazyPagingItems)
         }
     }
 }
 
-// ✅ Change receiver to LazyListScope
 private fun LazyListScope.footerAppendState(lazyPagingItems: LazyPagingItems<NotificationUi>) {
     when (val state = lazyPagingItems.loadState.append) {
         is LoadState.Loading -> {
@@ -268,7 +273,7 @@ private fun LazyListScope.footerAppendState(lazyPagingItems: LazyPagingItems<Not
                 Box(
                     Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(dimensionResource(R.dimen.mediumSpace)),
                     contentAlignment = Alignment.Center,
                 ) { CircularProgressIndicator() }
             }
@@ -279,16 +284,16 @@ private fun LazyListScope.footerAppendState(lazyPagingItems: LazyPagingItems<Not
                 Column(
                     Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(dimensionResource(R.dimen.mediumSpace)),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
-                        text = state.error.message ?: "Loading more failed",
+                        text = state.error.message ?: stringResource(R.string.loading_more_failed),
                         color = MaterialTheme.colorScheme.error,
                     )
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(dimensionResource(R.dimen.smallerSpace)))
                     Button(onClick = { lazyPagingItems.retry() }) {
-                        Text("Retry")
+                        Text(stringResource(R.string.retry))
                     }
                 }
             }
@@ -300,11 +305,11 @@ private fun LazyListScope.footerAppendState(lazyPagingItems: LazyPagingItems<Not
                     Box(
                         Modifier
                             .fillMaxWidth()
-                            .padding(24.dp),
+                            .padding(dimensionResource(R.dimen.largerSpace)),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            "You’re all caught up 🎉",
+                            stringResource(R.string.caught_up),
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -312,24 +317,6 @@ private fun LazyListScope.footerAppendState(lazyPagingItems: LazyPagingItems<Not
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun emptySection() {
-    Column(
-        Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Icon(
-            Icons.Outlined.Notifications,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(48.dp),
-        )
-        Spacer(Modifier.height(8.dp))
-        Text("No notifications available.", color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -343,15 +330,44 @@ private fun errorSection(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(message, color = MaterialTheme.colorScheme.error)
-        Spacer(Modifier.height(8.dp))
+        Text(
+            message,
+            color = MaterialTheme.colorScheme.error,
+        )
+        Spacer(Modifier.height(dimensionResource(R.dimen.smallerSpace)))
         Button(onClick = onRetry) { Text("Retry") }
     }
 }
 
 @Composable
-private fun rememberNowMillis(tickMillis: Long = MILLIS_PER_MINUTE): Long {
-    var now by remember { mutableStateOf(System.currentTimeMillis()) }
+private fun emptySection() {
+    val iconSize =
+        dimensionResource(R.dimen.appLogoSize) / 6 // reuse existing; 300/6 = 50dp approx
+    val gap8 = dimensionResource(R.dimen.smallerSpace)
+
+    Column(
+        Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Icon(
+            Icons.Outlined.Notifications,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(iconSize),
+        )
+        Spacer(Modifier.height(gap8))
+        Text(
+            stringResource(R.string.empty_notifications),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@SuppressLint("AutoboxingStateCreation")
+@Composable
+private fun rememberNowMillis(tickMillis: Long): Long {
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(tickMillis) {
         while (true) {
             delay(tickMillis)

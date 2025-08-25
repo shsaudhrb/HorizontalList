@@ -30,7 +30,6 @@
     <string name="menu_chat">المحادثة</string>
     <string name="menu_logout">تسجيل الخروج</string>
     <string name="open_menu"> افتح القائمة</string>
-    <string name="notification_title">اشعار</string>
 
     <string name="title_order_history">سجل الطلبات</string>
     <string name="export_pdf">تصدير PDF</string>
@@ -59,4 +58,51 @@
     <string name="sort_desc">تنازلي (الأحدث أولاً)</string>
     <string name="apply">تطبيق</string>
     <string name="cancel">إلغاء</string>
+
+    <!-- الفلاتر -->
+    <string name="filter_all">الكل</string>
+    <string name="filter_orders">الطلبات</string>
+    <string name="filter_wallet">المحفظة</string>
+    <string name="filter_other">أخرى</string>
+
+    <!-- الحالات والأزرار -->
+    <string name="empty_notifications">لا توجد إشعارات.</string>
+    <string name="loading_more_failed">فشل تحميل المزيد</string>
+    <string name="retry">إعادة المحاولة</string>
+    <string name="caught_up">انتهيت من كل الإشعارات 🎉</string>
+    <string name="unable_load_notifications">تعذّر تحميل الإشعارات.</string>
+
+    <!-- الوقت النسبي -->
+    <string name="just_now">الآن</string>
+
+    <plurals name="minutes_ago">
+        <item quantity="zero">الآن</item>
+        <item quantity="one">قبل دقيقة</item>
+        <item quantity="two">قبل دقيقتين</item>
+        <item quantity="few">قبل %d دقائق</item>
+        <item quantity="many">قبل %d دقيقة</item>
+        <item quantity="other">قبل %d دقيقة</item>
+    </plurals>
+
+    <plurals name="hours_ago">
+        <item quantity="zero">الآن</item>
+        <item quantity="one">قبل ساعة</item>
+        <item quantity="two">قبل ساعتين</item>
+        <item quantity="few">قبل %d ساعات</item>
+        <item quantity="many">قبل %d ساعة</item>
+        <item quantity="other">قبل %d ساعة</item>
+    </plurals>
+
+    <plurals name="days_ago">
+        <item quantity="zero">الآن</item>
+        <item quantity="one">قبل يوم</item>
+        <item quantity="two">قبل يومين</item>
+        <item quantity="few">قبل %d أيام</item>
+        <item quantity="many">قبل %d يومًا</item>
+        <item quantity="other">قبل %d يوم</item>
+    </plurals>
+
+    <!-- عنوان افتراضي لـ FCM -->
+    <string name="notification_title">الإشعارات</string>
+
 </resources>
