@@ -16,15 +16,23 @@ android {
         compose = true
     }
     defaultConfig {
-        applicationId = "com.example.lmd"
+        applicationId = "com.ntg.lmd"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // === REST base URL ===
+        buildConfigField("String", "BASE_URL", "\"https://kgomwyksxjqtcjwlzbsp.supabase.co/functions/v1/\"")
 
-        buildConfigField("String", "BASE_URL", "\"https://httpbin.org/\"")
+        // === WebSocket URL ===
+        buildConfigField("String", "WS_BASE_URL", "\"wss://kgomwyksxjqtcjwlzbsp.supabase.co/realtime/v1/websocket\"")
+        buildConfigField(
+            "String",
+            "SUPABASE_KEY",
+            "\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtnb213eWtzeGpxdGNqd2x6YnNwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU3ODQ0NTEsImV4cCI6MjA3MTM2MDQ1MX0.g0JTJ4fftJum44D3gDJHwnoXK0XBLmWnsRbQcSVO5zs\"",
+        )
     }
 
     buildTypes {

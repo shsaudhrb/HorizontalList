@@ -1,19 +1,20 @@
 package com.ntg.lmd.network.api
 
-import com.ntg.lmd.network.api.dto.RefreshRequest
-import com.ntg.lmd.network.api.dto.RefreshResponse
-import okhttp3.ResponseBody
-import retrofit2.Call
+import com.ntg.lmd.network.api.dto.LoginRequest
+import com.ntg.lmd.network.api.dto.LoginResponse
+import com.ntg.lmd.network.api.dto.RefreshTokenRequest
+import com.ntg.lmd.network.api.dto.RefreshTokenResponse
 import retrofit2.http.Body
-import retrofit2.http.GET
 import retrofit2.http.POST
 
 interface TestApi {
-    @POST("auth/refresh")
-    fun refresh(
-        @Body body: RefreshRequest,
-    ): Call<RefreshResponse>
+    @POST("login")
+    suspend fun login(
+        @Body req: LoginRequest,
+    ): LoginResponse
 
-    @GET("status/401")
-    suspend fun force401(): ResponseBody
+    @POST("refresh-token")
+    suspend fun refreshToken(
+        @Body req: RefreshTokenRequest,
+    ): RefreshTokenResponse
 }

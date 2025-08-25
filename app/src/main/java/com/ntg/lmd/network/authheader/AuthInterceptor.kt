@@ -4,25 +4,30 @@ import android.util.Log
 import okhttp3.Interceptor
 import okhttp3.Response
 
-private const val TAG_AUTH_I = "LMD-Auth-I"
-
 class AuthInterceptor(
-    private val tokenStore: TokenStore,
+    private val store: TokenStoreTest,
+    private val supabaseKey: String,
 ) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
-        val token = tokenStore.getAccessToken()
-        val req =
-            chain
-                .request()
-                .newBuilder()
-                .apply {
-                    if (!token.isNullOrBlank()) {
-                        header("Authorization", "Bearer $token")
-                        Log.d(TAG_AUTH_I, "Added Authorization header")
-                    } else {
-                        Log.d(TAG_AUTH_I, "No token -> no Authorization header")
-                    }
-                }.build()
-        return chain.proceed(req)
+        val req = chain.request()
+        val path = req.url.encodedPath
+        val isAuthEndpoint = path.endsWith("/login") || path.endsWith("/refresh-token")
+
+        val b = req.newBuilder()
+        b.header("apikey", supabaseKey)
+
+        if (isAuthEndpoint) {
+            b.header("Authorization", "Bearer $supabaseKey")
+            Log.d("LMD-Auth-I", "Using anon key for $path")
+        } else {
+            store.getAccessToken()?.takeIf { it.isNotBlank() }?.let {
+                b.header("Authorization", "Bearer $it")
+                Log.d("LMD-Auth-I", "Added user access token for ${req.url.encodedPath}")
+            } ?: run {
+                b.header("Authorization", "Bearer $supabaseKey")
+            }
+        }
+
+        return chain.proceed(b.build())
     }
 }

@@ -1,77 +1,81 @@
 package com.ntg.lmd.network.authheader
 
 import android.util.Log
-import com.ntg.lmd.BuildConfig
 import com.ntg.lmd.network.api.TestApi
-import com.ntg.lmd.network.api.dto.RefreshRequest
+import com.ntg.lmd.network.api.dto.RefreshTokenData
+import com.ntg.lmd.network.api.dto.RefreshTokenRequest
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import okhttp3.Authenticator
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.Route
-import java.net.HttpURLConnection.HTTP_UNAUTHORIZED
 
-private const val MAX_AUTH_RETRIES = 2
-private const val HEADER_AUTH = "Authorization"
-private const val BEARER_PREFIX = "Bearer "
-private const val TAG_AUTH = "LMD-Auth"
+private const val HTTP_UNAUTHORIZED = 401
+private const val MAX_AUTH_RETRIES = 1
 
 class TokenAuthenticator(
-    private val store: TokenStore,
-    private val api: TestApi,
+    private val store: TokenStoreTest,
+    private val refreshApi: TestApi,
 ) : Authenticator {
+    private val mutex = Mutex()
+
     override fun authenticate(
         route: Route?,
         response: Response,
     ): Request? {
-        Log.d(TAG_AUTH, "authenticate code=${response.code} prior=${responseCount(response)}")
-        val hadAuth = response.request.header(HEADER_AUTH) != null
-        val eligible =
-            responseCount(response) < MAX_AUTH_RETRIES &&
-                response.code == HTTP_UNAUTHORIZED &&
-                hadAuth
-        if (!eligible) {
-            Log.d(TAG_AUTH, "skip refresh (eligible=$eligible, hadAuth=$hadAuth)")
+        var result: Request? = null
+
+        val hadAuth = response.request.header("Authorization") != null
+        val prior = count(response)
+        if (!hadAuth || response.code != HTTP_UNAUTHORIZED || prior > MAX_AUTH_RETRIES) {
+            Log.d("LMD-Auth", "Skip refresh (hadAuth=$hadAuth, prior=$prior, code=${response.code})")
             return null
         }
-        val refresh = store.getRefreshToken()
-        val newAccess =
-            refresh?.let {
-                runCatching { refreshAccessToken(it) }
-                    .onFailure {
-                        Log.e(TAG_AUTH, "refresh failed: ${it.message}")
-                    }.getOrNull()
-            }
 
-        return if (newAccess != null) {
-            Log.d(TAG_AUTH, "refresh success -> new access saved")
-            store.saveTokens(newAccess, refresh)
-            response.request
-                .newBuilder()
-                .header(HEADER_AUTH, BEARER_PREFIX + newAccess)
-                .build()
-        } else {
-            null
+        val refresh = store.getRefreshToken()
+        if (refresh != null) {
+            val payload: RefreshTokenData =
+                runBlocking(Dispatchers.IO) {
+                    mutex.withLock {
+                        store.getAccessToken()?.let { existing ->
+                            return@withLock RefreshTokenData(existing, store.getRefreshToken(), null, null)
+                        }
+                        val body = refreshApi.refreshToken(RefreshTokenRequest(refresh))
+                        check(body.success) { "Refresh success=false" }
+                        body.data ?: error("Refresh data=null")
+                    }
+                }
+
+            store.saveFromPayload(
+                access = payload.accessToken,
+                refresh = payload.refreshToken,
+                expiresAt = payload.expiresAt,
+                refreshExpiresAt = payload.refreshExpiresAt,
+            )
+
+            val newAccess = payload.accessToken
+            if (newAccess != null) {
+                result =
+                    response.request
+                        .newBuilder()
+                        .header("Authorization", "Bearer $newAccess")
+                        .build()
+            }
         }
+
+        return result
     }
 
-    private fun responseCount(response: Response): Int {
-        var count = 1
-        var r: Response? = response.priorResponse
+    private fun count(resp: Response): Int {
+        var r: Response? = resp
+        var c = 0
         while (r != null) {
-            count++
+            c++
             r = r.priorResponse
         }
-        return count
-    }
-
-    private fun refreshAccessToken(refresh: String): String {
-        if (BuildConfig.DEBUG && BuildConfig.BASE_URL.contains("httpbin.org")) {
-            Log.d(TAG_AUTH, "debug stub: returning dummy access token")
-            return "DUMMY_ACCESS_${System.currentTimeMillis()}"
-        }
-        val res = api.refresh(RefreshRequest(refresh)).execute()
-        if (!res.isSuccessful) error("Refresh failed ${res.code()}")
-        val body = res.body() ?: error("Empty refresh body")
-        return body.accessToken
+        return c
     }
 }

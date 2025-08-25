@@ -13,6 +13,6 @@ sealed interface SocketEvent {
     ) : SocketEvent
 
     data class Error(
-        val throwable: Throwable,
+        val t: Throwable,
     ) : SocketEvent
 }

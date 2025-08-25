@@ -49,23 +49,26 @@ class RequestRepository(
 
     private suspend fun drainOne(id: Long) {
         Log.d(TAG_REQ, "drainOne start id=$id")
-        val item = dao.all().firstOrNull { it.id == id } ?: run {
-            Log.d(TAG_REQ, "drainOne id=$id not found"); return
-        }
+        val item =
+            dao.all().firstOrNull { it.id == id } ?: run {
+                Log.d(TAG_REQ, "drainOne id=$id not found")
+                return
+            }
         if (!network.isOnline.value) {
-            Log.d(TAG_REQ, "drainOne id=$id skipped (offline)"); return
+            Log.d(TAG_REQ, "drainOne id=$id skipped (offline)")
+            return
         }
 
         val result = runCatching { execute(item) }
-        result.onSuccess {
-            dao.delete(item.id)
-            Log.d(TAG_REQ, "drainOne id=${item.id} -> SUCCESS (deleted)")
-        }.onFailure { e ->
-            dao.bumpAttempts(item.id)
-            Log.w(TAG_REQ, "drainOne id=${item.id} -> FAIL (attempts++), err=${e.message}")
-        }
+        result
+            .onSuccess {
+                dao.delete(item.id)
+                Log.d(TAG_REQ, "drainOne id=${item.id} -> SUCCESS (deleted)")
+            }.onFailure { e ->
+                dao.bumpAttempts(item.id)
+                Log.w(TAG_REQ, "drainOne id=${item.id} -> FAIL (attempts++), err=${e.message}")
+            }
     }
-
 
     suspend fun drainAll() =
         drainMutex.withLock {
@@ -77,17 +80,18 @@ class RequestRepository(
 
     private suspend fun execute(item: QueuedRequest) {
         val client = retrofit.callFactory() as OkHttpClient
-        val req = okhttp3.Request.Builder()
-            .url(item.url)
-            .method(item.method.uppercase(), null)
-            .build()
+        val req =
+            okhttp3.Request
+                .Builder()
+                .url(item.url)
+                .method(item.method.uppercase(), null)
+                .build()
 
         val resp = withContext(Dispatchers.IO) { client.newCall(req).execute() }
         resp.use {
             check(it.isSuccessful) { "HTTP ${it.code} for ${item.method} ${item.url}" }
         }
     }
-
 
     fun syncOutboxOnce(): Flow<List<QueuedRequest>> =
         networkBoundResource(

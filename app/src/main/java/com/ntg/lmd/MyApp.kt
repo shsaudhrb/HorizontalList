@@ -1,35 +1,37 @@
 package com.ntg.lmd
 
 import android.app.Application
-import com.ntg.lmd.network.authheader.AutoReauthOnConnectivity
-import com.ntg.lmd.network.authheader.TokenStore
-import com.ntg.lmd.network.core.RetrofitProvider
+import com.ntg.lmd.network.api.AuthRepository
+import com.ntg.lmd.network.core.Net
 import com.ntg.lmd.network.sockets.SocketIntegration
-import okhttp3.OkHttpClient
 
 class MyApp : Application() {
-    private var autoReauth: AutoReauthOnConnectivity? = null
-
     lateinit var socket: SocketIntegration
+        private set
+    lateinit var authRepo: AuthRepository
         private set
 
     override fun onCreate() {
         super.onCreate()
 
-        // init Retrofit once
-        RetrofitProvider.init(this)
+        Net.init(this)
 
-        val tokenStore = TokenStore(this)
-        val client = (RetrofitProvider.retrofit.callFactory() as OkHttpClient)
-
-        // create socket instance
         socket =
             SocketIntegration(
-                baseWsUrl = "wss://example.com/ws",
-                client = client,
-                tokenStore = tokenStore,
+                baseWsUrl = BuildConfig.WS_BASE_URL,
+                client = Net.okHttpForWs,
+                tokenStore = Net.tokenStore,
             )
 
-        autoReauth = AutoReauthOnConnectivity(this).also { it.start() }
+        Net.tokenStore.onTokensChanged = { access, _ ->
+            socket.reconnectIfTokenChanged(access)
+        }
+
+        authRepo =
+            AuthRepository(
+                loginApi = Net.apiNoAuth,
+                store = Net.tokenStore,
+                socket = socket,
+            )
     }
 }
