@@ -29,9 +29,9 @@ import com.ntg.lmd.mainscreen.ui.screens.deliveriesLogScreen
 import com.ntg.lmd.mainscreen.ui.screens.generalPoolScreen
 import com.ntg.lmd.mainscreen.ui.screens.myOrdersScreen
 import com.ntg.lmd.mainscreen.ui.screens.myPoolScreen
-import com.ntg.lmd.mainscreen.ui.screens.ordersHistoryScreen
+/*import com.ntg.lmd.mainscreen.ui.screens.ordersHistoryScreen
 import com.ntg.lmd.navigation.component.AppScaffoldActions
-import com.ntg.lmd.navigation.component.AppScaffoldConfig
+import com.ntg.lmd.navigation.component.AppScaffoldConfig*/
 import com.ntg.lmd.navigation.component.appScaffoldWithDrawer
 import com.ntg.lmd.navigation.component.navigateSingleTop
 import com.ntg.lmd.notification.ui.screens.notificationScreen
@@ -206,7 +206,7 @@ private fun drawerHost(
         ) {
             composable(Screen.GeneralPool.route) { generalPoolScreen(drawerNavController) }
             composable(Screen.MyOrders.route) { myOrdersScreen(drawerNavController) }
-            composable(Screen.OrdersHistory.route) { ordersHistoryScreen(drawerNavController) }
+          //  composable(Screen.OrdersHistory.route) { ordersHistoryScreen(drawerNavController) }
             composable(
                 route = Screen.Notifications.route,
                 deepLinks = listOf(navDeepLink { uriPattern = "myapp://notifications" }),

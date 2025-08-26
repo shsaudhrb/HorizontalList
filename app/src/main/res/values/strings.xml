@@ -75,7 +75,7 @@
     <string name="empty_notifications">No notifications available.</string>
     <string name="loading_more_failed">Loading more failed</string>
     <string name="retry">Retry</string>
-    <string name="caught_up">You’re all caught up 🎉</string>
+    <string name="caught_up">You’re all caught up </string>
     <string name="unable_load_notifications">Unable to load notifications.</string>
 
     <!-- Relative time -->

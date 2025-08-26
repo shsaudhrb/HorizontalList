@@ -78,7 +78,7 @@
     <string name="empty_notifications">لا توجد إشعارات.</string>
     <string name="loading_more_failed">فشل تحميل المزيد</string>
     <string name="retry">إعادة المحاولة</string>
-    <string name="caught_up">انتهيت من كل الإشعارات 🎉</string>
+    <string name="caught_up">انتهيت من كل الإشعارات </string>
     <string name="unable_load_notifications">تعذّر تحميل الإشعارات.</string>
 
     <!-- الوقت النسبي -->
