@@ -325,10 +325,10 @@ fun circleSlider(
                                     val fraction = posX / size.width // Float 0..1
                                     val newValue =
                                         valueRange.start +
-                                            (
-                                                fraction.toDouble() *
-                                                    (valueRange.endInclusive - valueRange.start)
-                                            )
+                                                (
+                                                        fraction.toDouble() *
+                                                                (valueRange.endInclusive - valueRange.start)
+                                                        )
                                     onValueChange(newValue)
                                 }
                             }
