@@ -8,7 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.ntg.lmd.MyApp
 import com.ntg.lmd.R
 import com.ntg.lmd.authentication.ui.model.LoginUiState
-import com.ntg.lmd.network.api.AuthRepository
+import com.ntg.lmd.authentication.data.repositoryImp.AuthRepositoryImp
 import com.ntg.lmd.utils.ValidationField
 import com.ntg.lmd.utils.ValidationViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 private const val TAG_VM = "LMD-VM"
 
 class LoginViewModel(
-    private val authRepo: AuthRepository,
+    private val authRepo: AuthRepositoryImp,
     private val validationViewModel: ValidationViewModel = ValidationViewModel(),
 ) : ViewModel() {
     // Single StateFlow for all UI state

@@ -1,12 +1,13 @@
-package com.ntg.lmd.network.api
+package com.ntg.lmd.authentication.data.repositoryImp
 
-import com.ntg.lmd.network.api.dto.LoginRequest
-import com.ntg.lmd.network.authheader.TokenStoreTest
+import com.ntg.lmd.authentication.data.datasource.model.LoginRequest
+import com.ntg.lmd.authentication.data.datasource.remote.api.AuthApi
+import com.ntg.lmd.network.authheader.SecureTokenStore
 import com.ntg.lmd.network.sockets.SocketIntegration
 
-class AuthRepository(
-    private val loginApi: TestApi,
-    private val store: TokenStoreTest,
+class AuthRepositoryImp(
+    private val loginApi: AuthApi,
+    private val store: SecureTokenStore,
     private val socket: SocketIntegration,
 ) {
     suspend fun login(

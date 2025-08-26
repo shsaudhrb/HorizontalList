@@ -130,6 +130,8 @@ dependencies {
 
     // WorkManager
     implementation(libs.androidx.work.runtime.ktx)
+    //security
+    implementation(libs.androidx.security.crypto)
 }
 
 // Custom tasks for code quality checks

@@ -1,9 +1,9 @@
 package com.ntg.lmd.network.authheader
 
 import android.util.Log
-import com.ntg.lmd.network.api.TestApi
-import com.ntg.lmd.network.api.dto.RefreshTokenData
-import com.ntg.lmd.network.api.dto.RefreshTokenRequest
+import com.ntg.lmd.authentication.data.datasource.model.RefreshTokenData
+import com.ntg.lmd.authentication.data.datasource.model.RefreshTokenRequest
+import com.ntg.lmd.authentication.data.datasource.remote.api.AuthApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
@@ -17,8 +17,8 @@ private const val HTTP_UNAUTHORIZED = 401
 private const val MAX_AUTH_RETRIES = 1
 
 class TokenAuthenticator(
-    private val store: TokenStoreTest,
-    private val refreshApi: TestApi,
+    private val store: SecureTokenStore,
+    private val refreshApi: AuthApi,
 ) : Authenticator {
     private val mutex = Mutex()
 
@@ -41,7 +41,12 @@ class TokenAuthenticator(
                 runBlocking(Dispatchers.IO) {
                     mutex.withLock {
                         store.getAccessToken()?.let { existing ->
-                            return@withLock RefreshTokenData(existing, store.getRefreshToken(), null, null)
+                            return@withLock RefreshTokenData(
+                                existing,
+                                store.getRefreshToken(),
+                                null,
+                                null
+                            )
                         }
                         val body = refreshApi.refreshToken(RefreshTokenRequest(refresh))
                         check(body.success) { "Refresh success=false" }

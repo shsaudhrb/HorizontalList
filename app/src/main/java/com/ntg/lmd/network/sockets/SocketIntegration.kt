@@ -1,7 +1,7 @@
 package com.ntg.lmd.network.sockets
 
 import android.util.Log
-import com.ntg.lmd.network.authheader.TokenStoreTest
+import com.ntg.lmd.network.authheader.SecureTokenStore
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import okhttp3.OkHttpClient
@@ -14,7 +14,7 @@ private const val WS_CLOSE_CODE_NORMAL = 1000
 class SocketIntegration(
     private val baseWsUrl: String,
     private val client: OkHttpClient,
-    private val tokenStore: TokenStoreTest,
+    private val tokenStore: SecureTokenStore,
 ) {
     private var ws: WebSocket? = null
     private var lastAccess: String? = null

@@ -1,5 +1,6 @@
 package com.ntg.lmd.navigation.component
 
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -33,18 +34,23 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.ntg.lmd.MyApp
 import com.ntg.lmd.R
 import com.ntg.lmd.navigation.Screen
 import com.ntg.lmd.ui.theme.CupertinoCellBackground
@@ -67,7 +73,11 @@ fun appScaffoldWithDrawer(
 ) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-
+    val app = LocalContext.current.applicationContext as MyApp
+    val online by app.networkMonitor.isOnline.collectAsState()
+    LaunchedEffect(online) {
+        Log.d("NET", "Scaffold observed online=$online")
+    }
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
