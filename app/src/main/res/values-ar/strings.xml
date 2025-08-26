@@ -43,5 +43,24 @@
     <string name="distance_na">—</string>
     <string name="confirm_order">تأكيد الطلب</string>
     <string name="pick_order">استلام الطلب</string>
+    <string name="order_pool">سلة الطلبات</string>
+    <string name="start_delivery">بدء التوصيل</string>
+    <string name="deliver_order">تسليم الطلب</string>
+    <string name="delivery_failed">فشل التسليم</string>
+    <string name="cancel_order">إلغاء الطلب</string>
+    <string name="reassign_order">إعادة الإسناد</string>
+    <string name="are_you_sure">هل أنت متأكد؟</string>
+    <string name="ok">موافق</string>
+    <string name="cancel">إلغاء</string>
+    <string name="confirm">تأكيد</string>
+    <string name="deliver">تسليم</string>
+    <string name="please_enter_reason">فضلاً اكتب سبباً</string>
+    <string name="enter_pin_optional">أدخل رمز PIN (اختياري)</string>
+    <string name="update_failed">تعذّر تحديث الحالة</string>
+    <string name="phone_missing">لا يوجد رقم هاتف متاح</string>
+    <string name="enter_agent_name_or_id">أدخل اسم المندوب / المعرّف</string>
+    <string name="unit_km">كم</string>
+    <string name="more_options">المزيد من الخيارات</string>
+
 
 </resources>

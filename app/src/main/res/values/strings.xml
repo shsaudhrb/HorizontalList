@@ -42,4 +42,23 @@
     <string name="distance_na">—</string>
     <string name="confirm_order">Confirm Order</string>
     <string name="pick_order">Pick Order</string>
+    <string name="order_pool">Order Pool</string>
+    <string name="start_delivery">Start Delivery</string>
+    <string name="deliver_order">Deliver Order</string>
+    <string name="delivery_failed">Delivery Failed</string>
+    <string name="cancel_order">Cancel Order</string>
+    <string name="reassign_order">Reassign Order</string>
+    <string name="are_you_sure">Are you sure?</string>
+    <string name="ok">OK</string>
+    <string name="cancel">Cancel</string>
+    <string name="confirm">Confirm</string>
+    <string name="deliver">Deliver</string>
+    <string name="please_enter_reason">Please enter a reason</string>
+    <string name="enter_pin_optional">Enter PIN (optional)</string>
+    <string name="update_failed">Failed to update status</string>
+    <string name="phone_missing">No phone number available</string>
+    <string name="enter_agent_name_or_id">Enter agent name / ID</string>
+    <string name="unit_km">km</string>
+    <string name="more_options">More options</string>
+
 </resources>

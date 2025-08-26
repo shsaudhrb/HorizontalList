@@ -1,6 +1,6 @@
 [
-  {"id":1,"orderNumber":"180001","status":"added","customerName":"Ahmad","total":400.0,"state":"new","distanceMeters":1465},
-  {"id":2,"orderNumber":"180002","status":"added","customerName":"Lama","total":100.0,"state":"new","distanceMeters":2723},
+  {"id":1,"orderNumber":"180001","status":"added","customerName":"Ahmad","customerPhone": "+966500000001","total":400.0,"state":"new","distanceMeters":1465},
+  {"id":2,"orderNumber":"180002","status":"added","customerName":"Lama","customerPhone": "+966500000002","total":100.0,"state":"new","distanceMeters":2723},
   {"id":3,"orderNumber":"180003","status":"confirmed","customerName":"Mona","total":400.0,"state":"new","distanceMeters":2891},
   {"id":4,"orderNumber":"180004","status":"added","customerName":"Yousef","total":100.0,"state":"new","distanceMeters":2544},
   {"id":5,"orderNumber":"180005","status":"added","customerName":"Hanan","total":400.0,"state":"new","distanceMeters":1917},

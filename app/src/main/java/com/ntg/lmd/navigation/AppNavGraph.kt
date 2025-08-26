@@ -6,15 +6,18 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.ntg.lmd.mainscreen.ui.screens.chatScreen
 import com.ntg.lmd.mainscreen.ui.screens.deliveriesLogScreen
 import com.ntg.lmd.mainscreen.ui.screens.generalPoolScreen
 import com.ntg.lmd.mainscreen.ui.screens.myOrdersScreen
 import com.ntg.lmd.mainscreen.ui.screens.myPoolScreen
+import com.ntg.lmd.mainscreen.ui.screens.orderDetailsScreen
 import com.ntg.lmd.mainscreen.ui.screens.ordersHistoryScreen
 import com.ntg.lmd.navigation.component.AppBarConfig
 import com.ntg.lmd.navigation.component.appScaffoldWithDrawer
@@ -47,7 +50,7 @@ fun appNavGraph(rootNavController: NavHostController) {
 
         // ---------- Auth ----------
         composable(Screen.Login.route) {
-            LoginScreen()
+            LoginScreen(navController = rootNavController)
         }
         composable(Screen.Register.route) {
             RegisterScreen(
@@ -65,13 +68,27 @@ fun appNavGraph(rootNavController: NavHostController) {
                         launchSingleTop = true
                     }
                 },
+                onOpenOrderDetails = { id ->
+                    // 👈 take the id
+                    rootNavController.navigate(Screen.OrderDetails.route(id))
+                },
             )
+        }
+        composable(
+            route = Screen.OrderDetails.route, // "order_details/{orderId}"
+            arguments = listOf(navArgument("orderId") { type = NavType.LongType }),
+        ) { backStackEntry ->
+            val orderId = backStackEntry.arguments?.getLong("orderId") ?: 0L
+            orderDetailsScreen(orderId = orderId, navController = rootNavController)
         }
     }
 }
 
 @Composable
-private fun drawerHost(onLogout: () -> Unit) {
+private fun drawerHost(
+    onLogout: () -> Unit,
+    onOpenOrderDetails: (Long) -> Unit,
+) {
     val drawerNavController = rememberNavController()
     val backStack by drawerNavController.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route ?: Screen.GeneralPool.route
@@ -113,6 +130,7 @@ private fun drawerHost(onLogout: () -> Unit) {
                 myOrdersScreen(
                     navController = drawerNavController,
                     externalQuery = search,
+                    onOpenOrderDetails = onOpenOrderDetails,
                 )
             }
             composable(Screen.OrdersHistory.route) { ordersHistoryScreen(drawerNavController) }

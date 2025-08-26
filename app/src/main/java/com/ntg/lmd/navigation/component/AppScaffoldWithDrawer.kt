@@ -136,10 +136,18 @@ fun appScaffoldWithDrawer(
             topBar = {
                 appHeader(
                     title = appBar.title,
-                    onMenuClick = { scope.launch { drawerState.open() } },
-                    showSearch = appBar.showSearch,
-                    searchValue = appBar.searchValue,
-                    onSearchChange = appBar.onSearchChange,
+                    showBack = false,
+                    actions =
+                        AppHeaderActions(
+                            onBackClick = {},
+                            onMenuClick = { scope.launch { drawerState.open() } },
+                        ),
+                    search =
+                        AppHeaderSearch(
+                            visible = appBar.showSearch,
+                            value = appBar.searchValue,
+                            onValueChange = appBar.onSearchChange,
+                        ),
                 )
             },
         ) { inner ->

@@ -14,12 +14,24 @@ object OrdersLoaderHelper {
 
         for (i in 0 until arr.length()) {
             val o = arr.getJSONObject(i)
+
+            val phone =
+                (
+                    if (o.has("customerPhone")) {
+                        o.optString("customerPhone")
+                    } else if (o.has("phone")) {
+                        o.optString("phone")
+                    } else {
+                        o.optString("customer_phone", "") // fallback snake_case
+                    }
+                ).trim().takeIf { it.isNotEmpty() }
             out +=
                 OrderUI(
                     id = o.getInt("id").toLong(),
                     orderNumber = o.getString("orderNumber"),
                     status = o.getString("status"),
                     customerName = o.getString("customerName"),
+                    customerPhone = phone,
                     totalPrice = o.getDouble("total"),
                     distanceMeters =
                         o
