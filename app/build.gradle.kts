@@ -28,15 +28,16 @@ android {
         val mapsKey = (project.findProperty("MAPS_API_KEY") as String?) ?: System.getenv("MAPS_API_KEY") ?: ""
         manifestPlaceholders["MAPS_API_KEY"] = mapsKey
         // === REST base URL ===
-        buildConfigField("String", "BASE_URL", "\"https://kgomwyksxjqtcjwlzbsp.supabase.co/functions/v1/\"")
-
+        val baseUrl = providers.gradleProperty("BASE_URL").orNull
+            ?: error("Missing BASE_URL in gradle.properties")
         // === WebSocket URL ===
-        buildConfigField("String", "WS_BASE_URL", "\"wss://kgomwyksxjqtcjwlzbsp.supabase.co/realtime/v1/websocket\"")
-        buildConfigField(
-            "String",
-            "SUPABASE_KEY",
-            "\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtnb213eWtzeGpxdGNqd2x6YnNwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU3ODQ0NTEsImV4cCI6MjA3MTM2MDQ1MX0.g0JTJ4fftJum44D3gDJHwnoXK0XBLmWnsRbQcSVO5zs\"",
-        )
+        val wsBaseUrl = providers.gradleProperty("WS_BASE_URL").orNull
+            ?: error("Missing WS_BASE_URL in gradle.properties")
+        val supabaseKey = providers.gradleProperty("SUPABASE_KEY").orNull
+            ?: error("Missing SUPABASE_KEY in gradle.properties")
+        buildConfigField("String", "BASE_URL", "\"$baseUrl\"")
+        buildConfigField("String", "WS_BASE_URL", "\"$wsBaseUrl\"")
+        buildConfigField("String", "SUPABASE_KEY", "\"$supabaseKey\"")
     }
 
     buildTypes {
