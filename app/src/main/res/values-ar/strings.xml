@@ -66,6 +66,16 @@
     <string name="kilometer">كيلومتر</string>
     <string name="loading_text">جاري التحميل...</string>
     <string name="no_orders">لا توجد طلبات</string>
+    <!-- Deliveries Log -->
+    <string name="SLA">SLA</string>
+    <string name="order_details">تفاصيل الطلب</string>
+    <string name="delivery_time">وقت التسليم</string>
+    <string name="time_minutes_ago">منذ %1$d دقيقة</string>
+    <string name="time_one_hour_ago">منذ ساعة واحدة</string>
+    <string name="time_hours_ago">منذ %1$d ساعات</string>
+    <string name="time_one_day_ago">منذ يوم واحد</string>
+    <string name="time_days_ago">منذ %1$d أيام</string>
+
 
 
 </resources>

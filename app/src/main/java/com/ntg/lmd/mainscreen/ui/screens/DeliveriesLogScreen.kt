@@ -10,12 +10,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.TabRowDefaults.Divider
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -25,16 +25,18 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.ntg.lmd.R
+import com.ntg.lmd.mainscreen.domain.model.DeliveryLog
+import com.ntg.lmd.mainscreen.domain.model.DeliveryState
 import com.ntg.lmd.mainscreen.ui.viewmodel.DeliveriesLogViewModel
-import com.ntg.lmd.mainscreen.ui.viewmodel.DeliveryState
 import com.ntg.lmd.ui.theme.SuccessGreen
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -47,18 +49,24 @@ fun deliveriesLogScreen(
 ) {
 
     val context = LocalContext.current
-    LaunchedEffect(Unit) { vm.loadFromAssets(context) }
+    LaunchedEffect(Unit) { vm.load(context) }
 
     val backStackEntry = navController.currentBackStackEntry
+
+    val logs by vm.logs.collectAsState()
+
+    val iconWidth = 60.dp
+    val detailsWidth = 220.dp
+    val timeWidth = 120.dp
 
     LaunchedEffect(backStackEntry) {
         val h = backStackEntry?.savedStateHandle ?: return@LaunchedEffect
         val searchingFlow = h.getStateFlow("searching", false)
         val textFlow = h.getStateFlow("search_text", "")
-
-        combine(searchingFlow, textFlow) { enabled, text ->
-            if (enabled) text else "" // when search is closed, reset
-        }
+        combine(
+            searchingFlow,
+            textFlow
+        ) { enabled, text -> if (enabled) text else "" } // when search is closed, reset
             .distinctUntilChanged()
             .collect { query -> vm.searchById(query) }
     }
@@ -77,12 +85,6 @@ fun deliveriesLogScreen(
         }
     }
 
-    val logs by vm.logs.collectAsState()
-
-    val iconWidth = 60.dp
-    val detailsWidth = 220.dp
-    val timeWidth = 120.dp
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -99,7 +101,7 @@ fun deliveriesLogScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    "SLA",
+                    stringResource(R.string.SLA),
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp,
                     color = MaterialTheme.colorScheme.onBackground,
@@ -107,7 +109,7 @@ fun deliveriesLogScreen(
                 )
             }
             Text(
-                "Order Details",
+                stringResource(R.string.order_details),
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp,
                 color = MaterialTheme.colorScheme.onBackground,
@@ -115,7 +117,7 @@ fun deliveriesLogScreen(
                 textAlign = TextAlign.Center
             )
             Text(
-                "Delivery Time",
+                stringResource(R.string.delivery_time),
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp,
                 color = MaterialTheme.colorScheme.onBackground,
@@ -124,14 +126,14 @@ fun deliveriesLogScreen(
             )
         }
 
-        Divider()
+        HorizontalDivider()
 
         // Logs
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.fillMaxSize()
         ) {
-            items(logs) { log ->
+            items(logs) { log: DeliveryLog ->
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     elevation = CardDefaults.cardElevation(2.dp)
@@ -175,7 +177,7 @@ fun deliveriesLogScreen(
                         ) {
                             Text(
                                 text = log.orderDate,
-                                color = Color.Black,
+                                color = MaterialTheme.colorScheme.onBackground,
                                 textAlign = TextAlign.Center
                             )
                             Text(

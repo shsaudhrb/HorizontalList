@@ -64,5 +64,15 @@
     <string name="kilometer">Km</string>
     <string name="loading_text">Loading Text...</string>
     <string name="no_orders">No orders Found</string>
+    <!-- Deliveries Log -->
+    <string name="SLA">SLA</string>
+    <string name="order_details">Order Details</string>
+    <string name="delivery_time">Delivery Time</string>
+    <string name="time_minutes_ago">%1$d mins ago</string>
+    <string name="time_one_hour_ago">1 hour ago</string>
+    <string name="time_hours_ago">%1$d hours ago</string>
+    <string name="time_one_day_ago">1 day ago</string>
+    <string name="time_days_ago">%1$d days ago</string>
+
 
 </resources>
