@@ -29,6 +29,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -147,76 +148,95 @@ private fun headerRow(
 @Composable
 private fun logsList(
     logs: List<DeliveryLog>,
-    iconWidth: androidx.compose.ui.unit.Dp,
-    detailsWidth: androidx.compose.ui.unit.Dp,
-    timeWidth: androidx.compose.ui.unit.Dp,
+    iconWidth: Dp,
+    detailsWidth: Dp,
+    timeWidth: Dp,
 ) {
-    LazyColumn(
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        items(logs) { log ->
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(2.dp),
-            ) {
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+    if (logs.isEmpty()) {
+        // show empty state
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = stringResource(R.string.no_deliveries_yet),
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            )
+        }
+    } else {
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            items(logs) { log ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    elevation = CardDefaults.cardElevation(2.dp),
                 ) {
-                    Box(modifier = Modifier.width(iconWidth), contentAlignment = Alignment.Center) {
-                        when (log.state) {
-                            DeliveryState.DELIVERED ->
-                                Icon(Icons.Filled.CheckCircle, "Delivered", tint = SuccessGreen)
-
-                            DeliveryState.CANCELLED, DeliveryState.FAILED ->
-                                Icon(
-                                    Icons.Filled.Cancel,
-                                    "Not delivered",
-                                    tint = MaterialTheme.colorScheme.error,
-                                )
-
-                            else ->
-                                Icon(
-                                    Icons.Filled.CheckCircle,
-                                    "Other",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                        }
-                    }
-                    Column(
-                        modifier = Modifier.width(detailsWidth),
-                        horizontalAlignment = Alignment.CenterHorizontally,
+                    Row(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        Box(
+                            modifier = Modifier.width(iconWidth),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            when (log.state) {
+                                DeliveryState.DELIVERED ->
+                                    Icon(Icons.Filled.CheckCircle, "Delivered", tint = SuccessGreen)
+
+                                DeliveryState.CANCELLED, DeliveryState.FAILED ->
+                                    Icon(
+                                        Icons.Filled.Cancel,
+                                        "Not delivered",
+                                        tint = MaterialTheme.colorScheme.error,
+                                    )
+
+                                else ->
+                                    Icon(
+                                        Icons.Filled.CheckCircle,
+                                        "Other",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                            }
+                        }
+                        Column(
+                            modifier = Modifier.width(detailsWidth),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Text(
+                                log.orderDate,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                textAlign = TextAlign.Center,
+                            )
+                            Text(
+                                log.orderId,
+                                style =
+                                    MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onBackground,
+                                    ),
+                                textAlign = TextAlign.Center,
+                            )
+                        }
                         Text(
-                            log.orderDate,
-                            color = MaterialTheme.colorScheme.onBackground,
-                            textAlign = TextAlign.Center,
-                        )
-                        Text(
-                            log.orderId,
-                            style =
-                                MaterialTheme.typography.bodyMedium.copy(
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onBackground,
-                                ),
+                            text = log.deliveryTime,
+                            color =
+                                when (log.state) {
+                                    DeliveryState.DELIVERED -> SuccessGreen
+                                    DeliveryState.CANCELLED, DeliveryState.FAILED -> MaterialTheme.colorScheme.error
+                                    else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                            modifier = Modifier.width(timeWidth),
                             textAlign = TextAlign.Center,
                         )
                     }
-                    Text(
-                        text = log.deliveryTime,
-                        color =
-                            when (log.state) {
-                                DeliveryState.DELIVERED -> SuccessGreen
-                                DeliveryState.CANCELLED, DeliveryState.FAILED -> MaterialTheme.colorScheme.error
-                                else -> MaterialTheme.colorScheme.onSurfaceVariant
-                            },
-                        modifier = Modifier.width(timeWidth),
-                        textAlign = TextAlign.Center,
-                    )
                 }
             }
         }

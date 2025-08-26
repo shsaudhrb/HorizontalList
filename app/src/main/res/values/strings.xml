@@ -73,6 +73,7 @@
     <string name="time_hours_ago">%1$d hours ago</string>
     <string name="time_one_day_ago">1 day ago</string>
     <string name="time_days_ago">%1$d days ago</string>
+    <string name="no_deliveries_yet">No deliveries yet</string>
 
 
 </resources>

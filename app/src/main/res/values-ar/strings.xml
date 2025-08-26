@@ -75,7 +75,7 @@
     <string name="time_hours_ago">منذ %1$d ساعات</string>
     <string name="time_one_day_ago">منذ يوم واحد</string>
     <string name="time_days_ago">منذ %1$d أيام</string>
-
+    <string name="no_deliveries_yet">لا توجد تسليمات بعد</string>
 
 
 </resources>
