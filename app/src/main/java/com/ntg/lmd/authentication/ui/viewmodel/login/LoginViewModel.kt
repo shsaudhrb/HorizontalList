@@ -1,7 +1,6 @@
 package com.ntg.lmd.authentication.ui.viewmodel.login
 
 import android.app.Application
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -9,6 +8,7 @@ import com.ntg.lmd.MyApp
 import com.ntg.lmd.R
 import com.ntg.lmd.authentication.data.repositoryImp.AuthRepositoryImp
 import com.ntg.lmd.authentication.ui.model.LoginUiState
+import com.ntg.lmd.network.queue.NetworkResult
 import com.ntg.lmd.utils.ValidationField
 import com.ntg.lmd.utils.ValidationViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,8 +16,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-
-private const val TAG_VM = "LMD-VM"
 
 class LoginViewModel(
     private val authRepo: AuthRepositoryImp,
@@ -173,25 +171,34 @@ class LoginViewModel(
             val password = _uiState.value.password
 
             _uiState.update { it.copy(isLoading = true, message = null, loginSuccess = false) }
-
             val result = authRepo.login(username, password)
-            val success = result.isSuccess
 
-            if (success) {
-                Log.d(TAG_VM, "Login success")
-            } else {
-                Log.e(TAG_VM, "Login failure", result.exceptionOrNull())
+            when (result) {
+                is NetworkResult.Success -> {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            loginSuccess = true,
+                            message = R.string.msg_welcome,
+                        )
+                    }
+                    onResult(true)
+                }
+                is NetworkResult.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            loginSuccess = false,
+                            message = null,
+                            errorMessage = result.error.message ?: "Unknown error",
+                        )
+                    }
+                    onResult(false)
+                }
+                is NetworkResult.Loading -> {
+                    _uiState.update { it.copy(isLoading = true) }
+                }
             }
-
-            _uiState.update {
-                it.copy(
-                    isLoading = false,
-                    loginSuccess = success,
-                    message = if (success) R.string.msg_welcome else R.string.error_invalid_credentials,
-                )
-            }
-
-            onResult(success)
         }
 }
 

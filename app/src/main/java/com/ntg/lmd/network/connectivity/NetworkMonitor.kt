@@ -5,7 +5,6 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
-import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -14,8 +13,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.stateIn
-
-private const val TAG_NET = "NetworkMonitor"
 
 class NetworkMonitor(
     ctx: Context,
@@ -31,13 +28,11 @@ class NetworkMonitor(
             val callback =
                 object : ConnectivityManager.NetworkCallback() {
                     override fun onAvailable(network: Network) {
-                        Log.d(TAG_NET, "onAvailable -> online=true")
                         trySend(true).isSuccess
                     }
 
                     override fun onLost(network: Network) {
                         val online = currentlyOnline()
-                        Log.d(TAG_NET, "onLost -> online=$online")
                         trySend(online).isSuccess
                     }
 
@@ -46,7 +41,6 @@ class NetworkMonitor(
                         caps: NetworkCapabilities,
                     ) {
                         val online = currentlyOnline()
-                        Log.d(TAG_NET, "onCapabilitiesChanged -> online=$online")
                         trySend(online).isSuccess
                     }
                 }

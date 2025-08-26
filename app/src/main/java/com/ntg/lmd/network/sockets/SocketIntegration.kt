@@ -27,7 +27,6 @@ class SocketIntegration(
         lastAccess = access
         val anon = com.ntg.lmd.BuildConfig.SUPABASE_KEY
         val url = "$baseWsUrl?apikey=$anon&access_token=$access"
-        Log.d("WS-URL", "WebSocket URL = $url")
         val req = Request.Builder().url(url).build()
 
         ws =
@@ -46,7 +45,6 @@ class SocketIntegration(
                         webSocket: WebSocket,
                         text: String,
                     ) {
-                        Log.d("LMD-WS", "onMessage: $text")
                         _events.tryEmit(SocketEvent.Message(text))
                     }
 
@@ -55,7 +53,6 @@ class SocketIntegration(
                         code: Int,
                         reason: String,
                     ) {
-                        Log.d("LMD-WS", "onClosed code=$code reason=$reason")
                         _events.tryEmit(SocketEvent.Closed(code, reason))
                     }
 
@@ -85,7 +82,6 @@ class SocketIntegration(
             }
             """.trimIndent()
         ws?.send(msg)
-        Log.d("LMD-WS", "join sent: $msg")
     }
 
     fun reconnectIfTokenChanged(currentAccess: String?) {

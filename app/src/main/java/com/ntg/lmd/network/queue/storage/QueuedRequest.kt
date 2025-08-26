@@ -9,7 +9,7 @@ data class QueuedRequest(
     val method: String,
     val url: String,
     val headersJson: String? = null,
-    val bodyBase64: String? = null,
+    val bodyText: String? = null,
     val contentType: String? = null,
     val attempts: Int = 0,
 )
