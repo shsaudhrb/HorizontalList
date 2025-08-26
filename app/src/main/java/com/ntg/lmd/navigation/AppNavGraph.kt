@@ -1,19 +1,27 @@
+@file:Suppress("DEPRECATION")
+
 package com.ntg.lmd.navigation
 
+import android.content.Intent
+import android.os.Build
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import androidx.navigation.navDeepLink
 import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.domain.model.SearchController
 import com.ntg.lmd.mainscreen.ui.screens.chatScreen
@@ -21,9 +29,13 @@ import com.ntg.lmd.mainscreen.ui.screens.deliveriesLogScreen
 import com.ntg.lmd.mainscreen.ui.screens.generalPoolScreen
 import com.ntg.lmd.mainscreen.ui.screens.myOrdersScreen
 import com.ntg.lmd.mainscreen.ui.screens.myPoolScreen
+/*import com.ntg.lmd.mainscreen.ui.screens.ordersHistoryScreen
+import com.ntg.lmd.navigation.component.AppScaffoldActions
+import com.ntg.lmd.navigation.component.AppScaffoldConfig*/
 import com.ntg.lmd.navigation.component.appScaffoldWithDrawer
 import com.ntg.lmd.navigation.component.navigateSingleTop
 import com.ntg.lmd.notification.ui.screens.notificationScreen
+import com.ntg.lmd.notification.ui.viewmodel.DeepLinkViewModel
 import com.ntg.lmd.order.ui.screen.ordersHistoryRoute
 import com.ntg.lmd.settings.ui.screens.settingsOptions
 import com.ntg.lmd.authentication.ui.screens.login.loginScreen as LoginScreen
@@ -31,7 +43,10 @@ import com.ntg.lmd.authentication.ui.screens.register.registerScreen as Register
 import com.ntg.lmd.authentication.ui.screens.splash.splashScreen as SplashScreen
 
 @Composable
-fun appNavGraph(rootNavController: NavHostController) {
+fun appNavGraph(
+    rootNavController: NavHostController,
+    deeplinkVM: DeepLinkViewModel,
+) {
     NavHost(
         navController = rootNavController,
         startDestination = Screen.Splash.route,
@@ -41,7 +56,15 @@ fun appNavGraph(rootNavController: NavHostController) {
             SplashScreen(
                 navController = rootNavController,
                 onDecide = { isLoggedIn ->
-                    rootNavController.navigate(if (isLoggedIn) Screen.Drawer.route else Screen.Login.route) {
+                    val wantsNotifications = deeplinkVM.consumeOpenNotifications()
+
+                    rootNavController.navigate(
+                        when {
+                            !isLoggedIn -> Screen.Login.route
+                            wantsNotifications -> "${Screen.Drawer.route}?openNotifications=true"
+                            else -> Screen.Drawer.route
+                        },
+                    ) {
                         popUpTo(Screen.Splash.route) { inclusive = true }
                         launchSingleTop = true
                     }
@@ -50,15 +73,37 @@ fun appNavGraph(rootNavController: NavHostController) {
         }
 
         // ---------- Auth ----------
-        composable(Screen.Login.route) {
-            LoginScreen(navController = rootNavController)
-        }
-        composable(Screen.Register.route) {
-            RegisterScreen(navController = rootNavController)
-        }
+        composable(Screen.Login.route) { LoginScreen(navController = rootNavController) }
+        composable(Screen.Register.route) { RegisterScreen(navController = rootNavController) }
 
-        // ---------- Drawer Host (after login) ----------
-        composable(Screen.Drawer.route) {
+        // ---------- Drawer Host (AFTER LOGIN) ----------
+        composable(
+            route = Screen.Drawer.route + "?openNotifications={openNotifications}",
+            arguments =
+                listOf(
+                    navArgument("openNotifications") {
+                        type = NavType.BoolType
+                        defaultValue = false
+                    },
+                ),
+            deepLinks = listOf(navDeepLink { uriPattern = "myapp://notifications" }),
+        ) { backStackEntry ->
+
+            val argOpen = backStackEntry.arguments?.getBoolean("openNotifications") ?: false
+
+            val deepLinkIntent: Intent? =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    backStackEntry.arguments?.getParcelable(
+                        "android-support-nav:controller:deepLinkIntent",
+                        Intent::class.java,
+                    )
+                } else {
+                    @Suppress("DEPRECATION")
+                    backStackEntry.arguments?.getParcelable("android-support-nav:controller:deepLinkIntent")
+                }
+            val uri = deepLinkIntent?.data
+            val deepOpen = (uri?.scheme == "myapp" && uri.host == "notifications")
+
             drawerHost(
                 onLogout = {
                     rootNavController.navigate(Screen.Login.route) {
@@ -66,17 +111,30 @@ fun appNavGraph(rootNavController: NavHostController) {
                         launchSingleTop = true
                     }
                 },
+                openNotifications = argOpen || deepOpen, // ← single flag
             )
         }
     }
 }
 
 @Composable
-private fun drawerHost(onLogout: () -> Unit) {
+private fun drawerHost(
+    onLogout: () -> Unit,
+    openNotifications: Boolean = false,
+) {
     val drawerNavController = rememberNavController()
     val backStack by drawerNavController.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route ?: Screen.GeneralPool.route
 
+    val innerStart = if (openNotifications) Screen.Notifications.route else Screen.GeneralPool.route
+
+    LaunchedEffect(openNotifications) {
+        if (openNotifications) {
+            drawerNavController.navigate(Screen.Notifications.route) { launchSingleTop = true }
+        }
+    }
+
+    val openOrdersMenu = remember { mutableStateOf<(() -> Unit)?>(null) }
     // ---- Search state (kept at nav layer so it's shared across screens) ----
     val searchingState = remember { mutableStateOf(false) } // search on/off
     val searchTextState = remember { mutableStateOf("") } // current query
@@ -144,16 +202,21 @@ private fun drawerHost(onLogout: () -> Unit) {
         // Nested navigation graph for drawer destinations
         NavHost(
             navController = drawerNavController,
-            startDestination = Screen.GeneralPool.route,
+            startDestination = innerStart,
         ) {
             composable(Screen.GeneralPool.route) { generalPoolScreen(drawerNavController) }
             composable(Screen.MyOrders.route) { myOrdersScreen(drawerNavController) }
+          //  composable(Screen.OrdersHistory.route) { ordersHistoryScreen(drawerNavController) }
+            composable(
+                route = Screen.Notifications.route,
+                deepLinks = listOf(navDeepLink { uriPattern = "myapp://notifications" }),
+            ) { notificationScreen() }
             composable(Screen.OrdersHistory.route) {
                 ordersHistoryRoute(
                     registerOpenMenu = { setter -> openOrdersHistoryMenu = setter },
                 )
             }
-            composable(Screen.Notifications.route) { notificationScreen(drawerNavController) }
+            composable(Screen.Notifications.route) { notificationScreen() }
             composable(Screen.DeliveriesLog.route) { deliveriesLogScreen(drawerNavController) }
             composable(Screen.Settings.route) { settingsOptions(drawerNavController) }
             composable(Screen.MyPool.route) { myPoolScreen(drawerNavController) }

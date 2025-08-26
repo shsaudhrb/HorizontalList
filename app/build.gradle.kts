@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     id("org.jlleitschuh.gradle.ktlint") version "13.0.0"
     id("io.gitlab.arturbosch.detekt") version "1.23.8"
+    alias(libs.plugins.google.gms.google.services)
 }
 android {
     namespace = "com.ntg.lmd"
@@ -83,6 +84,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.firebase.messaging)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -114,6 +116,10 @@ dependencies {
     // Icons
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.material)
+
+    // Paging 3
+    implementation(libs.paging.runtime.ktx)
+    implementation(libs.paging.compose)
 }
 
 // Custom tasks for code quality checks

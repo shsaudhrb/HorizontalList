@@ -180,9 +180,6 @@ captures/
 *.jks
 *.keystore
 
-# Google Services
-google-services.json
-
 # Fastlane
 fastlane/report.xml
 fastlane/Preview.html
