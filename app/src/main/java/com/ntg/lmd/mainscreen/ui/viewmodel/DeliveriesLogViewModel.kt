@@ -4,14 +4,12 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ntg.lmd.mainscreen.domain.model.DeliveryLog
-import com.ntg.lmd.mainscreen.domain.usecase.LoadDeliveryLogsUseCase
 import com.ntg.lmd.mainscreen.ui.mapper.toUi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-class DeliveriesLogViewModel() : ViewModel() {
-
+class DeliveriesLogViewModel : ViewModel() {
     private val _logs = MutableStateFlow<List<DeliveryLog>>(emptyList())
     val logs: StateFlow<List<DeliveryLog>> = _logs
 
@@ -34,7 +32,10 @@ class DeliveriesLogViewModel() : ViewModel() {
     fun searchById(query: String) {
         val q = query.trim().removePrefix("#")
         _logs.value =
-            if (q.isEmpty()) allLogs
-            else allLogs.filter { it.orderId.removePrefix("#").contains(q, ignoreCase = true) }
+            if (q.isEmpty()) {
+                allLogs
+            } else {
+                allLogs.filter { it.orderId.removePrefix("#").contains(q, ignoreCase = true) }
+            }
     }
 }

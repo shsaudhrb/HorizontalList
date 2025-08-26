@@ -5,5 +5,5 @@ data class OrderRecord(
     val customer: String,
     val total: Double,
     val status: String,
-    val createdAtMillis: Long
+    val createdAtMillis: Long,
 )

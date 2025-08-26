@@ -45,9 +45,8 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 @Suppress("UNUSED_PARAMETER")
 fun deliveriesLogScreen(
     navController: NavController,
-    vm: DeliveriesLogViewModel = viewModel()
+    vm: DeliveriesLogViewModel = viewModel(),
 ) {
-
     val context = LocalContext.current
     LaunchedEffect(Unit) { vm.load(context) }
 
@@ -65,7 +64,7 @@ fun deliveriesLogScreen(
         val textFlow = h.getStateFlow("search_text", "")
         combine(
             searchingFlow,
-            textFlow
+            textFlow,
         ) { enabled, text -> if (enabled) text else "" } // when search is closed, reset
             .distinctUntilChanged()
             .collect { query -> vm.searchById(query) }
@@ -86,122 +85,138 @@ fun deliveriesLogScreen(
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         // Header Row
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier.width(iconWidth),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    stringResource(R.string.SLA),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    textAlign = TextAlign.Center
-                )
-            }
-            Text(
-                stringResource(R.string.order_details),
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-                color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.width(detailsWidth),
-                textAlign = TextAlign.Center
-            )
-            Text(
-                stringResource(R.string.delivery_time),
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-                color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.width(timeWidth),
-                textAlign = TextAlign.Center
-            )
-        }
+        headerRow(iconWidth, detailsWidth, timeWidth)
 
         HorizontalDivider()
 
         // Logs
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxSize()
-        ) {
-            items(logs) { log: DeliveryLog ->
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    elevation = CardDefaults.cardElevation(2.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
+        logsList(
+            logs = logs,
+            iconWidth = iconWidth,
+            detailsWidth = detailsWidth,
+            timeWidth = timeWidth,
+        )
+    }
+}
+
+@Composable
+private fun headerRow(
+    iconWidth: androidx.compose.ui.unit.Dp,
+    detailsWidth: androidx.compose.ui.unit.Dp,
+    timeWidth: androidx.compose.ui.unit.Dp,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(modifier = Modifier.width(iconWidth), contentAlignment = Alignment.Center) {
+            Text(
+                stringResource(R.string.SLA),
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp,
+                color = MaterialTheme.colorScheme.onBackground,
+                textAlign = TextAlign.Center,
+            )
+        }
+        Text(
+            stringResource(R.string.order_details),
+            fontWeight = FontWeight.Bold,
+            fontSize = 16.sp,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.width(detailsWidth),
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            stringResource(R.string.delivery_time),
+            fontWeight = FontWeight.Bold,
+            fontSize = 16.sp,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.width(timeWidth),
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+@Composable
+private fun logsList(
+    logs: List<DeliveryLog>,
+    iconWidth: androidx.compose.ui.unit.Dp,
+    detailsWidth: androidx.compose.ui.unit.Dp,
+    timeWidth: androidx.compose.ui.unit.Dp,
+) {
+    LazyColumn(
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        items(logs) { log ->
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = CardDefaults.cardElevation(2.dp),
+            ) {
+                Row(
+                    modifier =
+                        Modifier
                             .fillMaxWidth()
                             .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(modifier = Modifier.width(iconWidth), contentAlignment = Alignment.Center) {
+                        when (log.state) {
+                            DeliveryState.DELIVERED ->
+                                Icon(Icons.Filled.CheckCircle, "Delivered", tint = SuccessGreen)
+
+                            DeliveryState.CANCELLED, DeliveryState.FAILED ->
+                                Icon(
+                                    Icons.Filled.Cancel,
+                                    "Not delivered",
+                                    tint = MaterialTheme.colorScheme.error,
+                                )
+
+                            else ->
+                                Icon(
+                                    Icons.Filled.CheckCircle,
+                                    "Other",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                        }
+                    }
+                    Column(
+                        modifier = Modifier.width(detailsWidth),
+                        horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        // SLA icon
-                        Box(
-                            modifier = Modifier.width(iconWidth),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            when (log.state) {
-                                DeliveryState.DELIVERED -> Icon(
-                                    imageVector = Icons.Filled.CheckCircle,
-                                    contentDescription = "Delivered",
-                                    tint = SuccessGreen
-                                )
-
-                                DeliveryState.CANCELLED, DeliveryState.FAILED -> Icon(
-                                    imageVector = Icons.Filled.Cancel,
-                                    contentDescription = "Not delivered",
-                                    tint = MaterialTheme.colorScheme.error
-                                )
-
-                                else -> Icon(
-                                    imageVector = Icons.Filled.CheckCircle,
-                                    contentDescription = "Other",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-
-                        // Order details: date + order ID
-                        Column(
-                            modifier = Modifier.width(detailsWidth),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = log.orderDate,
-                                color = MaterialTheme.colorScheme.onBackground,
-                                textAlign = TextAlign.Center
-                            )
-                            Text(
-                                text = log.orderId,
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onBackground
-                                ),
-                                textAlign = TextAlign.Center
-                            )
-                        }
-
-                        // Delivery time
                         Text(
-                            text = log.deliveryTime,
-                            color = when (log.state) {
+                            log.orderDate,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            textAlign = TextAlign.Center,
+                        )
+                        Text(
+                            log.orderId,
+                            style =
+                                MaterialTheme.typography.bodyMedium.copy(
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                ),
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                    Text(
+                        text = log.deliveryTime,
+                        color =
+                            when (log.state) {
                                 DeliveryState.DELIVERED -> SuccessGreen
                                 DeliveryState.CANCELLED, DeliveryState.FAILED -> MaterialTheme.colorScheme.error
                                 else -> MaterialTheme.colorScheme.onSurfaceVariant
                             },
-                            modifier = Modifier.width(timeWidth),
-                            textAlign = TextAlign.Center
-                        )
-                    }
+                        modifier = Modifier.width(timeWidth),
+                        textAlign = TextAlign.Center,
+                    )
                 }
             }
         }
