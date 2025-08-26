@@ -118,55 +118,6 @@ class LoginViewModel(
 
     fun submit(onResult: (Boolean) -> Unit = {}) =
         viewModelScope.launch {
-//        viewModelScope.launch {
-//            // 1) Read current input
-//            val username = _uiState.value.username.trim()
-//            val password = _uiState.value.password
-//
-//            val usernameErr = validationViewModel.validateUsername(username)
-//            val passErr = validationViewModel.validatePassword(password)
-//            val formValid = usernameErr == null && passErr == null
-//
-//            _uiState.update {
-//                it.copy(
-//                    username = username,
-//                    usernameError = usernameErr,
-//                    passwordError = passErr,
-//                    showUsernameError = usernameErr != null,
-//                    showPasswordError = passErr != null,
-//                )
-//            }
-//
-//            if (!formValid) {
-//                onResult(false)
-//                return@launch
-//            }
-//
-//            // 3) Start loading
-//            _uiState.update {
-//                it.copy(
-//                    isLoading = true,
-//                    message = null,
-//                    loginSuccess = false,
-//                )
-//            }
-//            val success =
-//                run {
-//                    delay(SUCCESS_MESSAGE_DELAY)
-//                    username.startsWith("01") && password == "Password@123"
-//                }
-//            val msgRes = if (success) R.string.msg_welcome else R.string.error_invalid_credentials
-//
-//            // 5) Finish & notify
-//            _uiState.update {
-//                it.copy(
-//                    isLoading = false,
-//                    loginSuccess = success,
-//                    message = msgRes,
-//                )
-//            }
-//            onResult(success)
-//        }
             val username = _uiState.value.username.trim()
             val password = _uiState.value.password
 
