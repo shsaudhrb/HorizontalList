@@ -8,5 +8,5 @@ class LoadDeliveryLogsUseCase(
 ) {
     suspend operator fun invoke(): List<DeliveryLogDomain> =
         // sort by newest first
-        repository.loadHistory().sortedByDescending { it.createdAtMillis }
+        repository.loadLogs().sortedByDescending { it.createdAtMillis }
 }
