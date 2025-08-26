@@ -1,48 +1,37 @@
 package com.ntg.lmd.mainscreen.domain.model
 
 data class GeneralPoolUiState(
-    val isLoading: Boolean = true,
+    val isLoading: Boolean = false,
+    val orders: List<OrderInfo> = emptyList(),
+    val selected: OrderInfo? = null,
+
     val hasLocationPerm: Boolean = false,
     val distanceThresholdKm: Double = 100.0,
-    val orders: List<OrderInfo> = emptyList(),
-    val searchText: String = "",
-    val searching: Boolean = false,
-    val selected: OrderInfo? = null,
-) {
-    companion object {
-        private const val DISTANCE_EPSILON = 1e-3f // ~1 meter
-    }
 
-    // orders that match the current search text
-    val filteredOrders: List<OrderInfo>
-        get() {
-            val q = searchText.trim()
-            if (q.isBlank()) return emptyList()
-            return orders.filter { o ->
-                o.orderNumber.contains(q, ignoreCase = true) ||
-                    o.name.contains(q, ignoreCase = true)
-            }
-        }
+    val searching: Boolean = false,
+    val searchText: String = ""
+) {
 
     // orders that are within the selected distance
     val mapOrders: List<OrderInfo>
-        get() =
-            if (distanceThresholdKm <= 0.0) {
-                emptyList()
-            } else {
-                orders.filter {
-                    it.distanceKm.isFinite() && it.distanceKm <= distanceThresholdKm + DISTANCE_EPSILON
-                }
-            }
+        get() {
+            if (!hasLocationPerm) return orders
+            val anyFinite = orders.any { it.distanceKm.isFinite() }
+            if (!anyFinite) return orders
 
-    // orders in range filter for the dropdown
+            val filtered = orders.filter { it.distanceKm <= distanceThresholdKm }
+            return if (filtered.isEmpty()) orders else filtered
+        }
+
+    // orders that match the current search text
     val filteredOrdersInRange: List<OrderInfo>
-        get() =
-            if (distanceThresholdKm <= 0.0) {
-                emptyList()
-            } else {
-                filteredOrders.filter {
-                    it.distanceKm.isFinite() && it.distanceKm <= distanceThresholdKm + DISTANCE_EPSILON
-                }
+        get() {
+            val q = searchText.trim()
+            val base = mapOrders
+            if (q.isBlank()) return base
+            return base.filter {
+                it.orderNumber.contains(q, ignoreCase = true) ||
+                        it.name.contains(q, ignoreCase = true)
             }
+        }
 }

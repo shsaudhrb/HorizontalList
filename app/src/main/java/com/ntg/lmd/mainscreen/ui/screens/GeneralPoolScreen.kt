@@ -95,8 +95,9 @@ fun generalPoolScreen(
         }
     }
 
-    // Load Local orders.json from assets
-    LaunchedEffect(Unit) { generalPoolViewModel.loadOrdersFromAssets(context) }
+    LaunchedEffect(Unit) {
+        generalPoolViewModel.attach(context) // loads API, connects socket
+    }
 
     // handle location permission
     locationPermissionGate(viewModel = generalPoolViewModel)

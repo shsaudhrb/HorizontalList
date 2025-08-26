@@ -41,6 +41,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
@@ -179,6 +180,7 @@ private fun orderCard(
                         text = String.format(Locale.US, "%.1fkm", order.distanceKm),
                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onPrimary,
+                        maxLines = 1
                     )
                 }
 
@@ -191,11 +193,15 @@ private fun orderCard(
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         text = "${order.orderNumber} - ${order.timeAgo}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
@@ -205,6 +211,8 @@ private fun orderCard(
                 text = "Items in order (${order.itemsCount})",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
 
             Spacer(Modifier.weight(1f))
@@ -214,7 +222,7 @@ private fun orderCard(
                 onClick = { onAddClick(order) },
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(stringResource(R.string.add_to_your_orders))
+                Text(stringResource(R.string.add_to_your_orders), maxLines = 1)
             }
         }
     }

@@ -1,10 +1,12 @@
 package com.ntg.lmd.mainscreen.domain.repository
 
-import android.content.Context
-import com.ntg.lmd.mainscreen.domain.model.OrderInfo
+import com.ntg.lmd.mainscreen.data.model.LiveOrdersResponse
+import kotlinx.coroutines.flow.Flow
 
 interface OrdersRepository {
-
-    // load orders from local assets (orders.json)
-    suspend fun loadOrdersFromAssets(context: Context, assetFile: String = "orders.json"): List<OrderInfo>
+    suspend fun getLiveOrders(): Flow<Result<LiveOrdersResponse>>
+    fun connectToOrders(channelName: String = "orders")
+    fun disconnectFromOrders()
+    fun retryConnection()
+    fun updateOrderStatus(orderId: String, status: String)
 }
