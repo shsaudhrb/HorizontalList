@@ -134,7 +134,7 @@ private fun drawerHost(
         }
     }
 
-    val openOrdersMenu = remember { mutableStateOf<(() -> Unit)?>(null) }
+    //val openOrdersMenu = remember { mutableStateOf<(() -> Unit)?>(null) }
     // ---- Search state (kept at nav layer so it's shared across screens) ----
     val searchingState = remember { mutableStateOf(false) } // search on/off
     val searchTextState = remember { mutableStateOf("") } // current query
@@ -206,7 +206,7 @@ private fun drawerHost(
         ) {
             composable(Screen.GeneralPool.route) { generalPoolScreen(drawerNavController) }
             composable(Screen.MyOrders.route) { myOrdersScreen(drawerNavController) }
-          //  composable(Screen.OrdersHistory.route) { ordersHistoryScreen(drawerNavController) }
+            //  composable(Screen.OrdersHistory.route) { ordersHistoryScreen(drawerNavController) }
             composable(
                 route = Screen.Notifications.route,
                 deepLinks = listOf(navDeepLink { uriPattern = "myapp://notifications" }),
@@ -219,7 +219,7 @@ private fun drawerHost(
             composable(Screen.Notifications.route) { notificationScreen() }
             composable(Screen.DeliveriesLog.route) { deliveriesLogScreen(drawerNavController) }
             composable(Screen.Settings.route) { settingsOptions(drawerNavController) }
-            composable(Screen.MyPool.route) { myPoolScreen(drawerNavController) }
+            composable(Screen.MyPool.route) { myPoolScreen() }
             composable(Screen.Chat.route) { chatScreen() }
         }
     }

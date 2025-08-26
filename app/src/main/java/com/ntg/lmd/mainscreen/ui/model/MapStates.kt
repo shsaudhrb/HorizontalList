@@ -5,5 +5,5 @@ import com.google.maps.android.compose.MarkerState
 
 data class MapStates(
     val cameraPositionState: CameraPositionState,
-    val markerState: MarkerState
+    val markerState: MarkerState,
 )

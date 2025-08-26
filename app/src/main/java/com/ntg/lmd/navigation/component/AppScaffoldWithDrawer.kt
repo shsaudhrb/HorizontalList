@@ -111,7 +111,12 @@ fun appScaffoldWithDrawer(
     ModalNavigationDrawer(
         drawerState = drawerState,
         // Disable gestures on GeneralPool to avoid conflicts with the map
-        gesturesEnabled = currentRoute?.startsWith(Screen.GeneralPool.route) != true,
+        gesturesEnabled =
+            currentRoute !in
+                listOf(
+                    Screen.GeneralPool.route,
+                    Screen.MyPool.route,
+                ),
         drawerContent = {
             drawerContent(
                 currentRoute = currentRoute,

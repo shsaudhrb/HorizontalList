@@ -19,8 +19,8 @@ import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
-import com.ntg.lmd.mainscreen.domain.model.GeneralPoolUiState
-import com.ntg.lmd.mainscreen.domain.model.MapStates
+import com.ntg.lmd.mainscreen.ui.model.MapStates
+import com.ntg.lmd.mainscreen.ui.model.MapUiState
 
 // screen height
 private const val TOP_OVERLAY_RATIO = 0.09f // 9% of screen height
@@ -28,47 +28,38 @@ private const val BOTTOM_BAR_RATIO = 0.22f // 22% of screen height
 
 @Composable
 fun mapCenter(
-    ui: GeneralPoolUiState,
+    ui: MapUiState, // << works with BOTH states
     mapStates: MapStates,
     deviceLatLng: LatLng?,
     modifier: Modifier = Modifier,
 ) {
     val (cameraPositionState, markerState) = mapStates
 
-    // Screen-aware padding so map UI (incl. +/- and my-location button) isn't hidden
     val cfg = LocalConfiguration.current
     val screenH = cfg.screenHeightDp.dp
-
     val topOverlayHeight = (screenH * TOP_OVERLAY_RATIO).coerceIn(48.dp, 96.dp)
     val bottomBarHeight = (screenH * BOTTOM_BAR_RATIO).coerceIn(128.dp, 280.dp)
 
-    // Enable blue dot only if we have location permission (prevents SecurityException)
     val context = LocalContext.current
     val hasFine =
-        ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.ACCESS_FINE_LOCATION,
-        ) == PackageManager.PERMISSION_GRANTED
+        ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
+            PackageManager.PERMISSION_GRANTED
     val hasCoarse =
-        ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.ACCESS_COARSE_LOCATION,
-        ) == PackageManager.PERMISSION_GRANTED
+        ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) ==
+            PackageManager.PERMISSION_GRANTED
     val canShowMyLocation = hasFine || hasCoarse
 
     GoogleMap(
         modifier = modifier,
         cameraPositionState = cameraPositionState,
-        // Blue dot + target button
         properties = MapProperties(isMyLocationEnabled = canShowMyLocation),
         uiSettings = MapUiSettings(zoomControlsEnabled = true, myLocationButtonEnabled = true),
         contentPadding = PaddingValues(top = topOverlayHeight, bottom = bottomBarHeight),
     ) {
-        // Filter radius circle
         if (deviceLatLng != null && ui.distanceThresholdKm > 0.0) {
             Circle(
                 center = deviceLatLng,
-                radius = ui.distanceThresholdKm * 1000.0, // km -> meters
+                radius = ui.distanceThresholdKm * 1000.0,
                 strokeWidth = 3f,
                 strokeColor = MaterialTheme.colorScheme.primary,
                 fillColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
@@ -76,14 +67,10 @@ fun mapCenter(
             )
         }
 
-        // Markers for every order (except the selected one; it has its own marker)
         val selectedOrderNumber = ui.selected?.orderNumber
         ui.mapOrders.forEach { order ->
             if (order.orderNumber != selectedOrderNumber) {
-                val position =
-                    remember(order.lat, order.lng) {
-                        LatLng(order.lat, order.lng)
-                    }
+                val position = remember(order.lat, order.lng) { LatLng(order.lat, order.lng) }
                 Marker(
                     state = remember { MarkerState(position) },
                     title = order.name,
@@ -93,14 +80,10 @@ fun mapCenter(
             }
         }
 
-        // keep the marker pinned to the currently selected order
         LaunchedEffect(ui.selected?.lat, ui.selected?.lng) {
-            ui.selected?.let { sel ->
-                markerState.position = LatLng(sel.lat, sel.lng)
-            }
+            ui.selected?.let { markerState.position = LatLng(it.lat, it.lng) }
         }
 
-        // render the single marker only if we have a selection (special/high zIndex)
         ui.selected?.let {
             Marker(
                 state = markerState,

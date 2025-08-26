@@ -84,7 +84,7 @@ fun ordersHistoryRoute(registerOpenMenu: ((() -> Unit) -> Unit)? = null) {
             ),
         listState = listState,
         ctx = ctx,
-        onRefresh = { vm.refreshOrders() }
+        onRefresh = { vm.refreshOrders() },
     )
 
     ordersHistoryDialogs(

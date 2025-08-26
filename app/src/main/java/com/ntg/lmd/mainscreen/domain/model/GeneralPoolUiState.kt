@@ -1,19 +1,20 @@
 package com.ntg.lmd.mainscreen.domain.model
 
+import com.ntg.lmd.mainscreen.ui.model.MapUiState
+
 data class GeneralPoolUiState(
     val isLoading: Boolean = true,
     val hasLocationPerm: Boolean = false,
-    val distanceThresholdKm: Double = 100.0,
+    override val distanceThresholdKm: Double = 100.0,
     val orders: List<OrderInfo> = emptyList(),
     val searchText: String = "",
     val searching: Boolean = false,
-    val selected: OrderInfo? = null,
-) {
+    override val selected: OrderInfo? = null,
+) : MapUiState {
     companion object {
-        private const val DISTANCE_EPSILON = 1e-3f // ~1 meter
+        private const val DISTANCE_EPSILON = 1e-3f
     }
 
-    // orders that match the current search text
     val filteredOrders: List<OrderInfo>
         get() {
             val q = searchText.trim()
@@ -24,8 +25,7 @@ data class GeneralPoolUiState(
             }
         }
 
-    // orders that are within the selected distance
-    val mapOrders: List<OrderInfo>
+    override val mapOrders: List<OrderInfo>
         get() =
             if (distanceThresholdKm <= 0.0) {
                 emptyList()
@@ -35,7 +35,6 @@ data class GeneralPoolUiState(
                 }
             }
 
-    // orders in range filter for the dropdown
     val filteredOrdersInRange: List<OrderInfo>
         get() =
             if (distanceThresholdKm <= 0.0) {
