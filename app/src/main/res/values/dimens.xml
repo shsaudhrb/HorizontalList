@@ -38,6 +38,10 @@
     <dimen name="drawer_item_text_size">16sp</dimen>
     <dimen name="drawer_badge_text_size">14sp</dimen>
 
+    <dimen name="header_height">90dp</dimen>
+    <dimen name="orders_card_width">300dp</dimen>
+
+    <dimen name="start_padding">16dp</dimen>
 
     <dimen name="list_item_spacing">12dp</dimen>
     <dimen name="menu_offset_y">6dp</dimen>
@@ -55,4 +59,12 @@
     <dimen name="menu_corner_radius">16dp</dimen>
     <dimen name="menu_width">220dp</dimen>
     <dimen name="dialog_corner_radius">20dp</dimen>
+
+    <!--notifications Screen -->
+    <dimen name="chipRoundCorner">30dp</dimen>
+    <dimen name="smallElevation">2dp</dimen>
+    <dimen name="tinySpace">6dp</dimen>
+    <dimen name="notificationIconBox">42dp</dimen>
+    <dimen name="notificationPlaceholderHeight">72dp</dimen>
+    <dimen name="notificationAccentBarRadius">6dp</dimen>
 </resources>

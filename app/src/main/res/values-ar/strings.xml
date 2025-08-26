@@ -22,6 +22,7 @@
     <string name="drawer_section_orders">الطلبات</string>
     <!-- Drawer items -->
     <string name="menu_general_pool">المخزن العام</string>
+    <string name="my_pool">مخزني</string>
     <string name="menu_my_orders">طلباتي</string>
     <string name="menu_order_history">سجل الطلبات</string>
     <string name="menu_notifications">الإشعارات</string>
@@ -30,6 +31,7 @@
     <string name="menu_chat">المحادثة</string>
     <string name="menu_logout">تسجيل الخروج</string>
     <string name="open_menu"> افتح القائمة</string>
+
     <string name="title_order_history">سجل الطلبات</string>
     <string name="export_pdf">تصدير PDF</string>
     <string name="filter">تصفية</string>
@@ -57,4 +59,59 @@
     <string name="sort_desc">تنازلي (الأحدث أولاً)</string>
     <string name="apply">تطبيق</string>
     <string name="cancel">إلغاء</string>
+    <!-- General Pool -->
+    <string name="search_order_number_customer_name">ابحث برقم الطلب أو اسم العميل</string>
+    <string name="search_order_number">ابحث برقم الطلب</string>
+    <string name="add_to_your_orders">+ أضف إلى طلباتك</string>
+    <string name="location_access_request">يرجى السماح بالوصول إلى الموقع لتمكين تصفية المسافة</string>
+    <string name="kilometer">كيلومتر</string>
+    <string name="loading_text">جاري التحميل...</string>
+    <string name="no_orders">لا توجد طلبات</string>
+
+    <!-- الفلاتر -->
+    <string name="filter_all">الكل</string>
+    <string name="filter_orders">الطلبات</string>
+    <string name="filter_wallet">المحفظة</string>
+    <string name="filter_other">أخرى</string>
+
+    <!-- الحالات والأزرار -->
+    <string name="empty_notifications">لا توجد إشعارات.</string>
+    <string name="loading_more_failed">فشل تحميل المزيد</string>
+    <string name="retry">إعادة المحاولة</string>
+    <string name="caught_up">انتهيت من كل الإشعارات </string>
+    <string name="unable_load_notifications">تعذّر تحميل الإشعارات.</string>
+
+    <!-- الوقت النسبي -->
+    <string name="just_now">الآن</string>
+
+    <plurals name="minutes_ago">
+        <item quantity="zero">الآن</item>
+        <item quantity="one">قبل دقيقة</item>
+        <item quantity="two">قبل دقيقتين</item>
+        <item quantity="few">قبل %d دقائق</item>
+        <item quantity="many">قبل %d دقيقة</item>
+        <item quantity="other">قبل %d دقيقة</item>
+    </plurals>
+
+    <plurals name="hours_ago">
+        <item quantity="zero">الآن</item>
+        <item quantity="one">قبل ساعة</item>
+        <item quantity="two">قبل ساعتين</item>
+        <item quantity="few">قبل %d ساعات</item>
+        <item quantity="many">قبل %d ساعة</item>
+        <item quantity="other">قبل %d ساعة</item>
+    </plurals>
+
+    <plurals name="days_ago">
+        <item quantity="zero">الآن</item>
+        <item quantity="one">قبل يوم</item>
+        <item quantity="two">قبل يومين</item>
+        <item quantity="few">قبل %d أيام</item>
+        <item quantity="many">قبل %d يومًا</item>
+        <item quantity="other">قبل %d يوم</item>
+    </plurals>
+
+    <!-- عنوان افتراضي لـ FCM -->
+    <string name="notification_title">الإشعارات</string>
+
 </resources>

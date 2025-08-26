@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     id("org.jlleitschuh.gradle.ktlint") version "13.0.0"
     id("io.gitlab.arturbosch.detekt") version "1.23.8"
+    alias(libs.plugins.google.gms.google.services)
     id("org.jetbrains.kotlin.kapt")
 }
 android {
@@ -23,6 +24,9 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        val mapsKey = (project.findProperty("MAPS_API_KEY") as String?) ?: System.getenv("MAPS_API_KEY") ?: ""
+        manifestPlaceholders["MAPS_API_KEY"] = mapsKey
         // === REST base URL ===
         buildConfigField("String", "BASE_URL", "\"https://kgomwyksxjqtcjwlzbsp.supabase.co/functions/v1/\"")
 
@@ -94,6 +98,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.firebase.messaging)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -115,8 +120,20 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     // Icons
     implementation(libs.androidx.material.icons.extended)
+    // animation
+    implementation(libs.androidx.animation)
+    // Google Maps
+    implementation(libs.play.services.maps)
+    implementation(libs.maps.compose)
+    // Play Services for current location
+    implementation(libs.play.services.location)
+    // Icons
+    implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.material)
 
+    // Paging 3
+    implementation(libs.paging.runtime.ktx)
+    implementation(libs.paging.compose)
     implementation("androidx.compose.material:material-icons-extended:1.7.8")
 
     // Coroutines

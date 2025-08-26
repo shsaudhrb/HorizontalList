@@ -2,6 +2,8 @@ package com.ntg.lmd.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
+val DeepRed = Color(0xFFD52D1F) // Primary color (buttons, headers)
+
 val PrimaryRed = Color(0xFFE50000) // Primary color (buttons, headers)
 val surfaceWhite = Color(0xFFF3EFEF) // OnPrimary (text/icons on red), backgrounds
 val White = Color(0xFFFFFFFF) // OnPrimary (text/icons on red), backgrounds
