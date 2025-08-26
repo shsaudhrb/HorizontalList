@@ -7,11 +7,15 @@ plugins {
     id("org.jlleitschuh.gradle.ktlint") version "13.0.0"
     id("io.gitlab.arturbosch.detekt") version "1.23.8"
     alias(libs.plugins.google.gms.google.services)
+    id("org.jetbrains.kotlin.kapt")
 }
 android {
     namespace = "com.ntg.lmd"
     compileSdk = 36
-
+    buildFeatures {
+        buildConfig = true
+        compose = true
+    }
     defaultConfig {
         applicationId = "com.ntg.lmd"
         minSdk = 24
@@ -23,6 +27,17 @@ android {
 
         val mapsKey = (project.findProperty("MAPS_API_KEY") as String?) ?: System.getenv("MAPS_API_KEY") ?: ""
         manifestPlaceholders["MAPS_API_KEY"] = mapsKey
+        // === REST base URL ===
+        val baseUrl = providers.gradleProperty("BASE_URL").orNull
+            ?: error("Missing BASE_URL in gradle.properties")
+        // === WebSocket URL ===
+        val wsBaseUrl = providers.gradleProperty("WS_BASE_URL").orNull
+            ?: error("Missing WS_BASE_URL in gradle.properties")
+        val supabaseKey = providers.gradleProperty("SUPABASE_KEY").orNull
+            ?: error("Missing SUPABASE_KEY in gradle.properties")
+        buildConfigField("String", "BASE_URL", "\"$baseUrl\"")
+        buildConfigField("String", "WS_BASE_URL", "\"$wsBaseUrl\"")
+        buildConfigField("String", "SUPABASE_KEY", "\"$supabaseKey\"")
     }
 
     buildTypes {
@@ -120,6 +135,21 @@ dependencies {
     // Paging 3
     implementation(libs.paging.runtime.ktx)
     implementation(libs.paging.compose)
+    implementation("androidx.compose.material:material-icons-extended:1.7.8")
+
+    // Coroutines
+    implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.coroutines.android)
+
+    // Room
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    kapt(libs.androidx.room.compiler)
+
+    // WorkManager
+    implementation(libs.androidx.work.runtime.ktx)
+    // security
+    implementation(libs.androidx.security.crypto)
 }
 
 // Custom tasks for code quality checks

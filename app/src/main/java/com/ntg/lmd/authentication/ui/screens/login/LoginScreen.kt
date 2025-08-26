@@ -1,5 +1,6 @@
 package com.ntg.lmd.authentication.ui.screens.login
 
+import android.app.Application
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.updateTransition
@@ -40,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
@@ -55,6 +57,7 @@ import com.ntg.lmd.authentication.ui.model.CardUi
 import com.ntg.lmd.authentication.ui.model.InputProps
 import com.ntg.lmd.authentication.ui.model.LoginUiState
 import com.ntg.lmd.authentication.ui.viewmodel.login.LoginViewModel
+import com.ntg.lmd.authentication.ui.viewmodel.login.LoginViewModelFactory
 import com.ntg.lmd.navigation.Screen
 
 private const val CARD_SCALE_FOCUSED = 1.02f
@@ -63,10 +66,12 @@ private const val CARD_ELEVATION_FOCUSED = 10f
 private const val CARD_ELEVATION_DEFAULT = 2f
 
 @Composable
-fun loginScreen(
-    navController: NavController,
-    viewModel: LoginViewModel = viewModel(),
-) {
+fun loginScreen(navController: NavController) {
+    val ctx = LocalContext.current
+    val viewModel: LoginViewModel =
+        viewModel(
+            factory = LoginViewModelFactory(ctx.applicationContext as Application),
+        )
     val focus = LocalFocusManager.current
     val ui by viewModel.uiState.collectAsState()
     // Tracks anyFieldFocused locally to drive card animation (scale/elevation).
