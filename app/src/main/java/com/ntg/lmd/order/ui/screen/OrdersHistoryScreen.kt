@@ -84,7 +84,7 @@ fun ordersHistoryRoute(registerOpenMenu: ((() -> Unit) -> Unit)? = null) {
             ),
         listState = listState,
         ctx = ctx,
-        onRefresh = { vm.refreshOrders() }
+        onRefresh = { vm.refreshOrders() },
     )
 
     ordersHistoryDialogs(
@@ -135,7 +135,6 @@ fun ordersHistoryContent(
                 PaddingValues(
                     start = dimensionResource(R.dimen.mediumSpace),
                     end = dimensionResource(R.dimen.mediumSpace),
-                    top = dimensionResource(R.dimen.smallSpace),
                     bottom = dimensionResource(R.dimen.mediumSpace),
                 ),
             verticalArrangement =
