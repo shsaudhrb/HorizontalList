@@ -100,7 +100,7 @@ fun rememberFocusOnMyOrder(
     return remember {
         { order: OrderInfo, _: Boolean ->
             // update ViewModel
-            vm.value.onCenteredOrderChange(order, 0) // or pass index if you track it
+            vm.value.onCenteredOrderChange(order) // or pass index if you track it
 
             // move the marker on the map to that order's location
             marker.value.position = LatLng(order.lat, order.lng)
