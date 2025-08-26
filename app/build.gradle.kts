@@ -20,6 +20,9 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        val mapsKey = (project.findProperty("MAPS_API_KEY") as String?) ?: System.getenv("MAPS_API_KEY") ?: ""
+        manifestPlaceholders["MAPS_API_KEY"] = mapsKey
     }
 
     buildTypes {
@@ -101,6 +104,15 @@ dependencies {
     implementation(libs.logging.interceptor)
     // Lifecycle ViewModel
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
+    // Icons
+    implementation(libs.androidx.material.icons.extended)
+    // animation
+    implementation(libs.androidx.animation)
+    // Google Maps
+    implementation(libs.play.services.maps)
+    implementation(libs.maps.compose)
+    // Play Services for current location
+    implementation(libs.play.services.location)
     // Icons
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.material)

@@ -104,7 +104,7 @@ class OrderHistoryViewModel : ViewModel() {
         viewModelScope.launch {
             _isRefreshing.value = true
             try {
-                delay(600)
+                delay(LOADING_DELAY_MS)
                 all = all.shuffled()
                 recomputeAndResetPaging()
             } finally {

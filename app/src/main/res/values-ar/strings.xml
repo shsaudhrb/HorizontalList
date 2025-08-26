@@ -22,6 +22,7 @@
     <string name="drawer_section_orders">الطلبات</string>
     <!-- Drawer items -->
     <string name="menu_general_pool">المخزن العام</string>
+    <string name="my_pool">مخزني</string>
     <string name="menu_my_orders">طلباتي</string>
     <string name="menu_order_history">سجل الطلبات</string>
     <string name="menu_notifications">الإشعارات</string>
@@ -58,6 +59,14 @@
     <string name="sort_desc">تنازلي (الأحدث أولاً)</string>
     <string name="apply">تطبيق</string>
     <string name="cancel">إلغاء</string>
+    <!-- General Pool -->
+    <string name="search_order_number_customer_name">ابحث برقم الطلب أو اسم العميل</string>
+    <string name="search_order_number">ابحث برقم الطلب</string>
+    <string name="add_to_your_orders">+ أضف إلى طلباتك</string>
+    <string name="location_access_request">يرجى السماح بالوصول إلى الموقع لتمكين تصفية المسافة</string>
+    <string name="kilometer">كيلومتر</string>
+    <string name="loading_text">جاري التحميل...</string>
+    <string name="no_orders">لا توجد طلبات</string>
 
     <!-- الفلاتر -->
     <string name="filter_all">الكل</string>

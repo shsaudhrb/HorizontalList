@@ -44,6 +44,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.ntg.lmd.R
 import com.ntg.lmd.authentication.ui.components.appLogo
@@ -64,9 +65,7 @@ private const val CARD_ELEVATION_DEFAULT = 2f
 @Composable
 fun loginScreen(
     navController: NavController,
-    viewModel: LoginViewModel =
-        androidx.lifecycle.viewmodel.compose
-            .viewModel(),
+    viewModel: LoginViewModel = viewModel(),
 ) {
     val focus = LocalFocusManager.current
     val ui by viewModel.uiState.collectAsState()
