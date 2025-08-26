@@ -65,4 +65,34 @@
     <string name="loading_text">Loading Text...</string>
     <string name="no_orders">No orders Found</string>
 
+    <!-- Filters -->
+    <string name="filter_all">All</string>
+    <string name="filter_orders">Orders</string>
+    <string name="filter_wallet">Wallet</string>
+    <string name="filter_other">Other</string>
+
+    <!-- States & actions -->
+    <string name="empty_notifications">No notifications available.</string>
+    <string name="loading_more_failed">Loading more failed</string>
+    <string name="retry">Retry</string>
+    <string name="caught_up">You’re all caught up </string>
+    <string name="unable_load_notifications">Unable to load notifications.</string>
+
+    <!-- Relative time -->
+    <string name="just_now">just now</string>
+    <plurals name="minutes_ago">
+        <item quantity="one">%d min ago</item>
+        <item quantity="other">%d mins ago</item>
+    </plurals>
+    <plurals name="hours_ago">
+        <item quantity="one">%d hr ago</item>
+        <item quantity="other">%d hrs ago</item>
+    </plurals>
+    <plurals name="days_ago">
+        <item quantity="one">%d day ago</item>
+        <item quantity="other">%d days ago</item>
+    </plurals>
+
+    <!-- FCM default title -->
+    <string name="notification_title">Notifications</string>
 </resources>
