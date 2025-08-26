@@ -8,6 +8,7 @@ data class LoginResponse(
     @SerializedName("data")
     val data: LoginData?,
 )
+
 data class LoginData(
     @SerializedName("user")
     val user: User?,

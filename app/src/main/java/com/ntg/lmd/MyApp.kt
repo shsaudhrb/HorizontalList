@@ -20,6 +20,7 @@ class MyApp : Application() {
         private set
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     override fun onCreate() {
         super.onCreate()
         networkMonitor = NetworkMonitor(applicationContext)

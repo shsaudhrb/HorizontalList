@@ -7,8 +7,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.ntg.lmd.MyApp
 import com.ntg.lmd.R
-import com.ntg.lmd.authentication.ui.model.LoginUiState
 import com.ntg.lmd.authentication.data.repositoryImp.AuthRepositoryImp
+import com.ntg.lmd.authentication.ui.model.LoginUiState
 import com.ntg.lmd.utils.ValidationField
 import com.ntg.lmd.utils.ValidationViewModel
 import kotlinx.coroutines.flow.MutableStateFlow

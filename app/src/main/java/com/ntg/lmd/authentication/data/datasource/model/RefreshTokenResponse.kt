@@ -8,6 +8,7 @@ data class RefreshTokenResponse(
     @SerializedName("data")
     val data: RefreshTokenData?,
 )
+
 data class RefreshTokenData(
     @SerializedName("access_token")
     val accessToken: String?,

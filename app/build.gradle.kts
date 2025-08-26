@@ -147,7 +147,7 @@ dependencies {
 
     // WorkManager
     implementation(libs.androidx.work.runtime.ktx)
-    //security
+    // security
     implementation(libs.androidx.security.crypto)
 }
 

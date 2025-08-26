@@ -1,12 +1,12 @@
 package com.ntg.lmd.navigation.component
 
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -49,7 +49,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -117,7 +116,6 @@ fun appScaffoldWithDrawer(
     LaunchedEffect(online) {
         Log.d("NET", "Scaffold observed online=$online")
     }
-
     // Modal drawer wraps the entire screen with a navigation drawer
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -178,29 +176,6 @@ private fun drawerContent(
                 ),
         )
 
-        Spacer(Modifier.height(dimensionResource(R.dimen.smallSpace)))
-
-        drawerGroup(items = grouped.second, currentRoute = currentRoute, onEntryClick = onEntryClick)
-    }
-}
-
-@Composable
-private fun drawerGroup(
-    items: List<DrawerItem>,
-    currentRoute: String,
-    onEntryClick: (String) -> Unit,
-) {
-    groupCard {
-        items.forEachIndexed { index, item ->
-            drawerItemRow(
-                entry = item,
-                selected = currentRoute == item.route,
-                onClick = { onEntryClick(item.route) },
-            )
-            if (index != items.lastIndex) insetDivider()
-        }
-    }
-}
         // First group of items
         groupCard {
             grouped.first.forEachIndexed { i, item ->

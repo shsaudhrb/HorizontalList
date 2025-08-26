@@ -4,33 +4,41 @@ import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 
-class SecureTokenStore(ctx: Context) {
+class SecureTokenStore(
+    ctx: Context,
+) {
+    private val masterKey =
+        MasterKey
+            .Builder(ctx)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
 
-    private val masterKey = MasterKey.Builder(ctx)
-        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-        .build()
-
-    private val sp = EncryptedSharedPreferences.create(
-        ctx,
-        "secure_auth_prefs",
-        masterKey,
-        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-    )
+    private val sp =
+        EncryptedSharedPreferences.create(
+            ctx,
+            "secure_auth_prefs",
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+        )
 
     fun getAccessToken(): String? = sp.getString("access", null)
+
     fun getRefreshToken(): String? = sp.getString("refresh", null)
+
     fun getAccessExpiryIso(): String? = sp.getString("access_exp", null)
+
     fun getRefreshExpiryIso(): String? = sp.getString("refresh_exp", null)
 
     fun saveFromPayload(
         access: String?,
         refresh: String?,
         expiresAt: String?,
-        refreshExpiresAt: String?
+        refreshExpiresAt: String?,
     ) {
         val newRefresh = refresh ?: getRefreshToken()
-        sp.edit()
+        sp
+            .edit()
             .putString("access", access)
             .putString("refresh", newRefresh)
             .putString("access_exp", expiresAt)
@@ -41,9 +49,10 @@ class SecureTokenStore(ctx: Context) {
 
     fun saveTokens(
         access: String?,
-        refresh: String?
+        refresh: String?,
     ) {
-        sp.edit()
+        sp
+            .edit()
             .putString("access", access)
             .putString("refresh", refresh)
             .apply()
