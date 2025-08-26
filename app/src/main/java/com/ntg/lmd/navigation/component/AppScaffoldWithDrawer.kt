@@ -1,6 +1,5 @@
 package com.ntg.lmd.navigation.component
 
-import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.FiniteAnimationSpec
@@ -114,7 +113,6 @@ fun appScaffoldWithDrawer(
     val app = LocalContext.current.applicationContext as MyApp
     val online by app.networkMonitor.isOnline.collectAsState()
     LaunchedEffect(online) {
-        Log.d("NET", "Scaffold observed online=$online")
     }
     // Modal drawer wraps the entire screen with a navigation drawer
     ModalNavigationDrawer(

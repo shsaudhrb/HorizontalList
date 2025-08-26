@@ -6,10 +6,10 @@ data class RefreshTokenResponse(
     @SerializedName("success")
     val success: Boolean,
     @SerializedName("data")
-    val data: RefreshTokenData?,
+    val data: LoginRefreshToken?,
 )
 
-data class RefreshTokenData(
+data class LoginRefreshToken(
     @SerializedName("access_token")
     val accessToken: String?,
     @SerializedName("refresh_token")
