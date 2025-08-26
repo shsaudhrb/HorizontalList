@@ -29,9 +29,6 @@ import com.ntg.lmd.mainscreen.ui.screens.deliveriesLogScreen
 import com.ntg.lmd.mainscreen.ui.screens.generalPoolScreen
 import com.ntg.lmd.mainscreen.ui.screens.myOrdersScreen
 import com.ntg.lmd.mainscreen.ui.screens.myPoolScreen
-/*import com.ntg.lmd.mainscreen.ui.screens.ordersHistoryScreen
-import com.ntg.lmd.navigation.component.AppScaffoldActions
-import com.ntg.lmd.navigation.component.AppScaffoldConfig*/
 import com.ntg.lmd.navigation.component.appScaffoldWithDrawer
 import com.ntg.lmd.navigation.component.navigateSingleTop
 import com.ntg.lmd.notification.ui.screens.notificationScreen
@@ -125,71 +122,28 @@ private fun drawerHost(
     val drawerNavController = rememberNavController()
     val backStack by drawerNavController.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route ?: Screen.GeneralPool.route
+    val startDest = if (openNotifications) Screen.Notifications.route else Screen.GeneralPool.route
 
-    val innerStart = if (openNotifications) Screen.Notifications.route else Screen.GeneralPool.route
-
+    // jump to notifications if requested
     LaunchedEffect(openNotifications) {
         if (openNotifications) {
             drawerNavController.navigate(Screen.Notifications.route) { launchSingleTop = true }
         }
     }
 
-    //val openOrdersMenu = remember { mutableStateOf<(() -> Unit)?>(null) }
-    // ---- Search state (kept at nav layer so it's shared across screens) ----
-    val searchingState = remember { mutableStateOf(false) } // search on/off
-    val searchTextState = remember { mutableStateOf("") } // current query
-
-    // --- a place to store Orders History menu opener ---
+    // shared state between screens
     var openOrdersHistoryMenu by remember { mutableStateOf<(() -> Unit)?>(null) }
 
-    // Build a UI "spec" for the current route
+    // per-route UI spec (title, actions, etc.)
     val spec = buildRouteUiSpec(currentRoute, drawerNavController, openOrdersHistoryMenu)
 
-    // Controller that wires the app bar search field <-> VM via savedStateHandle
-    val search =
-        remember(searchingState, searchTextState) {
-            SearchController(
-                searching = searchingState,
-                text = searchTextState,
-                // Called when user hits IME search
-                onSubmit = { query ->
-                    drawerNavController.currentBackStackEntry?.savedStateHandle?.set(
-                        "search_submit",
-                        query,
-                    )
-                },
-                // Called when search mode is toggled (open/close)
-                onToggle = { enabled ->
-                    searchingState.value = enabled
-                    drawerNavController.currentBackStackEntry?.savedStateHandle?.set(
-                        "searching",
-                        enabled,
-                    )
-                },
-                // Called on every keystroke in the search field
-                onTextChange = { t ->
-                    searchTextState.value = t
-                    drawerNavController.currentBackStackEntry?.savedStateHandle?.set("search_text", t)
-                },
-            )
-        }
+    // search controller (kept at nav layer)
+    val search = rememberSearchController(drawerNavController)
 
-    // ---- TopBar config passed into the scaffold ----
-    val topBar =
-        TopBarConfigWithTitle(
-            title = spec.title,
-            search = search,
-            showSearchIcon = spec.showSearchIcon,
-            actionButtonLabel = spec.actionButtonLabel,
-            onActionButtonClick = spec.onActionButtonClick,
-            actionIcon = spec.actionIcon,
-            onActionIconClick = spec.onActionIconClick,
-            searchPlaceholder = spec.searchPlaceholder,
-            searchActionIcon = if (spec.showSearchIcon) Icons.Filled.Search else null,
-            onSearchIconClick = { search.onToggle(true) },
-        )
+    // top bar config
+    val topBar = buildTopBar(spec, search)
 
-    // ---- Scaffold (drawer + top bar + nested nav graph) ----
+    // scaffold (drawer + top bar + nested nav)
     appScaffoldWithDrawer(
         navConfig =
             AppNavConfig(
@@ -199,29 +153,81 @@ private fun drawerHost(
         topBar = topBar,
         onLogout = onLogout,
     ) {
-        // Nested navigation graph for drawer destinations
-        NavHost(
+        drawerNavGraph(
             navController = drawerNavController,
-            startDestination = innerStart,
-        ) {
-            composable(Screen.GeneralPool.route) { generalPoolScreen(drawerNavController) }
-            composable(Screen.MyOrders.route) { myOrdersScreen(drawerNavController) }
-            //  composable(Screen.OrdersHistory.route) { ordersHistoryScreen(drawerNavController) }
-            composable(
-                route = Screen.Notifications.route,
-                deepLinks = listOf(navDeepLink { uriPattern = "myapp://notifications" }),
-            ) { notificationScreen() }
-            composable(Screen.OrdersHistory.route) {
-                ordersHistoryRoute(
-                    registerOpenMenu = { setter -> openOrdersHistoryMenu = setter },
-                )
-            }
-            composable(Screen.Notifications.route) { notificationScreen() }
-            composable(Screen.DeliveriesLog.route) { deliveriesLogScreen(drawerNavController) }
-            composable(Screen.Settings.route) { settingsOptions(drawerNavController) }
-            composable(Screen.MyPool.route) { myPoolScreen() }
-            composable(Screen.Chat.route) { chatScreen() }
+            startDestination = startDest,
+            registerOpenMenu = { setter -> openOrdersHistoryMenu = setter },
+        )
+    }
+}
+
+// ---------- helpers ----------
+
+@Composable
+private fun rememberSearchController(navController: NavHostController): SearchController {
+    val searching = remember { mutableStateOf(false) }
+    val text = remember { mutableStateOf("") }
+
+    return remember(searching, text) {
+        SearchController(
+            searching = searching,
+            text = text,
+            onSubmit = { q ->
+                navController.currentBackStackEntry?.savedStateHandle?.set("search_submit", q)
+            },
+            onToggle = { enabled ->
+                searching.value = enabled
+                navController.currentBackStackEntry?.savedStateHandle?.set("searching", enabled)
+            },
+            onTextChange = { t ->
+                text.value = t
+                navController.currentBackStackEntry?.savedStateHandle?.set("search_text", t)
+            },
+        )
+    }
+}
+
+@Composable
+private fun buildTopBar(
+    spec: RouteUiSpec,
+    search: SearchController,
+): TopBarConfigWithTitle =
+    TopBarConfigWithTitle(
+        title = spec.title,
+        search = search,
+        showSearchIcon = spec.showSearchIcon,
+        actionButtonLabel = spec.actionButtonLabel,
+        onActionButtonClick = spec.onActionButtonClick,
+        actionIcon = spec.actionIcon,
+        onActionIconClick = spec.onActionIconClick,
+        searchPlaceholder = spec.searchPlaceholder,
+        searchActionIcon = if (spec.showSearchIcon) Icons.Filled.Search else null,
+        onSearchIconClick = { search.onToggle(true) },
+    )
+
+@Composable
+private fun drawerNavGraph(
+    navController: NavHostController,
+    startDestination: String,
+    registerOpenMenu: (setter: (() -> Unit)?) -> Unit,
+) {
+    NavHost(
+        navController = navController,
+        startDestination = startDestination,
+    ) {
+        composable(Screen.GeneralPool.route) { generalPoolScreen(navController) }
+        composable(Screen.MyOrders.route) { myOrdersScreen(navController) }
+        composable(
+            route = Screen.Notifications.route,
+            deepLinks = listOf(navDeepLink { uriPattern = "myapp://notifications" }),
+        ) { notificationScreen() }
+        composable(Screen.OrdersHistory.route) {
+            ordersHistoryRoute(registerOpenMenu = registerOpenMenu)
         }
+        composable(Screen.DeliveriesLog.route) { deliveriesLogScreen(navController) }
+        composable(Screen.Settings.route) { settingsOptions(navController) }
+        composable(Screen.MyPool.route) { myPoolScreen(navController) }
+        composable(Screen.Chat.route) { chatScreen() }
     }
 }
 
