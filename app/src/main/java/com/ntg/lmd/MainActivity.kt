@@ -28,10 +28,7 @@ class MainActivity : ComponentActivity() {
             lmdTheme {
                 navController = rememberNavController()
                 // pass the VM down
-                appNavGraph(rootNavController = navController, deeplinkVM = deepLinkVM, onOpenOrderDetails = { orderId ->
-                    navController.navigate("order/$orderId") // adjust to your route
-                }
-                )
+                appNavGraph(rootNavController = navController, deeplinkVM = deepLinkVM)
                 // keep this for normal deep link handling too
                 LaunchedEffect(Unit) { navController.handleDeepLink(intent) }
             }

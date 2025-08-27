@@ -26,8 +26,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Divider
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -43,7 +41,6 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarColors
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarDefaults.topAppBarColors
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
@@ -109,13 +106,13 @@ data class AppBarConfig(
     val searchValue: String = "",
     val onSearchChange: (String) -> Unit = {},
 )
-
+@Suppress("UnusedParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun appScaffoldWithDrawer(
-    navConfig: AppNavConfig,               // holds navController + currentRoute
-    topBar: TopBarConfigWithTitle,         // UI config for top bar
-    appBar: AppBarConfig,                  // simple title/search config
+    navConfig: AppNavConfig, // holds navController + currentRoute
+    topBar: TopBarConfigWithTitle, // UI config for top bar
+    appBar: AppBarConfig, // simple title/search config
     onLogout: () -> Unit,
     content: @Composable () -> Unit,
 ) {
@@ -140,9 +137,12 @@ fun appScaffoldWithDrawer(
                     onLogout = onLogout,
                     onNavigate = { route ->
                         scope.launch { drawerState.close() }
-                        if (route == Screen.Logout.route) onLogout()
-                        else navController.navigateSingleTop(route)
-                    }
+                        if (route == Screen.Logout.route) {
+                            onLogout()
+                        } else {
+                            navController.navigateSingleTop(route)
+                        }
+                    },
                 )
             }
         },
@@ -165,9 +165,10 @@ private fun drawerContent(
     onNavigate: (String) -> Unit,
 ) {
     // Split drawer items into 2 groups (orders + settings/logout)
-    val grouped = remember {
-        Pair(drawerItems.take(FIRST_GROUP_SIZE), drawerItems.drop(FIRST_GROUP_SIZE))
-    }
+    val grouped =
+        remember {
+            Pair(drawerItems.take(FIRST_GROUP_SIZE), drawerItems.drop(FIRST_GROUP_SIZE))
+        }
 
     drawerHeader(name = "Sherif")
 
@@ -177,11 +178,12 @@ private fun drawerContent(
         color = MaterialTheme.colorScheme.primary,
         fontWeight = FontWeight.SemiBold,
         fontSize = dimensionResource(R.dimen.drawer_section_title_text_size).value.sp,
-        modifier = Modifier.padding(
-            start = dimensionResource(R.dimen.mediumSpace),
-            top = dimensionResource(R.dimen.smallSpace),
-            bottom = dimensionResource(R.dimen.smallerSpace),
-        ),
+        modifier =
+            Modifier.padding(
+                start = dimensionResource(R.dimen.mediumSpace),
+                top = dimensionResource(R.dimen.smallSpace),
+                bottom = dimensionResource(R.dimen.smallerSpace),
+            ),
     )
 
     // First group of items
@@ -225,12 +227,13 @@ private fun drawerContent(
 private fun appTopBar(
     config: TopBarConfigWithTitle,
     onOpenDrawer: () -> Unit,
-    colors: TopAppBarColors = topAppBarColors(
-        containerColor = MaterialTheme.colorScheme.primary,
-        titleContentColor = MaterialTheme.colorScheme.onPrimary,
-        navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
-        actionIconContentColor = MaterialTheme.colorScheme.onPrimary,
-    ),
+    colors: TopAppBarColors =
+        topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.primary,
+            titleContentColor = MaterialTheme.colorScheme.onPrimary,
+            navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+            actionIconContentColor = MaterialTheme.colorScheme.onPrimary,
+        ),
 ) {
     val search = config.search
     val focusRequester = remember { FocusRequester() }
@@ -266,8 +269,9 @@ private fun appTopBar(
             if (config.showSearchIcon && search.searching.value) {
                 searchTextField(
                     search = search,
-                    placeholder = config.searchPlaceholder
-                        ?: stringResource(R.string.search_order_number_customer_name),
+                    placeholder =
+                        config.searchPlaceholder
+                            ?: stringResource(R.string.search_order_number_customer_name),
                     focusRequester = focusRequester,
                     focusManager = focusManager,
                 )
@@ -286,10 +290,11 @@ private fun topBarTitle(
     AnimatedVisibility(visible = showTitle, enter = fadeIn(fadeSpec), exit = fadeOut(fadeSpec)) {
         Text(
             title,
-            style = MaterialTheme.typography.titleLarge.copy(
-                fontWeight = FontWeight.Medium,
-                textAlign = TextAlign.Start,
-            ),
+            style =
+                MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.Medium,
+                    textAlign = TextAlign.Start,
+                ),
         )
     }
 }
@@ -325,30 +330,32 @@ private fun searchTextField(
                 Icon(
                     Icons.Filled.Close,
                     contentDescription = stringResource(R.string.clear_or_close),
-                    tint = onPrimary
+                    tint = onPrimary,
                 )
             }
         },
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-        keyboardActions = androidx.compose.foundation.text.KeyboardActions(
-            onSearch = {
-                search.onSubmit(search.text.value)
-                focusManager.clearFocus()
-            },
-        ),
-        colors = TextFieldDefaults.colors(
-            focusedIndicatorColor = Transparent,
-            unfocusedIndicatorColor = Transparent,
-            disabledIndicatorColor = Transparent,
-            errorIndicatorColor = Transparent,
-            focusedContainerColor = Transparent,
-            unfocusedContainerColor = Transparent,
-            disabledContainerColor = Transparent,
-            errorContainerColor = Transparent,
-            cursorColor = onPrimary,
-            focusedTextColor = onPrimary,
-            unfocusedTextColor = onPrimary,
-        ),
+        keyboardActions =
+            androidx.compose.foundation.text.KeyboardActions(
+                onSearch = {
+                    search.onSubmit(search.text.value)
+                    focusManager.clearFocus()
+                },
+            ),
+        colors =
+            TextFieldDefaults.colors(
+                focusedIndicatorColor = Transparent,
+                unfocusedIndicatorColor = Transparent,
+                disabledIndicatorColor = Transparent,
+                errorIndicatorColor = Transparent,
+                focusedContainerColor = Transparent,
+                unfocusedContainerColor = Transparent,
+                disabledContainerColor = Transparent,
+                errorContainerColor = Transparent,
+                cursorColor = onPrimary,
+                focusedTextColor = onPrimary,
+                unfocusedTextColor = onPrimary,
+            ),
         textStyle = MaterialTheme.typography.bodyMedium.copy(color = onPrimary),
         modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
     )
@@ -391,14 +398,15 @@ private fun topBarActions(
 @Composable
 fun drawerHeader(name: String) {
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.primary)
-            .height(dimensionResource(R.dimen.drawer_header_height))
-            .padding(
-                horizontal = dimensionResource(R.dimen.mediumSpace),
-                vertical = dimensionResource(R.dimen.mediumSpace),
-            ),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.primary)
+                .height(dimensionResource(R.dimen.drawer_header_height))
+                .padding(
+                    horizontal = dimensionResource(R.dimen.mediumSpace),
+                    vertical = dimensionResource(R.dimen.mediumSpace),
+                ),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Image(
@@ -421,11 +429,12 @@ fun drawerHeader(name: String) {
 @Composable
 private fun groupCard(content: @Composable ColumnScope.() -> Unit) {
     Column(
-        modifier = Modifier
-            .padding(horizontal = dimensionResource(R.dimen.smallSpace))
-            .clip(RoundedCornerShape(dimensionResource(R.dimen.card_radius)))
-            .background(CupertinoCellBackground)
-            .padding(vertical = dimensionResource(R.dimen.smallSpace)),
+        modifier =
+            Modifier
+                .padding(horizontal = dimensionResource(R.dimen.smallSpace))
+                .clip(RoundedCornerShape(dimensionResource(R.dimen.card_radius)))
+                .background(CupertinoCellBackground)
+                .padding(vertical = dimensionResource(R.dimen.smallSpace)),
         content = content,
     )
 }
@@ -442,22 +451,24 @@ fun drawerItemRow(
     val label = stringResource(entry.labelRes)
 
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(enabled = entry.enabled, onClick = onClick)
-            .padding(
-                horizontal = dimensionResource(R.dimen.mediumSpace),
-                vertical = dimensionResource(R.dimen.smallSpace),
-            ),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(enabled = entry.enabled, onClick = onClick)
+                .padding(
+                    horizontal = dimensionResource(R.dimen.mediumSpace),
+                    vertical = dimensionResource(R.dimen.smallSpace),
+                ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
             imageVector = entry.icon,
             contentDescription = null,
             tint = textColor,
-            modifier = Modifier
-                .size(dimensionResource(R.dimen.drawer_icon_size))
-                .graphicsLayer(alpha = iconAlpha),
+            modifier =
+                Modifier
+                    .size(dimensionResource(R.dimen.drawer_icon_size))
+                    .graphicsLayer(alpha = iconAlpha),
         )
         Spacer(Modifier.width(dimensionResource(R.dimen.smallSpace)))
 
