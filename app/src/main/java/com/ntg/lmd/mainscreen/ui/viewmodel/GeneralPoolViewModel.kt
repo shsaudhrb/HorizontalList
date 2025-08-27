@@ -43,6 +43,8 @@ class GeneralPoolViewModel : ViewModel() {
     @SuppressLint("StaticFieldLeak")
     private lateinit var ctx: Context
 
+    private var realtimeStarted = false
+
     // distance computation use case
     private val computeDistances by lazy { GeneralPoolProvider.computeDistancesUseCase() }
 
@@ -55,9 +57,27 @@ class GeneralPoolViewModel : ViewModel() {
     fun attach(context: Context) {
         if (::ctx.isInitialized) return
         ctx = context.applicationContext
+
+        startRealtime("orders")
+
         loadOrdersFromApi()
         ensureLocationReady(ctx, promptIfMissing = true)
     }
+
+    private fun startRealtime(table: String) {
+        if (realtimeStarted) return
+        realtimeStarted = true
+        GeneralPoolProvider.ordersRepository(ctx).connectToOrders(table)
+    }
+
+    override fun onCleared() {
+        if (::ctx.isInitialized) {
+            GeneralPoolProvider.ordersRepository(ctx).disconnectFromOrders()
+        }
+        realtimeStarted = false
+        super.onCleared()
+    }
+
 
     // toggle the search mode, for showing/hiding the search fields and results
     fun onSearchingChange(v: Boolean) = _ui.update { it.copy(searching = v) }
@@ -106,14 +126,14 @@ class GeneralPoolViewModel : ViewModel() {
 
         _ui.update { prev ->
             val currentSel = prev.selected
-            val selectionHadNoDistance = currentSel?.distanceKm?.isFinite() != true // was ∞ or null
+            val selectionHadNoDistance = currentSel?.distanceKm?.isFinite() != true
 
             val nextSelected =
                 when {
-                    userPinnedSelection -> currentSel // respect user choice
-                    currentSel == null -> nearest // nothing chosen yet → nearest
-                    selectionHadNoDistance -> nearest // replace ∞ with nearest
-                    else -> currentSel // keep selection
+                    userPinnedSelection -> currentSel
+                    currentSel == null -> nearest
+                    selectionHadNoDistance -> nearest
+                    else -> currentSel
                 }
 
             prev.copy(orders = updated, selected = nextSelected)
@@ -147,16 +167,12 @@ class GeneralPoolViewModel : ViewModel() {
                 .onSuccess { allOrders ->
                     val initial = allOrders.map { it.toUi(ctx) }
 
-                    val validCount = initial.count { it.lat != 0.0 && it.lng != 0.0 }
-                    Log.d("GeneralPoolVM", "Orders total=${initial.size}, validWithCoords=$validCount")
-
-                    // System-picked default (replaceable later by first distance compute)
                     val defaultSelection =
                         _ui.value.selected
                             ?: initial.firstOrNull { it.lat != 0.0 && it.lng != 0.0 }
                             ?: initial.firstOrNull()
 
-                    userPinnedSelection = false // system default should be replaceable
+                    userPinnedSelection = false
 
                     _ui.update {
                         it.copy(
@@ -175,7 +191,12 @@ class GeneralPoolViewModel : ViewModel() {
                     ensureSelectedStillVisible()
                 }.onFailure { e ->
                     Log.e("GeneralPoolVM", "Failed to load paged orders: ${e.message}", e)
-                    _ui.update { it.copy(isLoading = false, errorMessage = "Unable to load orders.") }
+                    _ui.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = "Unable to load orders."
+                        )
+                    }
                 }
         }
     }

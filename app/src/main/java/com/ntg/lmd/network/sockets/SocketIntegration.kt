@@ -4,8 +4,9 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import com.google.gson.Gson
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
 import com.ntg.lmd.mainscreen.data.model.Order
-import com.ntg.lmd.mainscreen.data.model.RealtimeMessage
 import com.ntg.lmd.mainscreen.data.model.WebSocketMessage
 import com.ntg.lmd.network.authheader.SecureTokenStore
 import kotlinx.coroutines.CoroutineScope
@@ -36,7 +37,6 @@ class SocketIntegration(
     private val tokenStore: SecureTokenStore,
 ) {
     private val logTag = "LMD-WS"
-
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private var ws: WebSocket? = null
@@ -53,7 +53,6 @@ class SocketIntegration(
 
     private val gson = Gson()
     private val orderChannel = Channel<Order>(Channel.UNLIMITED)
-
     fun getOrderChannel(): Channel<Order> = orderChannel
 
     private var currentChannelName: String? = null
@@ -61,7 +60,6 @@ class SocketIntegration(
     private var reconnectionRunnable: Runnable? = null
     private var isDestroyed = false
 
-    /** Simple “raw” connect used by lightweight listeners (doesn’t auto-join). */
     fun connect() {
         val access = tokenStore.getAccessToken().orEmpty()
         lastAccess = access
@@ -72,60 +70,37 @@ class SocketIntegration(
 
         _connectionState.value = ConnectionState.CONNECTING
 
-        ws =
-            client.newWebSocket(
-                req,
-                object : WebSocketListener() {
-                    override fun onOpen(
-                        webSocket: WebSocket,
-                        response: Response,
-                    ) {
-                        Log.i(logTag, "Connected (code=${response.code})")
-                        _events.tryEmit(SocketEvent.Open)
-                        _connectionState.value = ConnectionState.CONNECTED
-                    }
+        ws = client.newWebSocket(
+            req,
+            object : WebSocketListener() {
+                override fun onOpen(webSocket: WebSocket, response: Response) {
+                    Log.i(logTag, "Connected (code=${response.code})")
+                    _events.tryEmit(SocketEvent.Open)
+                    _connectionState.value = ConnectionState.CONNECTED
+                }
 
-                    override fun onMessage(
-                        webSocket: WebSocket,
-                        text: String,
-                    ) {
-                        Log.d(logTag, "onMessage: $text")
-                        _events.tryEmit(SocketEvent.Message(text))
-                    }
+                override fun onMessage(webSocket: WebSocket, text: String) {
+                    Log.d(logTag, "onMessage: $text")
+                    _events.tryEmit(SocketEvent.Message(text))
+                }
 
-                    override fun onClosed(
-                        webSocket: WebSocket,
-                        code: Int,
-                        reason: String,
-                    ) {
-                        Log.d(logTag, "onClosed code=$code reason=$reason")
-                        _events.tryEmit(SocketEvent.Closed(code, reason))
-                        _connectionState.value = ConnectionState.DISCONNECTED
-                    }
+                override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                    Log.d(logTag, "onClosed code=$code reason=$reason")
+                    _events.tryEmit(SocketEvent.Closed(code, reason))
+                    _connectionState.value = ConnectionState.DISCONNECTED
+                }
 
-                    override fun onFailure(
-                        webSocket: WebSocket,
-                        t: Throwable,
-                        response: Response?,
-                    ) {
-                        Log.e(logTag, "onFailure ${t.message}", t)
-                        _events.tryEmit(SocketEvent.Error(t))
-                        _connectionState.value =
-                            ConnectionState.ERROR(t.message ?: "Connection failed")
-                    }
-                },
-            )
+                override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                    Log.e(logTag, "onFailure ${t.message}", t)
+                    _events.tryEmit(SocketEvent.Error(t))
+                    _connectionState.value = ConnectionState.ERROR(t.message ?: "Connection failed")
+                }
+            },
+        )
     }
 
-    /** Phoenix-style channel join helper for the raw connection (optional). */
-    fun joinPhoenixChannel(
-        topic: String,
-        ref: String = "1",
-    ) {
-        val msg =
-            """
-            {"topic":"$topic","event":"phx_join","payload":{},"ref":"$ref"}
-            """.trimIndent()
+    fun joinPhoenixChannel(topic: String, ref: String = "1") {
+        val msg = """{"topic":"$topic","event":"phx_join","payload":{},"ref":"$ref"}"""
         ws?.send(msg)
         Log.d(logTag, "join sent: $msg")
     }
@@ -155,7 +130,7 @@ class SocketIntegration(
                 for (order in orderChannel) {
                     Log.d(
                         logTag,
-                        "ORDER FROM CHANNEL: #${order.orderNumber} - ${order.customerName}",
+                        "ORDER FROM CHANNEL: #${order.orderNumber} - ${order.customerName}"
                     )
                 }
             } catch (e: Exception) {
@@ -189,10 +164,7 @@ class SocketIntegration(
         _connectionState.value = ConnectionState.DISCONNECTED
     }
 
-    fun updateOrderStatus(
-        orderId: String,
-        status: String,
-    ) {
+    fun updateOrderStatus(orderId: String, status: String) {
         val access = tokenStore.getAccessToken()
         if (access.isNullOrEmpty()) return
         val statusUpdate = mapOf("order_id" to orderId, "status" to status)
@@ -209,11 +181,11 @@ class SocketIntegration(
         _orders.value = emptyList()
         _connectionState.value = ConnectionState.DISCONNECTED
         orderChannel.close()
-        scope.cancel() // cancel coroutines
+        scope.cancel()
         Log.d(logTag, "Destroyed")
     }
 
-    fun connectToOrders() = connect(channelName = "orders")
+    fun connectToOrders(channelName: String = "orders") = connect(channelName)
 
     fun connect(channelName: String) {
         if (isDestroyed) {
@@ -245,88 +217,135 @@ class SocketIntegration(
         _connectionState.value = ConnectionState.CONNECTING
 
         val request = Request.Builder().url(wsUrl).build()
-        ws =
-            client.newWebSocket(
-                request,
-                object : WebSocketListener() {
-                    override fun onOpen(
-                        webSocket: WebSocket,
-                        response: Response,
-                    ) {
-                        if (isDestroyed) return
-                        _connectionState.value = ConnectionState.CONNECTED
+        ws = client.newWebSocket(
+            request,
+            object : WebSocketListener() {
+                override fun onOpen(webSocket: WebSocket, response: Response) {
+                    if (isDestroyed) return
+                    _connectionState.value = ConnectionState.CONNECTED
 
-                        // Join the specific table’s realtime channel
-                        val joinMessage =
-                            mapOf(
-                                "topic" to "realtime:public:$channelName",
-                                "event" to "phx_join",
-                                "payload" to emptyMap<String, Any>(),
-                                "ref" to "1",
-                            )
-                        webSocket.send(gson.toJson(joinMessage))
-                    }
+                    val table = (currentChannelName ?: "orders")
+                    val topic = "realtime:public:$table"
+                    val joinMessage =
+                        """{"topic":"$topic","event":"phx_join","payload":{},"ref":"1"}"""
+                    webSocket.send(joinMessage)
+                    Log.d(logTag, "JOIN -> $joinMessage")
+                }
 
-                    override fun onMessage(
-                        webSocket: WebSocket,
-                        text: String,
-                    ) {
-                        if (isDestroyed) return
-                        try {
-                            val realtime = gson.fromJson(text, RealtimeMessage::class.java)
-                            when (realtime.event) {
-                                "INSERT" -> realtime.payload?.record?.let { addOrder(it) }
-                                "UPDATE" -> realtime.payload?.record?.let { updateOrder(it) }
-                                "DELETE" ->
-                                    realtime.payload
-                                        ?.record
-                                        ?.id
-                                        ?.let { removeOrder(it) }
+                override fun onMessage(webSocket: WebSocket, text: String) {
+                    if (isDestroyed) return
+                    Log.d(logTag, "MSG: $text")
 
-                                "phx_reply" -> Log.d(logTag, "Channel joined")
-                                "ping" -> {
-                                    val pong =
-                                        mapOf(
-                                            "event" to "pong",
-                                            "payload" to emptyMap<String, Any>(),
-                                            "ref" to "0",
+                    try {
+                        val root = JsonParser.parseString(text).asJsonObject
+                        val event = root.get("event")?.asString ?: ""
+
+                        when (event) {
+                            "phx_reply" -> Log.d(logTag, "Channel joined")
+
+                            "INSERT", "UPDATE", "DELETE" -> {
+                                val payload = root.getAsJsonObject("payload") ?: JsonObject()
+                                val record = payload.getAsJsonObject("record")
+                                val oldRecord = payload.getAsJsonObject("old_record")
+
+                                when (event) {
+                                    "INSERT" -> {
+                                        val order = gson.fromJson(record, Order::class.java)
+                                        Log.d(
+                                            logTag,
+                                            """INSERT -> #${order.orderNumber} • ${order.customerName}"""
                                         )
-                                    webSocket.send(gson.toJson(pong))
+                                        addOrder(order)
+                                    }
+
+                                    "UPDATE" -> {
+                                        val order = gson.fromJson(record, Order::class.java)
+                                        Log.d(
+                                            logTag,
+                                            """UPDATE -> #${order.orderNumber} • ${order.customerName}"""
+                                        )
+                                        updateOrder(order)
+                                    }
+
+                                    "DELETE" -> {
+                                        val id = oldRecord?.get("id")?.asString
+                                        if (id != null) {
+                                            Log.d(logTag, "DELETE -> id=$id")
+                                            removeOrder(id)
+                                        } else {
+                                            Log.d(logTag, "DELETE -> (no id in old_record)")
+                                        }
+                                    }
                                 }
                             }
-                        } catch (e: Exception) {
-                            Log.e(logTag, "Parse error: ${e.message}", e)
-                        }
-                    }
 
-                    override fun onClosed(
-                        webSocket: WebSocket,
-                        code: Int,
-                        reason: String,
-                    ) {
-                        if (isDestroyed) return
-                        _connectionState.value = ConnectionState.DISCONNECTED
-                        if (code == WS_CLOSE_NORMAL || code == WS_CLOSE_GOING_AWAY)
-                            scheduleReconnection(DEFAULT_RETRY_DELAY_MS)
-                    }
+                            "postgres_changes" -> {
+                                val payload = root.getAsJsonObject("payload")
+                                val data = payload?.getAsJsonObject("data")
+                                val type = data?.get("eventType")?.asString
+                                when (type) {
+                                    "INSERT" -> {
+                                        val newJson = data.getAsJsonObject("new")
+                                        val order = gson.fromJson(newJson, Order::class.java)
+                                        Log.d(
+                                            logTag,
+                                            """INSERT -> #${order.orderNumber} • ${order.customerName}"""
+                                        )
+                                        addOrder(order)
+                                    }
 
-                    override fun onFailure(
-                        webSocket: WebSocket,
-                        t: Throwable,
-                        response: Response?,
-                    ) {
-                        if (isDestroyed) return
-                        response?.let { Log.e(logTag, "HTTP ${it.code} ${it.message}") }
-                        if (response?.code == HTTP_UNAUTHORIZED) {
-                            handleTokenRefresh()
-                        } else {
-                            _connectionState.value =
-                                ConnectionState.ERROR(t.message ?: "Connection failed")
-                            scheduleReconnection(DEFAULT_RETRY_DELAY_MS)
+                                    "UPDATE" -> {
+                                        val newJson = data.getAsJsonObject("new")
+                                        val order = gson.fromJson(newJson, Order::class.java)
+                                        Log.d(
+                                            logTag,
+                                            """UPDATE -> #${order.orderNumber} • ${order.customerName}"""
+                                        )
+                                        updateOrder(order)
+                                    }
+
+                                    "DELETE" -> {
+                                        val oldJson = data.getAsJsonObject("old")
+                                        val id = oldJson?.get("id")?.asString
+                                        if (id != null) {
+                                            Log.d(logTag, "DELETE -> id=$id")
+                                            removeOrder(id)
+                                        }
+                                    }
+                                }
+                            }
+
+                            "presence_state", "presence_diff", "system", "ping", "phx_close" -> {
+                            }
+
+                            else -> {
+                                // ignore
+                            }
                         }
+                    } catch (e: Exception) {
+                        Log.e(logTag, "Parse error: ${e.message}", e)
                     }
-                },
-            )
+                }
+
+                override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                    if (isDestroyed) return
+                    _connectionState.value = ConnectionState.DISCONNECTED
+                    if (code != WS_CLOSE_NORMAL) scheduleReconnection(DEFAULT_RETRY_DELAY_MS)
+                }
+
+                override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                    if (isDestroyed) return
+                    response?.let { Log.e(logTag, "HTTP ${it.code} ${it.message}") }
+                    if (response?.code == HTTP_UNAUTHORIZED) {
+                        handleTokenRefresh()
+                    } else {
+                        _connectionState.value =
+                            ConnectionState.ERROR(t.message ?: "Connection failed")
+                        scheduleReconnection(DEFAULT_RETRY_DELAY_MS)
+                    }
+                }
+            },
+        )
     }
 
     private fun addOrder(order: Order) {
@@ -358,11 +377,10 @@ class SocketIntegration(
     private fun scheduleReconnection(delayMs: Long) {
         cancelReconnection()
         reconnectionHandler = Handler(Looper.getMainLooper())
-        reconnectionRunnable =
-            Runnable {
-                Log.d(logTag, "Auto-reconnecting…")
-                currentChannelName?.let { performConnect(it) }
-            }
+        reconnectionRunnable = Runnable {
+            Log.d(logTag, "Auto-reconnecting…")
+            currentChannelName?.let { performConnect(it) }
+        }
         reconnectionHandler?.postDelayed(reconnectionRunnable!!, delayMs)
         Log.d(logTag, "Reconnection scheduled in ${delayMs}ms")
     }
@@ -376,12 +394,7 @@ class SocketIntegration(
 
 sealed class ConnectionState {
     data object CONNECTING : ConnectionState()
-
     data object CONNECTED : ConnectionState()
-
     data object DISCONNECTED : ConnectionState()
-
-    data class ERROR(
-        val message: String,
-    ) : ConnectionState()
+    data class ERROR(val message: String) : ConnectionState()
 }
