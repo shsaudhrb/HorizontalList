@@ -87,7 +87,6 @@
     <string name="sort_asc">Ascending (oldest first)</string>
     <string name="sort_desc">Descending (newest first)</string>
     <string name="apply">Apply</string>
-    <string name="cancel">Cancel</string>
     <!-- General Pool -->
     <string name="add_to_your_orders">+ Add to your orders</string>
     <string name="search_order_number_customer_name">Search by order no. or customer name</string>
@@ -98,7 +97,6 @@
     <string name="no_orders">No orders Found</string>
     <!-- Deliveries Log -->
     <string name="SLA">SLA</string>
-    <string name="order_details">Order Details</string>
     <string name="delivery_time">Delivery Time</string>
     <string name="time_minutes_ago">%1$d mins ago</string>
     <string name="time_one_hour_ago">1 hour ago</string>
@@ -117,7 +115,6 @@
     <!-- States & actions -->
     <string name="empty_notifications">No notifications available.</string>
     <string name="loading_more_failed">Loading more failed</string>
-    <string name="retry">Retry</string>
     <string name="caught_up">You’re all caught up </string>
     <string name="unable_load_notifications">Unable to load notifications.</string>
 
@@ -138,4 +135,6 @@
 
     <!-- FCM default title -->
     <string name="notification_title">Notifications</string>
+    <string name="clear_or_close">Clear or close</string>
+    <string name="action">Action</string>
 </resources>

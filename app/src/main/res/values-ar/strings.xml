@@ -90,7 +90,6 @@
     <string name="sort_asc">تصاعدي (الأقدم أولاً)</string>
     <string name="sort_desc">تنازلي (الأحدث أولاً)</string>
     <string name="apply">تطبيق</string>
-    <string name="cancel">إلغاء</string>
     <!-- General Pool -->
     <string name="search_order_number_customer_name">ابحث برقم الطلب أو اسم العميل</string>
     <string name="search_order_number">ابحث برقم الطلب</string>
@@ -101,7 +100,6 @@
     <string name="no_orders">لا توجد طلبات</string>
     <!-- Deliveries Log -->
     <string name="SLA">SLA</string>
-    <string name="order_details">تفاصيل الطلب</string>
     <string name="delivery_time">وقت التسليم</string>
     <string name="time_minutes_ago">منذ %1$d دقيقة</string>
     <string name="time_one_hour_ago">منذ ساعة واحدة</string>
@@ -119,7 +117,6 @@
     <!-- الحالات والأزرار -->
     <string name="empty_notifications">لا توجد إشعارات.</string>
     <string name="loading_more_failed">فشل تحميل المزيد</string>
-    <string name="retry">إعادة المحاولة</string>
     <string name="caught_up">انتهيت من كل الإشعارات </string>
     <string name="unable_load_notifications">تعذّر تحميل الإشعارات.</string>
 
@@ -155,5 +152,7 @@
 
     <!-- عنوان افتراضي لـ FCM -->
     <string name="notification_title">الإشعارات</string>
+    <string name="clear_or_close">مسح/إغلاق</string>
+    <string name="action">إجراء</string>
 
 </resources>
