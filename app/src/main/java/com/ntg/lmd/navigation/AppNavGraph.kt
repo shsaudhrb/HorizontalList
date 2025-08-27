@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -115,7 +116,6 @@ fun appNavGraph(
 }
 
 // ======================= Drawer host =======================
-
 @Composable
 private fun drawerHost(
     onLogout: () -> Unit,
@@ -126,58 +126,41 @@ private fun drawerHost(
     val currentRoute = backStack?.destination?.route ?: Screen.GeneralPool.route
     val startDest = if (openNotifications) Screen.Notifications.route else Screen.GeneralPool.route
 
-    // Jump to notifications if requested
     LaunchedEffect(openNotifications) {
         if (openNotifications) {
             drawerNavController.navigate(Screen.Notifications.route) { launchSingleTop = true }
         }
     }
+
+    // observe sub-screen flag from Settings
     val inSettingsSub by remember(backStack) {
-        backStack
-            ?.savedStateHandle
-            ?.getStateFlow("settings_in_sub", false)
+        backStack?.savedStateHandle?.getStateFlow("settings_in_sub", false)
             ?: kotlinx.coroutines.flow.MutableStateFlow(false)
     }.collectAsState()
 
-    // Shared hook for Orders History overflow menu
     var openOrdersHistoryMenu by remember { mutableStateOf<(() -> Unit)?>(null) }
 
-    // Route-specific UI
     val spec = buildRouteUiSpec(currentRoute, drawerNavController, openOrdersHistoryMenu)
-
-    // Shared search controller
     val search = rememberSearchController(drawerNavController)
-
-    // Top bar config
     val topBar = buildTopBar(spec, search)
 
-    // Scaffold + inner nav
     appScaffoldWithDrawer(
         navConfig = AppNavConfig(navController = drawerNavController, currentRoute = currentRoute),
         topBar = topBar,
         onLogout = onLogout,
-        appBar =
-            AppBarConfig( // required by your scaffold
-                title = spec.title,
-            ),
+        appBar = AppBarConfig(
+            title = spec.title,
+            visible = !(currentRoute == Screen.Settings.route && inSettingsSub)
+        ),
     ) {
         drawerNavGraph(
             navController = drawerNavController,
             startDestination = startDest,
             registerOpenMenu = { setter -> openOrdersHistoryMenu = setter },
-            externalQuery = search.text.value, // pass String
+            externalQuery = search.text.value,
             onOpenOrderDetails = { id -> drawerNavController.navigate("order/$id") },
         )
     }
-        showTopBar = !(currentRoute == Screen.Settings.route && inSettingsSub), // hide when in sub
-        content = {
-            drawerNavGraph(
-                navController = drawerNavController,
-                startDestination = startDest,
-                registerOpenMenu = { setter -> openOrdersHistoryMenu = setter },
-            )
-        },
-    )
 }
 
 // ======================= Helpers =======================
