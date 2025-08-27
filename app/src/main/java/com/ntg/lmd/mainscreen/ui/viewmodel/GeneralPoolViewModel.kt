@@ -58,16 +58,15 @@ class GeneralPoolViewModel : ViewModel() {
         if (::ctx.isInitialized) return
         ctx = context.applicationContext
 
-        startRealtime("orders")
+        if (!realtimeStarted) {
+            realtimeStarted = true
+            GeneralPoolProvider
+                .ordersRepository(ctx)
+                .connectToOrders("orders")
+        }
 
         loadOrdersFromApi()
         ensureLocationReady(ctx, promptIfMissing = true)
-    }
-
-    private fun startRealtime(table: String) {
-        if (realtimeStarted) return
-        realtimeStarted = true
-        GeneralPoolProvider.ordersRepository(ctx).connectToOrders(table)
     }
 
     override fun onCleared() {
@@ -77,7 +76,6 @@ class GeneralPoolViewModel : ViewModel() {
         realtimeStarted = false
         super.onCleared()
     }
-
 
     // toggle the search mode, for showing/hiding the search fields and results
     fun onSearchingChange(v: Boolean) = _ui.update { it.copy(searching = v) }
@@ -92,7 +90,6 @@ class GeneralPoolViewModel : ViewModel() {
     }
 
     fun onOrderSelected(order: OrderInfo?) {
-        // Only pin when user actually chose a card (non-null)
         userPinnedSelection = order != null
         _ui.update { it.copy(selected = order) }
     }
@@ -120,38 +117,36 @@ class GeneralPoolViewModel : ViewModel() {
         }
     }
 
-    private fun applyDistancesFrom(origin: Location) {
-        val updated = computeDistances(origin, _ui.value.orders)
-        val nearest: OrderInfo? = updated.minByOrNull { it.distanceKm }
-
-        _ui.update { prev ->
-            val currentSel = prev.selected
-            val selectionHadNoDistance = currentSel?.distanceKm?.isFinite() != true
-
-            val nextSelected =
-                when {
-                    userPinnedSelection -> currentSel
-                    currentSel == null -> nearest
-                    selectionHadNoDistance -> nearest
-                    else -> currentSel
-                }
-
-            prev.copy(orders = updated, selected = nextSelected)
-        }
-
-        if (updated.isNotEmpty()) lastNonEmptyOrders = updated
-        _deviceLatLng.value = LatLng(origin.latitude, origin.longitude)
-        ensureSelectedStillVisible()
-    }
-
     fun fetchAndApplyDistances(context: Context) {
         if (_ui.value.orders.isEmpty()) return
         viewModelScope.launch {
             val (last, current) = GeneralPoolProvider.getDeviceLocationsUseCase().invoke(context)
-            when {
-                current != null -> applyDistancesFrom(current)
-                last != null -> applyDistancesFrom(last)
-                else -> Log.d("GeneralPoolVM", "No device location yet")
+            val origin: Location? = current ?: last
+
+            if (origin != null) {
+                val updated = computeDistances(origin, _ui.value.orders)
+                val nearest: OrderInfo? = updated.minByOrNull { it.distanceKm }
+
+                _ui.update { prev ->
+                    val currentSel = prev.selected
+                    val selectionHadNoDistance = currentSel?.distanceKm?.isFinite() != true
+
+                    val nextSelected =
+                        when {
+                            userPinnedSelection -> currentSel
+                            currentSel == null -> nearest
+                            selectionHadNoDistance -> nearest
+                            else -> currentSel
+                        }
+
+                    prev.copy(orders = updated, selected = nextSelected)
+                }
+
+                if (updated.isNotEmpty()) lastNonEmptyOrders = updated
+                _deviceLatLng.value = LatLng(origin.latitude, origin.longitude)
+                ensureSelectedStillVisible()
+            } else {
+                Log.d("GeneralPoolVM", "No device location yet")
             }
         }
     }
@@ -194,7 +189,7 @@ class GeneralPoolViewModel : ViewModel() {
                     _ui.update {
                         it.copy(
                             isLoading = false,
-                            errorMessage = "Unable to load orders."
+                            errorMessage = "Unable to load orders.",
                         )
                     }
                 }

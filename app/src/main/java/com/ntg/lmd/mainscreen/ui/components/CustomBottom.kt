@@ -99,8 +99,6 @@ fun customBottom(
         }
     }
 
-    if (orders.isEmpty()) return
-
     Box(
         Modifier
             .fillMaxWidth()
