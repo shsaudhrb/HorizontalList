@@ -161,6 +161,8 @@ dependencies {
     implementation(libs.androidx.work.runtime.ktx)
     // security
     implementation(libs.androidx.security.crypto)
+
+    implementation(libs.material.icons.extended)
 }
 
 // Custom tasks for code quality checks
