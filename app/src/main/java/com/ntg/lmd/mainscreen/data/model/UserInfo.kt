@@ -8,5 +8,5 @@ data class UserInfo(
     @SerializedName("email")
     val email: String?,
     @SerializedName("full_name")
-    val fullName: String?
+    val fullName: String?,
 )

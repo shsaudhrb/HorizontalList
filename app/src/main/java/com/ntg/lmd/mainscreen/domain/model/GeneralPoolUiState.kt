@@ -4,23 +4,36 @@ data class GeneralPoolUiState(
     val isLoading: Boolean = false,
     val orders: List<OrderInfo> = emptyList(),
     val selected: OrderInfo? = null,
-
     val hasLocationPerm: Boolean = false,
     val distanceThresholdKm: Double = 100.0,
-
     val searching: Boolean = false,
-    val searchText: String = ""
+    val searchText: String = "",
+    val errorMessage: String? = null,
 ) {
+    companion object {
+        private const val MAX_LATITUDE = 90.0
+        private const val MAX_LONGITUDE = 180.0
+    }
 
     // orders that are within the selected distance
     val mapOrders: List<OrderInfo>
         get() {
-            if (!hasLocationPerm) return orders
-            val anyFinite = orders.any { it.distanceKm.isFinite() }
-            if (!anyFinite) return orders
+            // keep only valid coords
+            val base =
+                orders.filter {
+                    it.lat.isFinite() &&
+                        it.lng.isFinite() &&
+                        !(it.lat == 0.0 && it.lng == 0.0) &&
+                        kotlin.math.abs(it.lat) <= MAX_LATITUDE &&
+                        kotlin.math.abs(it.lng) <= MAX_LONGITUDE
+                }
 
-            val filtered = orders.filter { it.distanceKm <= distanceThresholdKm }
-            return if (filtered.isEmpty()) orders else filtered
+            if (!hasLocationPerm) return base
+
+            val anyFinite = base.any { it.distanceKm.isFinite() }
+            if (!anyFinite) return emptyList()
+
+            return base.filter { it.distanceKm.isFinite() && it.distanceKm <= distanceThresholdKm }
         }
 
     // orders that match the current search text
@@ -31,7 +44,7 @@ data class GeneralPoolUiState(
             if (q.isBlank()) return base
             return base.filter {
                 it.orderNumber.contains(q, ignoreCase = true) ||
-                        it.name.contains(q, ignoreCase = true)
+                    it.name.contains(q, ignoreCase = true)
             }
         }
 }

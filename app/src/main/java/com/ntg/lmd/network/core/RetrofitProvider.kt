@@ -62,7 +62,6 @@ object RetrofitProvider {
             .create(AuthApi::class.java)
     }
 
-
     val liveOrderApi: LiveOrdersApiService by lazy {
         Retrofit
             .Builder()

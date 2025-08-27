@@ -1,11 +1,10 @@
 package com.ntg.lmd.mainscreen.domain.usecase
 
-import com.ntg.lmd.mainscreen.data.model.LiveOrdersResponse
+import com.ntg.lmd.mainscreen.data.model.Order
 import com.ntg.lmd.mainscreen.domain.repository.OrdersRepository
-import kotlinx.coroutines.flow.Flow
 
 class LoadOrdersUseCase(
-    private val repo: OrdersRepository
+    private val repo: OrdersRepository,
 ) {
-    suspend operator fun invoke(): Flow<Result<LiveOrdersResponse>> = repo.getLiveOrders()
+    suspend operator fun invoke(pageSize: Int = 50): Result<List<Order>> = repo.getAllLiveOrders(pageSize)
 }

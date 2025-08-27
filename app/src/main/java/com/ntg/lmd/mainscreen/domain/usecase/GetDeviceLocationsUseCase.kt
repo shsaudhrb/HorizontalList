@@ -5,7 +5,7 @@ import android.location.Location
 import com.ntg.lmd.mainscreen.domain.repository.LocationRepository
 
 class GetDeviceLocationsUseCase(
-    private val locationRepo: LocationRepository
+    private val locationRepo: LocationRepository,
 ) {
     suspend operator fun invoke(context: Context): Pair<Location?, Location?> {
         val last = locationRepo.getLastLocation(context)

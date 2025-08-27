@@ -68,22 +68,20 @@ fun customBottom(
 
     // Jump to the externally selected order
     LaunchedEffect(selectedOrderNumber, orders) {
-        if (!selectedOrderNumber.isNullOrEmpty()) {
+        if (!selectedOrderNumber.isNullOrEmpty() && orders.isNotEmpty()) {
             val i = orders.indexOfFirst { it.orderNumber == selectedOrderNumber }
             if (i >= 0) {
                 programmatic = true
                 try {
                     listState.animateScrollToItem(i, -px)
+                    lastCentered = i
                 } finally {
                     programmatic = false
                 }
-                lastCentered = i
-                onCenteredOrderChange(orders[i], i)
             }
         }
     }
 
-    // When the list stops moving, compute the centered item and notify
     LaunchedEffect(orders, listState) {
         snapshotFlow { listState.isScrollInProgress }.collect { moving ->
             if (!moving && !programmatic && orders.isNotEmpty()) {
@@ -112,7 +110,10 @@ fun customBottom(
         LazyRow(
             state = listState,
             flingBehavior = rememberSnapFlingBehavior(lazyListState = listState),
-            modifier = Modifier.fillMaxWidth().align(Alignment.Center),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.Center),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding = PaddingValues(start = sidePadding, end = sidePadding),
         ) {
@@ -128,10 +129,9 @@ fun customBottom(
                             } finally {
                                 programmatic = false
                             }
-                            // Explicitly notify after snapping
                             if (index in orders.indices) {
                                 lastCentered = index
-                                onCenteredOrderChange(orders[index], index)
+                                onCenteredOrderChange(orders[index], index) // user-driven pin
                             }
                         }
                         onOrderClick(clicked)
@@ -150,11 +150,10 @@ private fun orderCard(
     modifier: Modifier = Modifier,
 ) {
     Card(
-        onClick = { onOrderClick(order) }, // click on selected order
+        onClick = { onOrderClick(order) },
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        modifier =
-            modifier.size(width = 270.dp, height = 150.dp),
+        modifier = modifier.size(width = 270.dp, height = 150.dp),
     ) {
         Column(
             modifier =
@@ -167,7 +166,7 @@ private fun orderCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // ---- distance of orders ----
+                // distance
                 Box(
                     modifier =
                         Modifier
@@ -180,7 +179,7 @@ private fun orderCard(
                         text = String.format(Locale.US, "%.1fkm", order.distanceKm),
                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onPrimary,
-                        maxLines = 1
+                        maxLines = 1,
                     )
                 }
 
@@ -194,14 +193,14 @@ private fun orderCard(
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
                     )
                     Text(
                         text = "${order.orderNumber} - ${order.timeAgo}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
@@ -212,7 +211,7 @@ private fun orderCard(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
 
             Spacer(Modifier.weight(1f))

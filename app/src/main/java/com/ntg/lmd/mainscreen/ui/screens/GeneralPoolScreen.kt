@@ -157,7 +157,7 @@ fun generalPoolScreen(
             Box(Modifier.align(Alignment.BottomCenter)) {
                 customBottom(
                     orders = ui.mapOrders,
-                    selectedOrderNumber = ui.selected?.orderNumber, // ← drives auto-centering
+                    selectedOrderNumber = ui.selected?.orderNumber,
                     onOrderClick = { order -> focusOnOrder(order, false) },
                     onCenteredOrderChange = { order, _ -> focusOnOrder(order, false) },
                     onAddClick = { },
@@ -326,10 +326,10 @@ fun circleSlider(
                                     val fraction = posX / size.width // Float 0..1
                                     val newValue =
                                         valueRange.start +
-                                                (
-                                                        fraction.toDouble() *
-                                                                (valueRange.endInclusive - valueRange.start)
-                                                        )
+                                            (
+                                                fraction.toDouble() *
+                                                    (valueRange.endInclusive - valueRange.start)
+                                            )
                                     onValueChange(newValue)
                                 }
                             }

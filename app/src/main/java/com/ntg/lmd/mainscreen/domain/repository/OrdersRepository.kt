@@ -1,12 +1,18 @@
 package com.ntg.lmd.mainscreen.domain.repository
 
-import com.ntg.lmd.mainscreen.data.model.LiveOrdersResponse
-import kotlinx.coroutines.flow.Flow
+import com.ntg.lmd.mainscreen.data.model.Order
 
 interface OrdersRepository {
-    suspend fun getLiveOrders(): Flow<Result<LiveOrdersResponse>>
+    suspend fun getAllLiveOrders(pageSize: Int = 50): Result<List<Order>>
+
     fun connectToOrders(channelName: String = "orders")
+
     fun disconnectFromOrders()
+
     fun retryConnection()
-    fun updateOrderStatus(orderId: String, status: String)
+
+    fun updateOrderStatus(
+        orderId: String,
+        status: String,
+    )
 }

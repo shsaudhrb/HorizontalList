@@ -6,17 +6,17 @@ data class Column(
     @SerializedName("name")
     val name: String?,
     @SerializedName("type")
-    val type: String?
+    val type: String?,
 )
 
 data class OrderStatusUpdate(
     @SerializedName("order_id")
     val orderId: String,
     @SerializedName("status")
-    val status: String
+    val status: String,
 )
 
 data class Coordinates(
-    @SerializedName("latitude") val latitude: Double? = null,
-    @SerializedName("longitude") val longitude: Double? = null
+    @SerializedName(value = "latitude", alternate = ["lat"]) val latitude: Double?,
+    @SerializedName(value = "longitude", alternate = ["lng", "lon"]) val longitude: Double?,
 )

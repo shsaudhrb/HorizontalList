@@ -7,5 +7,5 @@ data class RealtimeConfig(
     @SerializedName("user_id") val userId: String? = null,
     val filters: Filters? = null,
     @SerializedName("user_orders_only") val userOrdersOnly: Boolean? = null,
-    @SerializedName("subscription_config") val subscriptionConfig: SubscriptionConfig? = null
+    @SerializedName("subscription_config") val subscriptionConfig: SubscriptionConfig? = null,
 )

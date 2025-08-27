@@ -16,5 +16,5 @@ data class FiltersApplied(
     @SerializedName("dc_id")
     val dcId: String?,
     @SerializedName("search")
-    val search: String?
+    val search: String?,
 )

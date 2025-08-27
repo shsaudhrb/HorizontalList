@@ -12,5 +12,5 @@ data class OrderItem(
     @SerializedName("unit_price")
     val unitPrice: Double?,
     @SerializedName("total_price")
-    val totalPrice: Double?
+    val totalPrice: Double?,
 )

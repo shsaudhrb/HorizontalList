@@ -18,7 +18,6 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 object GeneralPoolProvider {
-
     private var retrofit: Retrofit? = null
     private var liveApi: LiveOrdersApiService? = null
     private var socket: SocketIntegration? = null
@@ -31,11 +30,13 @@ object GeneralPoolProvider {
         val client: OkHttpClient = RetrofitProvider.okHttpForWs
 
         if (retrofit == null) {
-            retrofit = Retrofit.Builder()
-                .baseUrl(BuildConfig.BASE_URL)
-                .client(client)
-                .addConverterFactory(GsonConverterFactory.create())
-                .build()
+            retrofit =
+                Retrofit
+                    .Builder()
+                    .baseUrl(BuildConfig.BASE_URL)
+                    .client(client)
+                    .addConverterFactory(GsonConverterFactory.create())
+                    .build()
         }
         return retrofit!!
     }
@@ -48,26 +49,27 @@ object GeneralPoolProvider {
     }
 
     private fun socket(ctx: Context): SocketIntegration {
-
         val client: OkHttpClient = RetrofitProvider.okHttpForWs
         val tokenStore = SecureTokenStore(ctx.applicationContext)
 
         if (socket == null) {
-            socket = SocketIntegration(
-                baseWsUrl = BuildConfig.WS_BASE_URL,
-                client = client,
-                tokenStore = tokenStore
-            )
+            socket =
+                SocketIntegration(
+                    baseWsUrl = BuildConfig.WS_BASE_URL,
+                    client = client,
+                    tokenStore = tokenStore,
+                )
         }
         return socket!!
     }
 
     fun ordersRepository(ctx: Context): OrdersRepository {
         if (ordersRepo == null) {
-            ordersRepo = OrdersRepositoryImpl(
-                liveOrdersApi = liveOrdersApi(ctx),
-                socket = socket(ctx)
-            )
+            ordersRepo =
+                OrdersRepositoryImpl(
+                    liveOrdersApi = liveOrdersApi(ctx),
+                    socket = socket(ctx),
+                )
         }
         return ordersRepo!!
     }
@@ -77,12 +79,9 @@ object GeneralPoolProvider {
         return locationRepo!!
     }
 
-    fun loadOrdersUseCase(ctx: Context): LoadOrdersUseCase =
-        LoadOrdersUseCase(ordersRepository(ctx))
+    fun loadOrdersUseCase(ctx: Context): LoadOrdersUseCase = LoadOrdersUseCase(ordersRepository(ctx))
 
-    fun getDeviceLocationsUseCase(): GetDeviceLocationsUseCase =
-        GetDeviceLocationsUseCase(locationRepository())
+    fun getDeviceLocationsUseCase(): GetDeviceLocationsUseCase = GetDeviceLocationsUseCase(locationRepository())
 
-    fun computeDistancesUseCase(): ComputeDistancesUseCase =
-        ComputeDistancesUseCase()
+    fun computeDistancesUseCase(): ComputeDistancesUseCase = ComputeDistancesUseCase()
 }

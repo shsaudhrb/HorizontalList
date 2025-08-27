@@ -19,7 +19,6 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -50,6 +49,9 @@ class GeneralPoolViewModel : ViewModel() {
     // Cache last non-empty orders to guard against empty realtime emissions
     private var lastNonEmptyOrders: List<OrderInfo> = emptyList()
 
+    // whether the user explicitly picked a card (don't auto-override selection if true)
+    private var userPinnedSelection: Boolean = false
+
     fun attach(context: Context) {
         if (::ctx.isInitialized) return
         ctx = context.applicationContext
@@ -69,42 +71,59 @@ class GeneralPoolViewModel : ViewModel() {
         ensureSelectedStillVisible()
     }
 
-    // set or clear the currently selected order
-    fun onOrderSelected(order: OrderInfo?) = _ui.update { it.copy(selected = order) }
+    fun onOrderSelected(order: OrderInfo?) {
+        // Only pin when user actually chose a card (non-null)
+        userPinnedSelection = order != null
+        _ui.update { it.copy(selected = order) }
+    }
 
-    // for location permission
-    fun ensureLocationReady(context: Context, promptIfMissing: Boolean) {
-        val fineGranted = ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-        val coarseGranted = ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.ACCESS_COARSE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
+    fun ensureLocationReady(
+        context: Context,
+        promptIfMissing: Boolean,
+    ) {
+        val fineGranted =
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_FINE_LOCATION,
+            ) == PackageManager.PERMISSION_GRANTED
+        val coarseGranted =
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+            ) == PackageManager.PERMISSION_GRANTED
         val granted = fineGranted || coarseGranted
         _ui.update { it.copy(hasLocationPerm = granted) }
         if (granted) {
-            // if already have permission -> calculate distance
             fetchAndApplyDistances(context)
         } else if (promptIfMissing) {
-            // if not, request permission
             _events.tryEmit(GeneralPoolUiEvent.RequestLocationPermission)
         }
     }
 
-    // update orders list with calculated distances
     private fun applyDistancesFrom(origin: Location) {
         val updated = computeDistances(origin, _ui.value.orders)
+        val nearest: OrderInfo? = updated.minByOrNull { it.distanceKm }
 
-        _ui.update { it.copy(orders = updated) }
+        _ui.update { prev ->
+            val currentSel = prev.selected
+            val selectionHadNoDistance = currentSel?.distanceKm?.isFinite() != true // was ∞ or null
+
+            val nextSelected =
+                when {
+                    userPinnedSelection -> currentSel // respect user choice
+                    currentSel == null -> nearest // nothing chosen yet → nearest
+                    selectionHadNoDistance -> nearest // replace ∞ with nearest
+                    else -> currentSel // keep selection
+                }
+
+            prev.copy(orders = updated, selected = nextSelected)
+        }
+
         if (updated.isNotEmpty()) lastNonEmptyOrders = updated
-
         _deviceLatLng.value = LatLng(origin.latitude, origin.longitude)
         ensureSelectedStillVisible()
     }
 
-    // fetch device location, compute distance to each order, and sort by nearest first
     fun fetchAndApplyDistances(context: Context) {
         if (_ui.value.orders.isEmpty()) return
         viewModelScope.launch {
@@ -117,91 +136,58 @@ class GeneralPoolViewModel : ViewModel() {
         }
     }
 
-    // Fetch orders from API
     private fun loadOrdersFromApi() {
         _ui.update { it.copy(isLoading = true) }
+
         viewModelScope.launch {
             val loadUseCase = GeneralPoolProvider.loadOrdersUseCase(ctx)
-            loadUseCase().collectLatest { result ->
-                result.onSuccess { resp ->
-                    val data = resp.data
+            val result = loadUseCase(pageSize = 25)
 
-                    // Initial orders from API response
-                    val initial = data?.initialOrders.orEmpty().map { it.toUi(ctx) }
+            result
+                .onSuccess { allOrders ->
+                    val initial = allOrders.map { it.toUi(ctx) }
 
-                    _ui.update { it.copy(orders = initial, isLoading = false) }
+                    val validCount = initial.count { it.lat != 0.0 && it.lng != 0.0 }
+                    Log.d("GeneralPoolVM", "Orders total=${initial.size}, validWithCoords=$validCount")
+
+                    // System-picked default (replaceable later by first distance compute)
+                    val defaultSelection =
+                        _ui.value.selected
+                            ?: initial.firstOrNull { it.lat != 0.0 && it.lng != 0.0 }
+                            ?: initial.firstOrNull()
+
+                    userPinnedSelection = false // system default should be replaceable
+
+                    _ui.update {
+                        it.copy(
+                            orders = initial,
+                            isLoading = false,
+                            selected = defaultSelection,
+                            errorMessage = null,
+                        )
+                    }
                     if (initial.isNotEmpty()) lastNonEmptyOrders = initial
 
-                    // Apply distances if we already have permission
                     if (_ui.value.hasLocationPerm) {
                         fetchAndApplyDistances(ctx)
                     }
 
                     ensureSelectedStillVisible()
-
-                    // Subscribe to realtime channel
-                    val channel =
-                        data?.realtimeConfig?.channelName ?: data?.channelName ?: "live-orders"
-                    GeneralPoolProvider.ordersRepository(ctx).connectToOrders(channel)
-
-                    // Collect realtime updates
-                    viewModelScope.launch {
-                        val repo =
-                            GeneralPoolProvider.ordersRepository(ctx) as? com.ntg.lmd.mainscreen.data.repository.OrdersRepositoryImpl
-                        val flow = repo?.orders() ?: return@launch
-
-                        flow.collectLatest { list ->
-                            if (list.isEmpty()) {
-                                // Restore last known orders if realtime gives empty
-                                val cur = _ui.value.orders.size
-                                if (cur == 0 && lastNonEmptyOrders.isNotEmpty()) {
-                                    _ui.update { it.copy(orders = lastNonEmptyOrders) }
-                                }
-                                return@collectLatest
-                            }
-
-                            // Keep previous distances when mapping new orders
-                            val prevDistances =
-                                _ui.value.orders.associate { it.orderNumber to it.distanceKm }
-                            val mapped = list.map { raw ->
-                                val uiOrder = raw.toUi(ctx)
-                                uiOrder.copy(
-                                    distanceKm = prevDistances[uiOrder.orderNumber]
-                                        ?: Double.POSITIVE_INFINITY
-                                )
-                            }
-
-                            _ui.update { cur -> cur.copy(orders = mapped) }
-                            if (mapped.isNotEmpty()) lastNonEmptyOrders = mapped
-
-                            // Resort orders with cached location if available
-                            val loc = _deviceLatLng.value
-                            if (loc != null) {
-                                val fake = Location("cached").apply {
-                                    latitude = loc.latitude
-                                    longitude = loc.longitude
-                                }
-                                val resorted = computeDistances(fake, _ui.value.orders)
-                                _ui.update { it.copy(orders = resorted) }
-                                if (resorted.isNotEmpty()) lastNonEmptyOrders = resorted
-                                ensureSelectedStillVisible()
-                            }
-                        }
-                    }
                 }.onFailure { e ->
-                    _ui.update { it.copy(isLoading = false) }
+                    Log.e("GeneralPoolVM", "Failed to load paged orders: ${e.message}", e)
+                    _ui.update { it.copy(isLoading = false, errorMessage = "Unable to load orders.") }
                 }
-            }
         }
     }
 
-    // ensure currently selected order is still visible in the filtered list, if not then clear selection
     fun ensureSelectedStillVisible() {
         _ui.update { s ->
             val sel = s.selected
             if (sel != null && s.mapOrders.none { it.orderNumber == sel.orderNumber }) {
                 s.copy(selected = null)
-            } else s
+            } else {
+                s
+            }
         }
     }
 }

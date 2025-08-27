@@ -11,7 +11,6 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 
 class LocationRepositoryImpl : LocationRepository {
-
     private fun client(context: Context): FusedLocationProviderClient =
         LocationServices.getFusedLocationProviderClient(context.applicationContext)
 
@@ -29,7 +28,8 @@ class LocationRepositoryImpl : LocationRepository {
     override suspend fun getCurrentLocation(context: Context): Location? {
         val c = client(context)
         return suspendCancellableCoroutine { cont ->
-            c.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, null)
+            c
+                .getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, null)
                 .addOnSuccessListener { cont.resume(it) }
                 .addOnFailureListener { cont.resume(null) }
         }

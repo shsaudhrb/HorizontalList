@@ -9,5 +9,5 @@ data class Filters(
     @SerializedName("assigned_agent_id") val assignedAgentId: String? = null,
     @SerializedName("partner_id") val partnerId: String? = null,
     @SerializedName("dc_id") val dcId: String? = null,
-    val search: String? = null
+    val search: String? = null,
 )

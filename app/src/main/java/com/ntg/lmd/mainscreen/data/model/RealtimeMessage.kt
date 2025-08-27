@@ -10,7 +10,7 @@ data class RealtimeMessage(
     @SerializedName("payload")
     val payload: RealtimePayload?,
     @SerializedName("topic")
-    val topic: String?
+    val topic: String?,
 )
 
 data class RealtimePayload(
@@ -27,5 +27,5 @@ data class RealtimePayload(
     @SerializedName("schema")
     val schema: String?,
     @SerializedName("commit_timestamp")
-    val commitTimestamp: String?
+    val commitTimestamp: String?,
 )

@@ -8,5 +8,5 @@ data class Instructions(
     @SerializedName("listen_for_events")
     val listenForEvents: String?,
     @SerializedName("broadcast_events")
-    val broadcastEvents: String?
+    val broadcastEvents: String?,
 )

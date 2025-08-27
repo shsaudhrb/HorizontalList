@@ -8,5 +8,5 @@ data class WebSocketMessage(
     @SerializedName("data")
     val data: Any?,
     @SerializedName("timestamp")
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
 )
