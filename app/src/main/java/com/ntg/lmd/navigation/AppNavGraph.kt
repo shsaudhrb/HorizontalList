@@ -8,7 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,6 +29,8 @@ import com.ntg.lmd.mainscreen.ui.screens.deliveriesLogScreen
 import com.ntg.lmd.mainscreen.ui.screens.generalPoolScreen
 import com.ntg.lmd.mainscreen.ui.screens.myOrdersScreen
 import com.ntg.lmd.mainscreen.ui.screens.myPoolScreen
+import com.ntg.lmd.mainscreen.ui.screens.orderDetailsScreen
+import com.ntg.lmd.navigation.component.AppBarConfig
 import com.ntg.lmd.navigation.component.appScaffoldWithDrawer
 import com.ntg.lmd.navigation.component.navigateSingleTop
 import com.ntg.lmd.notification.ui.screens.notificationScreen
@@ -54,7 +56,6 @@ fun appNavGraph(
                 navController = rootNavController,
                 onDecide = { isLoggedIn ->
                     val wantsNotifications = deeplinkVM.consumeOpenNotifications()
-
                     rootNavController.navigate(
                         when {
                             !isLoggedIn -> Screen.Login.route
@@ -85,7 +86,6 @@ fun appNavGraph(
                 ),
             deepLinks = listOf(navDeepLink { uriPattern = "myapp://notifications" }),
         ) { backStackEntry ->
-
             val argOpen = backStackEntry.arguments?.getBoolean("openNotifications") ?: false
 
             val deepLinkIntent: Intent? =
@@ -108,11 +108,13 @@ fun appNavGraph(
                         launchSingleTop = true
                     }
                 },
-                openNotifications = argOpen || deepOpen, // ← single flag
+                openNotifications = argOpen || deepOpen,
             )
         }
     }
 }
+
+// ======================= Drawer host =======================
 
 @Composable
 private fun drawerHost(
@@ -124,6 +126,12 @@ private fun drawerHost(
     val currentRoute = backStack?.destination?.route ?: Screen.GeneralPool.route
     val startDest = if (openNotifications) Screen.Notifications.route else Screen.GeneralPool.route
 
+    // Jump to notifications if requested
+    LaunchedEffect(openNotifications) {
+        if (openNotifications) {
+            drawerNavController.navigate(Screen.Notifications.route) { launchSingleTop = true }
+        }
+    }
     val inSettingsSub by remember(backStack) {
         backStack
             ?.savedStateHandle
@@ -131,15 +139,36 @@ private fun drawerHost(
             ?: kotlinx.coroutines.flow.MutableStateFlow(false)
     }.collectAsState()
 
+    // Shared hook for Orders History overflow menu
     var openOrdersHistoryMenu by remember { mutableStateOf<(() -> Unit)?>(null) }
+
+    // Route-specific UI
     val spec = buildRouteUiSpec(currentRoute, drawerNavController, openOrdersHistoryMenu)
+
+    // Shared search controller
     val search = rememberSearchController(drawerNavController)
+
+    // Top bar config
     val topBar = buildTopBar(spec, search)
 
+    // Scaffold + inner nav
     appScaffoldWithDrawer(
         navConfig = AppNavConfig(navController = drawerNavController, currentRoute = currentRoute),
         topBar = topBar,
         onLogout = onLogout,
+        appBar =
+            AppBarConfig( // required by your scaffold
+                title = spec.title,
+            ),
+    ) {
+        drawerNavGraph(
+            navController = drawerNavController,
+            startDestination = startDest,
+            registerOpenMenu = { setter -> openOrdersHistoryMenu = setter },
+            externalQuery = search.text.value, // pass String
+            onOpenOrderDetails = { id -> drawerNavController.navigate("order/$id") },
+        )
+    }
         showTopBar = !(currentRoute == Screen.Settings.route && inSettingsSub), // hide when in sub
         content = {
             drawerNavGraph(
@@ -151,7 +180,7 @@ private fun drawerHost(
     )
 }
 
-// ---------- helpers ----------
+// ======================= Helpers =======================
 
 @Composable
 private fun rememberSearchController(navController: NavHostController): SearchController {
@@ -200,20 +229,44 @@ private fun drawerNavGraph(
     navController: NavHostController,
     startDestination: String,
     registerOpenMenu: (setter: (() -> Unit)?) -> Unit,
+    externalQuery: String,
+    onOpenOrderDetails: (Long) -> Unit,
 ) {
     NavHost(
         navController = navController,
         startDestination = startDestination,
     ) {
         composable(Screen.GeneralPool.route) { generalPoolScreen(navController) }
-        composable(Screen.MyOrders.route) { myOrdersScreen(navController) }
+
+        composable(Screen.MyOrders.route) {
+            myOrdersScreen(
+                navController = navController,
+                externalQuery = externalQuery,
+                onOpenOrderDetails = onOpenOrderDetails,
+            )
+        }
+
+        composable(
+            route = "order/{id}",
+            arguments = listOf(navArgument("id") { type = NavType.StringType }),
+        ) { backStackEntry ->
+            val idStr = backStackEntry.arguments?.getString("id")
+            val id = idStr?.toLongOrNull()
+            orderDetailsScreen(
+                orderId = id, // nullable is OK
+                navController = navController,
+            )
+        }
+
         composable(
             route = Screen.Notifications.route,
             deepLinks = listOf(navDeepLink { uriPattern = "myapp://notifications" }),
         ) { notificationScreen() }
+
         composable(Screen.OrdersHistory.route) {
             ordersHistoryRoute(registerOpenMenu = registerOpenMenu)
         }
+
         composable(Screen.DeliveriesLog.route) { deliveriesLogScreen(navController) }
         composable(Screen.Settings.route) { entry ->
             settingsScreen(entry)
@@ -223,7 +276,8 @@ private fun drawerNavGraph(
     }
 }
 
-// ---------- Route UI Spec ----------
+// ======================= Route UI Spec =======================
+
 @Composable
 private fun buildRouteUiSpec(
     currentRoute: String,
