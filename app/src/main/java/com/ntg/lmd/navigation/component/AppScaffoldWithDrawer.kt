@@ -1,6 +1,5 @@
 package com.ntg.lmd.navigation.component
 
-import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.FiniteAnimationSpec
@@ -27,7 +26,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -43,7 +41,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarColors
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBarDefaults.topAppBarColors
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -99,22 +97,33 @@ fun NavHostController.navigateSingleTop(route: String) {
     }
 }
 
+/**
+ * Bundle app-bar/search params to avoid LongParameterList.
+ */
+data class AppBarConfig(
+    val title: String,
+    val showSearch: Boolean = false,
+    val searchValue: String = "",
+    val onSearchChange: (String) -> Unit = {},
+)
+@Suppress("UnusedParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun appScaffoldWithDrawer(
-    navConfig: AppNavConfig, // Current navigation configuration
-    topBar: TopBarConfigWithTitle, // UI config for the TopBar (title, search, actions)
-    onLogout: () -> Unit, // Callback when user chooses logout
-    content: @Composable () -> Unit, // Main content of the screen
+    navConfig: AppNavConfig, // holds navController + currentRoute
+    topBar: TopBarConfigWithTitle, // UI config for top bar
+    appBar: AppBarConfig, // simple title/search config
+    onLogout: () -> Unit,
+    content: @Composable () -> Unit,
 ) {
     val navController = navConfig.navController
     val currentRoute = navConfig.currentRoute
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+
     val app = LocalContext.current.applicationContext as MyApp
     val online by app.networkMonitor.isOnline.collectAsState()
     LaunchedEffect(online) {
-        Log.d("NET", "Scaffold observed online=$online")
     }
     // Modal drawer wraps the entire screen with a navigation drawer
     ModalNavigationDrawer(
@@ -127,22 +136,24 @@ fun appScaffoldWithDrawer(
                     Screen.MyPool.route,
                 ),
         drawerContent = {
-            drawerContent(
-                currentRoute = currentRoute,
-                onLogout = onLogout,
-            ) { route ->
-                scope.launch { drawerState.close() }
-                if (route == Screen.Logout.route) {
-                    onLogout()
-                } else {
-                    navController.navigateSingleTop(route)
-                }
+            ModalDrawerSheet(drawerContainerColor = CupertinoSystemBackground) {
+                drawerContent(
+                    currentRoute = currentRoute,
+                    onLogout = onLogout,
+                    onNavigate = { route ->
+                        scope.launch { drawerState.close() }
+                        if (route == Screen.Logout.route) {
+                            onLogout()
+                        } else {
+                            navController.navigateSingleTop(route)
+                        }
+                    },
+                )
             }
         },
     ) {
         Scaffold(
             topBar = {
-                // Custom top app bar (title, search, action buttons)
                 appTopBar(
                     config = topBar,
                     onOpenDrawer = { scope.launch { drawerState.open() } },
@@ -152,68 +163,64 @@ fun appScaffoldWithDrawer(
     }
 }
 
-// ---------- Drawer Content ----------
 @Composable
 private fun drawerContent(
-    currentRoute: String?, // Current screen route for highlighting selection
-    onLogout: () -> Unit, // Logout callback
-    onNavigate: (String) -> Unit, // Navigation callback for clicking drawer items
+    currentRoute: String?,
+    onLogout: () -> Unit,
+    onNavigate: (String) -> Unit,
 ) {
     // Split drawer items into 2 groups (orders + settings/logout)
     val grouped =
-        remember { Pair(drawerItems.take(FIRST_GROUP_SIZE), drawerItems.drop(FIRST_GROUP_SIZE)) }
-
-    ModalDrawerSheet(drawerContainerColor = CupertinoSystemBackground) {
-        // Header with avatar + user name
-        drawerHeader(name = "Sherif")
-
-        // Section title ("Orders")
-        Text(
-            text = stringResource(R.string.drawer_section_orders),
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = dimensionResource(R.dimen.drawer_section_title_text_size).value.sp,
-            modifier =
-                Modifier.padding(
-                    start = dimensionResource(R.dimen.mediumSpace),
-                    top = dimensionResource(R.dimen.smallSpace),
-                    bottom = dimensionResource(R.dimen.smallerSpace),
-                ),
-        )
-
-        // First group of items
-        groupCard {
-            grouped.first.forEachIndexed { i, item ->
-                drawerItemRow(
-                    entry = item,
-                    selected = currentRoute == item.route,
-                ) { onNavigate(item.route) }
-                // Divider between rows
-                if (i != grouped.first.lastIndex) {
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = dimensionResource(R.dimen.drawer_divider_inset)),
-                        thickness = dimensionResource(R.dimen.hairline),
-                        color = CupertinoSeparator,
-                    )
-                }
-            }
+        remember {
+            Pair(drawerItems.take(FIRST_GROUP_SIZE), drawerItems.drop(FIRST_GROUP_SIZE))
         }
 
-        Spacer(Modifier.height(dimensionResource(R.dimen.smallSpace)))
+    drawerHeader(name = "Sherif")
 
-        // Second group of items (Settings, Logout, etc.)
-        groupCard {
-            grouped.second.forEachIndexed { i, item ->
-                drawerItemRow(entry = item, selected = currentRoute == item.route) {
-                    if (item.route == Screen.Logout.route) onLogout() else onNavigate(item.route)
-                }
-                if (i != grouped.second.lastIndex) {
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = dimensionResource(R.dimen.drawer_divider_inset)),
-                        thickness = dimensionResource(R.dimen.hairline),
-                        color = CupertinoSeparator,
-                    )
-                }
+    // Section title ("Orders")
+    Text(
+        text = stringResource(R.string.drawer_section_orders),
+        color = MaterialTheme.colorScheme.primary,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = dimensionResource(R.dimen.drawer_section_title_text_size).value.sp,
+        modifier =
+            Modifier.padding(
+                start = dimensionResource(R.dimen.mediumSpace),
+                top = dimensionResource(R.dimen.smallSpace),
+                bottom = dimensionResource(R.dimen.smallerSpace),
+            ),
+    )
+
+    // First group of items
+    groupCard {
+        grouped.first.forEachIndexed { i, item ->
+            drawerItemRow(entry = item, selected = currentRoute == item.route) {
+                if (item.route == Screen.Logout.route) onLogout() else onNavigate(item.route)
+            }
+            if (i != grouped.first.lastIndex) {
+                HorizontalDivider(
+                    modifier = Modifier.padding(start = dimensionResource(R.dimen.drawer_divider_inset)),
+                    thickness = dimensionResource(R.dimen.hairline),
+                    color = CupertinoSeparator,
+                )
+            }
+        }
+    }
+
+    Spacer(Modifier.height(dimensionResource(R.dimen.smallSpace)))
+
+    // Second group of items (Settings, Logout, etc.)
+    groupCard {
+        grouped.second.forEachIndexed { i, item ->
+            drawerItemRow(entry = item, selected = currentRoute == item.route) {
+                if (item.route == Screen.Logout.route) onLogout() else onNavigate(item.route)
+            }
+            if (i != grouped.second.lastIndex) {
+                HorizontalDivider(
+                    modifier = Modifier.padding(start = dimensionResource(R.dimen.drawer_divider_inset)),
+                    thickness = dimensionResource(R.dimen.hairline),
+                    color = CupertinoSeparator,
+                )
             }
         }
     }
@@ -223,10 +230,10 @@ private fun drawerContent(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun appTopBar(
-    config: TopBarConfigWithTitle, // All config for the top bar (title, search, actions)
-    onOpenDrawer: () -> Unit, // Callback to open drawer when hamburger menu clicked
+    config: TopBarConfigWithTitle,
+    onOpenDrawer: () -> Unit,
     colors: TopAppBarColors =
-        TopAppBarDefaults.topAppBarColors(
+        topAppBarColors(
             containerColor = MaterialTheme.colorScheme.primary,
             titleContentColor = MaterialTheme.colorScheme.onPrimary,
             navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
@@ -236,17 +243,14 @@ private fun appTopBar(
     val search = config.search
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
-    val fadeSpec =
-        remember { tween<Float>(FADE_ANIMATION_DURATION_MS, easing = FastOutSlowInEasing) }
+    val fadeSpec = remember { tween<Float>(FADE_ANIMATION_DURATION_MS, easing = FastOutSlowInEasing) }
 
-    // Auto-focus search field when search mode is enabled
     LaunchedEffect(search.searching.value) {
         if (search.searching.value) focusRequester.requestFocus()
     }
 
     TopAppBar(
         colors = colors,
-        // Left side icon (menu vs search icon)
         navigationIcon = {
             if (!search.searching.value) {
                 IconButton(onClick = onOpenDrawer, modifier = Modifier.padding(start = 8.dp)) {
@@ -254,14 +258,13 @@ private fun appTopBar(
                 }
             } else {
                 Icon(
-                    imageVector = Icons.Filled.Search,
-                    contentDescription = stringResource(R.string.search_order_number_customer_name),
-                    tint = MaterialTheme.colorScheme.onPrimary,
+                    imageVector = Icons.Filled.Menu,
+                    contentDescription = null, // decorative when searching
+                    tint = MaterialTheme.colorScheme.primary, // keep space, de-emphasize
                     modifier = Modifier.padding(start = 8.dp),
                 )
             }
         },
-        // Title area: either title text OR a search field
         title = {
             topBarTitle(
                 title = config.title,
@@ -279,17 +282,10 @@ private fun appTopBar(
                 )
             }
         },
-        // Right side actions (action buttons + search toggle)
-        actions = {
-            topBarActions(
-                config = config,
-                searching = search.searching.value,
-            )
-        },
+        actions = { topBarActions(config = config, searching = search.searching.value) },
     )
 }
 
-// Title text with fade animation
 @Composable
 private fun topBarTitle(
     title: String,
@@ -308,7 +304,6 @@ private fun topBarTitle(
     }
 }
 
-// Search text field shown when search mode is enabled
 @Composable
 private fun searchTextField(
     search: SearchController,
@@ -329,7 +324,6 @@ private fun searchTextField(
             )
         },
         trailingIcon = {
-            // Clear text if not empty, otherwise close search
             IconButton(onClick = {
                 if (search.text.value.isNotEmpty()) {
                     search.onTextChange("")
@@ -338,7 +332,11 @@ private fun searchTextField(
                     focusManager.clearFocus()
                 }
             }) {
-                Icon(Icons.Filled.Close, contentDescription = "Clear/Close", tint = onPrimary)
+                Icon(
+                    Icons.Filled.Close,
+                    contentDescription = stringResource(R.string.clear_or_close),
+                    tint = onPrimary,
+                )
             }
         },
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
@@ -364,10 +362,7 @@ private fun searchTextField(
                 unfocusedTextColor = onPrimary,
             ),
         textStyle = MaterialTheme.typography.bodyMedium.copy(color = onPrimary),
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .focusRequester(focusRequester),
+        modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
     )
 }
 
@@ -392,21 +387,13 @@ private fun topBarActions(
         // Optional custom icon (e.g. MoreVert)
         config.actionIcon?.let { icon ->
             IconButton(onClick = { config.onActionIconClick?.invoke() }) {
-                Icon(
-                    icon,
-                    contentDescription = "Action",
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                )
+                Icon(icon, contentDescription = stringResource(R.string.action), tint = MaterialTheme.colorScheme.onPrimary)
             }
             Spacer(Modifier.width(4.dp))
         }
-        // NEW: Optional search icon, fully controlled by nav layer
         config.searchActionIcon?.let { icon ->
             IconButton(onClick = { config.onSearchIconClick?.invoke() }) {
-                Icon(
-                    icon,
-                    contentDescription = stringResource(R.string.search_order_number_customer_name),
-                )
+                Icon(icon, contentDescription = stringResource(R.string.search_order_number_customer_name))
             }
         }
     }
@@ -427,17 +414,12 @@ fun drawerHeader(name: String) {
                 ),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            // Avatar
             Image(
                 painter = painterResource(R.drawable.ic_user_placeholder),
                 contentDescription = null,
-                modifier =
-                    Modifier
-                        .size(dimensionResource(R.dimen.drawer_avatar_size))
-                        .clip(CircleShape),
+                modifier = Modifier.size(dimensionResource(R.dimen.drawer_avatar_size)).clip(CircleShape),
             )
             Spacer(Modifier.width(dimensionResource(R.dimen.smallSpace)))
-            // Username
             Text(
                 text = name,
                 color = MaterialTheme.colorScheme.onPrimary,
@@ -465,9 +447,9 @@ private fun groupCard(content: @Composable ColumnScope.() -> Unit) {
 // ---------- Drawer Item Row ----------
 @Composable
 fun drawerItemRow(
-    entry: DrawerItem, // Data for drawer item (icon, label, route, enabled, etc.)
-    selected: Boolean, // Whether this item is currently active
-    onClick: () -> Unit, // Callback when clicked
+    entry: DrawerItem,
+    selected: Boolean,
+    onClick: () -> Unit,
 ) {
     val textColor = if (entry.enabled) CupertinoLabelPrimary else CupertinoLabelSecondary
     val iconAlpha = if (entry.enabled) ENABLED_ICON else DISABLED_ICON
@@ -484,7 +466,6 @@ fun drawerItemRow(
                 ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Leading icon
         Icon(
             imageVector = entry.icon,
             contentDescription = null,
@@ -496,7 +477,6 @@ fun drawerItemRow(
         )
         Spacer(Modifier.width(dimensionResource(R.dimen.smallSpace)))
 
-        // Label
         Text(
             text = label,
             color = textColor,
@@ -504,7 +484,6 @@ fun drawerItemRow(
             modifier = Modifier.weight(1f),
         )
 
-        // Optional badge (e.g. notification count)
         entry.badgeCount?.let {
             Text(
                 text = it.toString(),
@@ -514,7 +493,6 @@ fun drawerItemRow(
             Spacer(Modifier.width(dimensionResource(R.dimen.smallerSpace)))
         }
 
-        // Chevron if navigable (but not for Logout)
         if (entry.enabled && entry.route != Screen.Logout.route) {
             Icon(
                 imageVector = Icons.Filled.ChevronRight,
@@ -524,7 +502,6 @@ fun drawerItemRow(
         }
     }
 
-    // Divider highlight below selected item
     if (selected) {
         HorizontalDivider(
             thickness = dimensionResource(R.dimen.hairline),

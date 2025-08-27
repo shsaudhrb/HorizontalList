@@ -1,7 +1,6 @@
 package com.ntg.lmd
 
 import android.app.Application
-import android.util.Log
 import com.ntg.lmd.authentication.data.repositoryImp.AuthRepositoryImp
 import com.ntg.lmd.network.connectivity.NetworkMonitor
 import com.ntg.lmd.network.core.RetrofitProvider
@@ -42,11 +41,9 @@ class MyApp : Application() {
             AuthRepositoryImp(
                 loginApi = RetrofitProvider.apiNoAuth,
                 store = RetrofitProvider.tokenStore,
-                socket = socket,
             )
         appScope.launch {
             networkMonitor.isOnline.collect { online ->
-                Log.d("LMD-NET", "App connectivity changed -> online=$online")
             }
         }
     }

@@ -34,4 +34,9 @@ sealed class Screen(
     object Notifications : Screen("notifications_screen")
 
     object Settings : Screen("settings_screen")
+
+    // ---------- Details ----------
+    object OrderDetails : Screen("order_details/{orderId}") {
+        fun route(orderId: Long) = "order_details/$orderId"
+    }
 }

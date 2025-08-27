@@ -6,18 +6,7 @@ data class LoginResponse(
     @SerializedName("success")
     val success: Boolean,
     @SerializedName("data")
-    val data: LoginData?,
-)
-
-data class LoginData(
-    @SerializedName("user")
-    val user: User?,
-    @SerializedName("access_token")
-    val accessToken: String?,
-    @SerializedName("refresh_token")
-    val refreshToken: String?,
-    @SerializedName("expires_at")
-    val expiresAt: String?,
-    @SerializedName("refresh_expires_at")
-    val refreshExpiresAt: String?,
+    val data: LoginRefreshToken?,
+    @SerializedName("error")
+    val error: String?,
 )

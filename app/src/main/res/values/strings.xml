@@ -29,6 +29,38 @@
     <string name="menu_chat">Chat</string>
     <string name="menu_logout">Logout</string>
     <string name="open_menu">Open menu</string>
+
+    <string name="my_orders_title">My Orders (%1$d)</string>
+    <string name="search_by_order_number">Search by Order Number</string>
+    <string name="order_details">Order Details</string>
+    <string name="call">Call</string>
+    <string name="retry">Retry</string>
+    <string name="no_active_orders">No active orders.</string>
+    <string name="no_matching_orders">No matching orders.</string>
+    <string name="unable_to_load_orders">Unable to load orders.</string>
+    <string name="distance_unavailable_gps">Distance unavailable — turn on GPS.</string>
+    <string name="distance_na">—</string>
+    <string name="confirm_order">Confirm Order</string>
+    <string name="pick_order">Pick Order</string>
+    <string name="order_pool">Order Pool</string>
+    <string name="start_delivery">Start Delivery</string>
+    <string name="deliver_order">Deliver Order</string>
+    <string name="delivery_failed">Delivery Failed</string>
+    <string name="cancel_order">Cancel Order</string>
+    <string name="reassign_order">Reassign Order</string>
+    <string name="are_you_sure">Are you sure?</string>
+    <string name="ok">OK</string>
+    <string name="cancel">Cancel</string>
+    <string name="confirm">Confirm</string>
+    <string name="deliver">Deliver</string>
+    <string name="please_enter_reason">Please enter a reason</string>
+    <string name="enter_pin_optional">Enter PIN (optional)</string>
+    <string name="update_failed">Failed to update status</string>
+    <string name="phone_missing">No phone number available</string>
+    <string name="enter_agent_name_or_id">Enter agent name / ID</string>
+    <string name="unit_km">km</string>
+    <string name="more_options">More options</string>
+
     <string name="title_order_history">Order History</string>
     <string name="export_pdf">Export PDF</string>
     <string name="filter">Filter</string>
@@ -55,7 +87,6 @@
     <string name="sort_asc">Ascending (oldest first)</string>
     <string name="sort_desc">Descending (newest first)</string>
     <string name="apply">Apply</string>
-    <string name="cancel">Cancel</string>
     <!-- General Pool -->
     <string name="add_to_your_orders">+ Add to your orders</string>
     <string name="search_order_number_customer_name">Search by order no. or customer name</string>
@@ -66,7 +97,6 @@
     <string name="no_orders">No orders Found</string>
     <!-- Deliveries Log -->
     <string name="SLA">SLA</string>
-    <string name="order_details">Order Details</string>
     <string name="delivery_time">Delivery Time</string>
     <string name="time_minutes_ago">%1$d mins ago</string>
     <string name="time_one_hour_ago">1 hour ago</string>
@@ -85,7 +115,6 @@
     <!-- States & actions -->
     <string name="empty_notifications">No notifications available.</string>
     <string name="loading_more_failed">Loading more failed</string>
-    <string name="retry">Retry</string>
     <string name="caught_up">You’re all caught up </string>
     <string name="unable_load_notifications">Unable to load notifications.</string>
 
@@ -106,4 +135,6 @@
 
     <!-- FCM default title -->
     <string name="notification_title">Notifications</string>
+    <string name="clear_or_close">Clear or close</string>
+    <string name="action">Action</string>
 </resources>

@@ -1,0 +1,241 @@
+package com.ntg.lmd.mainscreen.ui.components
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import com.ntg.lmd.R
+import com.ntg.lmd.mainscreen.ui.screens.orders.model.OrderStatus
+import com.ntg.lmd.mainscreen.ui.screens.orders.model.OrderUI
+import com.ntg.lmd.mainscreen.ui.screens.orders.model.statusEnum
+import com.ntg.lmd.mainscreen.ui.screens.statusTint
+import java.util.Locale
+
+private const val KM_DIVISOR = 1000.0
+
+@Composable
+fun distanceBadge(
+    distanceMeters: Double?,
+    modifier: Modifier = Modifier,
+) {
+    val bg = MaterialTheme.colorScheme.primary
+    val fg = MaterialTheme.colorScheme.onPrimary
+    val value = distanceMeters?.div(KM_DIVISOR)
+    Box(
+        modifier = modifier.size(56.dp).background(bg, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = value?.let { String.format(Locale.getDefault(), "%.2f", it) } ?: "--",
+                style = MaterialTheme.typography.titleSmall,
+                color = fg,
+            )
+            Text(
+                text = stringResource(R.string.unit_km),
+                style = MaterialTheme.typography.labelSmall,
+                color = fg.copy(alpha = 0.9f),
+            )
+        }
+    }
+}
+
+@Composable
+fun primaryActionButton(
+    text: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier,
+        colors =
+            ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+            ),
+        shape = RoundedCornerShape(dimensionResource(R.dimen.mediumSpace)),
+    ) {
+        Spacer(modifier = Modifier.width(dimensionResource(R.dimen.smallerSpace)))
+        Text(text = text)
+    }
+}
+
+@Composable
+fun callButton(onCall: () -> Unit) {
+    Button(
+        onClick = onCall,
+        modifier = Modifier.fillMaxWidth(),
+        colors =
+            ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+            ),
+        shape = RoundedCornerShape(dimensionResource(R.dimen.card_radius)),
+    ) {
+        Icon(
+            imageVector = Icons.Filled.Phone,
+            contentDescription = stringResource(R.string.call),
+            tint = MaterialTheme.colorScheme.onPrimary,
+            modifier = Modifier.size(dimensionResource(R.dimen.drawer_icon_size)),
+        )
+        Spacer(modifier = Modifier.width(dimensionResource(R.dimen.smallerSpace)))
+        Text(text = stringResource(R.string.call))
+    }
+}
+
+@Composable
+fun bottomStickyButton(
+    text: String,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(
+                    horizontal = dimensionResource(R.dimen.mediumSpace),
+                    vertical = dimensionResource(R.dimen.smallSpace),
+                ),
+    ) {
+        Button(
+            onClick = onClick,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(dimensionResource(R.dimen.card_radius)),
+            colors =
+                ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                ),
+        ) { Text(text = text, style = MaterialTheme.typography.titleMedium) }
+    }
+}
+
+@Composable
+fun orderHeaderWithMenu(
+    order: OrderUI,
+    onPickUp: () -> Unit,
+    onCancel: () -> Unit,
+    onReassign: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Top,
+    ) {
+        orderHeaderLeft(order)
+        orderHeaderRight(order, onPickUp, onCancel, onReassign)
+    }
+}
+
+@Composable
+fun orderHeaderLeft(order: OrderUI) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        distanceBadge(
+            distanceMeters = order.distanceMeters,
+            modifier = Modifier.padding(end = dimensionResource(R.dimen.mediumSpace)),
+        )
+        Column {
+            Text(
+                "#${order.orderNumber}",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            )
+            Text(order.customerName, style = MaterialTheme.typography.bodyMedium)
+            order.details?.let {
+                Spacer(modifier = Modifier.height(dimensionResource(R.dimen.extraSmallSpace)))
+                Text(it, style = MaterialTheme.typography.bodySmall)
+            }
+        }
+    }
+}
+
+@Composable
+fun orderHeaderRight(
+    order: OrderUI,
+    onPickUp: () -> Unit,
+    onCancel: () -> Unit,
+    onReassign: () -> Unit,
+) {
+    var menuExpanded by remember { mutableStateOf(false) }
+    val statusEnum = order.statusEnum
+
+    Column(horizontalAlignment = Alignment.End) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = order.status,
+                color = statusTint(order.status),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            IconButton(onClick = { menuExpanded = true }, modifier = Modifier.size(24.dp)) {
+                Icon(
+                    imageVector = Icons.Filled.MoreVert,
+                    contentDescription = stringResource(R.string.more_options),
+                    tint = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+            DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                if (statusEnum == OrderStatus.CONFIRMED) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.pick_order)) },
+                        onClick = {
+                            menuExpanded = false
+                            onPickUp()
+                        },
+                    )
+                }
+                if (statusEnum == OrderStatus.ADDED || statusEnum == OrderStatus.CONFIRMED) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.cancel_order)) },
+                        onClick = {
+                            menuExpanded = false
+                            onCancel()
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.reassign_order)) },
+                        onClick = {
+                            menuExpanded = false
+                            onReassign()
+                        },
+                    )
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(dimensionResource(R.dimen.smallerSpace)))
+        Text(
+            text = String.format(Locale.getDefault(), "%.2f", order.totalPrice),
+            style = MaterialTheme.typography.titleMedium,
+        )
+    }
+}
