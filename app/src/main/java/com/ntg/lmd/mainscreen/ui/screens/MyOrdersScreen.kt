@@ -221,7 +221,7 @@ fun orderList( // Lazy list of orders with a paging spinner item when loading mo
         verticalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.mediumSpace)),
     ) {
         items(items = orders, key = { it.id }) { order ->
-            orderCard(
+            myOrderorderCard(
                 order = order,
                 onDetails = { actions.onDetails(order.id) },
                 onConfirmOrPick = { actions.onConfirmOrPick(order.id) },
@@ -244,7 +244,7 @@ fun orderList( // Lazy list of orders with a paging spinner item when loading mo
 
 @Suppress("UnusedParameter")
 @Composable
-fun orderCard( // Single order card
+fun myOrderorderCard( // Single order card
     order: OrderUI,
     onDetails: () -> Unit,
     onConfirmOrPick: () -> Unit,
