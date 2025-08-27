@@ -106,4 +106,19 @@
 
     <!-- FCM default title -->
     <string name="notification_title">Notifications</string>
+    <string name="back">Back</string>
+
+    <!-- Settings / Language -->
+    <string name="app_language_title">App Language</string>
+    <string name="app_language_english">English</string>
+    <string name="app_language_arabic">العربية</string>
+    <string name="settings_app_language">App Language</string>
+
+    <!-- Settings / Notifications -->
+    <string name="settings_notifications">Notifications</string>
+    <string name="every_x_days">Every %1$d days</string>
+    <string name="notif_every_15_days">Every 15 days</string>
+    <string name="notif_every_30_days">Every 30 days</string>
+    <string name="notif_every_90_days">Every 90 days</string>
+
 </resources>

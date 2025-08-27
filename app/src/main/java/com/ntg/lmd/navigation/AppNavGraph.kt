@@ -8,7 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,7 +34,7 @@ import com.ntg.lmd.navigation.component.navigateSingleTop
 import com.ntg.lmd.notification.ui.screens.notificationScreen
 import com.ntg.lmd.notification.ui.viewmodel.DeepLinkViewModel
 import com.ntg.lmd.order.ui.screen.ordersHistoryRoute
-import com.ntg.lmd.settings.ui.screens.settingsOptions
+import com.ntg.lmd.settings.ui.screens.settingsScreen
 import com.ntg.lmd.authentication.ui.screens.login.loginScreen as LoginScreen
 import com.ntg.lmd.authentication.ui.screens.register.registerScreen as RegisterScreen
 import com.ntg.lmd.authentication.ui.screens.splash.splashScreen as SplashScreen
@@ -124,41 +124,31 @@ private fun drawerHost(
     val currentRoute = backStack?.destination?.route ?: Screen.GeneralPool.route
     val startDest = if (openNotifications) Screen.Notifications.route else Screen.GeneralPool.route
 
-    // jump to notifications if requested
-    LaunchedEffect(openNotifications) {
-        if (openNotifications) {
-            drawerNavController.navigate(Screen.Notifications.route) { launchSingleTop = true }
-        }
-    }
+    val inSettingsSub by remember(backStack) {
+        backStack
+            ?.savedStateHandle
+            ?.getStateFlow("settings_in_sub", false)
+            ?: kotlinx.coroutines.flow.MutableStateFlow(false)
+    }.collectAsState()
 
-    // shared state between screens
     var openOrdersHistoryMenu by remember { mutableStateOf<(() -> Unit)?>(null) }
-
-    // per-route UI spec (title, actions, etc.)
     val spec = buildRouteUiSpec(currentRoute, drawerNavController, openOrdersHistoryMenu)
-
-    // search controller (kept at nav layer)
     val search = rememberSearchController(drawerNavController)
-
-    // top bar config
     val topBar = buildTopBar(spec, search)
 
-    // scaffold (drawer + top bar + nested nav)
     appScaffoldWithDrawer(
-        navConfig =
-            AppNavConfig(
-                navController = drawerNavController,
-                currentRoute = currentRoute,
-            ),
+        navConfig = AppNavConfig(navController = drawerNavController, currentRoute = currentRoute),
         topBar = topBar,
         onLogout = onLogout,
-    ) {
-        drawerNavGraph(
-            navController = drawerNavController,
-            startDestination = startDest,
-            registerOpenMenu = { setter -> openOrdersHistoryMenu = setter },
-        )
-    }
+        showTopBar = !(currentRoute == Screen.Settings.route && inSettingsSub), // hide when in sub
+        content = {
+            drawerNavGraph(
+                navController = drawerNavController,
+                startDestination = startDest,
+                registerOpenMenu = { setter -> openOrdersHistoryMenu = setter },
+            )
+        },
+    )
 }
 
 // ---------- helpers ----------
@@ -225,7 +215,9 @@ private fun drawerNavGraph(
             ordersHistoryRoute(registerOpenMenu = registerOpenMenu)
         }
         composable(Screen.DeliveriesLog.route) { deliveriesLogScreen(navController) }
-        composable(Screen.Settings.route) { settingsOptions(navController) }
+        composable(Screen.Settings.route) { entry ->
+            settingsScreen(entry)
+        }
         composable(Screen.MyPool.route) { myPoolScreen(navController) }
         composable(Screen.Chat.route) { chatScreen() }
     }

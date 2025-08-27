@@ -23,6 +23,7 @@ android {
         buildConfig = true
         compose = true
     }
+
     defaultConfig {
         applicationId = "com.ntg.lmd"
         minSdk = 24

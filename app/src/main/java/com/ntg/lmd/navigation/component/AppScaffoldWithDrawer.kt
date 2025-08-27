@@ -23,7 +23,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
@@ -68,6 +68,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.ntg.lmd.MyApp
 import com.ntg.lmd.R
@@ -75,6 +76,9 @@ import com.ntg.lmd.mainscreen.domain.model.SearchController
 import com.ntg.lmd.navigation.AppNavConfig
 import com.ntg.lmd.navigation.Screen
 import com.ntg.lmd.navigation.TopBarConfigWithTitle
+import com.ntg.lmd.settings.data.LogoutUiState
+import com.ntg.lmd.settings.ui.viewmodel.SettingsViewModel
+import com.ntg.lmd.settings.ui.viewmodel.SettingsViewModelFactory
 import com.ntg.lmd.ui.theme.CupertinoCellBackground
 import com.ntg.lmd.ui.theme.CupertinoLabelPrimary
 import com.ntg.lmd.ui.theme.CupertinoLabelSecondary
@@ -104,7 +108,8 @@ fun appScaffoldWithDrawer(
     navConfig: AppNavConfig, // Current navigation configuration
     topBar: TopBarConfigWithTitle, // UI config for the TopBar (title, search, actions)
     onLogout: () -> Unit, // Callback when user chooses logout
-    content: @Composable () -> Unit, // Main content of the screen
+    content: @Composable () -> Unit,
+    showTopBar: Boolean = true,
 ) {
     val navController = navConfig.navController
     val currentRoute = navConfig.currentRoute
@@ -112,34 +117,57 @@ fun appScaffoldWithDrawer(
     val scope = rememberCoroutineScope()
     val app = LocalContext.current.applicationContext as MyApp
     val online by app.networkMonitor.isOnline.collectAsState()
+    val ctx = LocalContext.current
+    val settingsVm: SettingsViewModel =
+        viewModel(
+            factory = SettingsViewModelFactory(ctx.applicationContext),
+        )
+    val logoutState by settingsVm.logoutState.collectAsState()
+
+    LaunchedEffect(logoutState) {
+        if (logoutState is LogoutUiState.Success) {
+            onLogout()
+            settingsVm.resetLogoutState()
+        }
+    }
+
     LaunchedEffect(online) {
     }
-    // Modal drawer wraps the entire screen with a navigation drawer
     ModalNavigationDrawer(
         drawerState = drawerState,
-        // Disable gestures on GeneralPool to avoid conflicts with the map
         gesturesEnabled = currentRoute?.startsWith(Screen.GeneralPool.route) != true,
         drawerContent = {
             drawerContent(
                 currentRoute = currentRoute,
-                onLogout = onLogout,
-            ) { route ->
-                scope.launch { drawerState.close() }
-                if (route == Screen.Logout.route) {
-                    onLogout()
-                } else {
-                    navController.navigateSingleTop(route)
-                }
-            }
+                onLogout = {
+                    scope.launch {
+                        drawerState.close()
+                        settingsVm.logout()
+                    }
+                },
+                onNavigate = { route ->
+                    scope.launch {
+                        drawerState.close()
+                        if (route != currentRoute) {
+                            navController.navigate(route) {
+                                launchSingleTop = true
+                                restoreState = true
+                                popUpTo(Screen.Drawer.route) { saveState = true }
+                            }
+                        }
+                    }
+                },
+            )
         },
     ) {
         Scaffold(
             topBar = {
-                // Custom top app bar (title, search, action buttons)
-                appTopBar(
-                    config = topBar,
-                    onOpenDrawer = { scope.launch { drawerState.open() } },
-                )
+                if (showTopBar) {
+                    appTopBar(
+                        config = topBar,
+                        onOpenDrawer = { scope.launch { drawerState.open() } },
+                    )
+                }
             },
         ) { inner -> Box(Modifier.padding(inner)) { content() } }
     }
@@ -510,7 +538,7 @@ fun drawerItemRow(
         // Chevron if navigable (but not for Logout)
         if (entry.enabled && entry.route != Screen.Logout.route) {
             Icon(
-                imageVector = Icons.Filled.ChevronRight,
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
                 tint = CupertinoLabelSecondary,
             )
