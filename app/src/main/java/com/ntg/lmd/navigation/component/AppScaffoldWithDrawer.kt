@@ -1,6 +1,5 @@
 package com.ntg.lmd.navigation.component
 
-import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.FiniteAnimationSpec
@@ -127,8 +126,9 @@ fun appScaffoldWithDrawer(
 
     val app = LocalContext.current.applicationContext as MyApp
     val online by app.networkMonitor.isOnline.collectAsState()
-    LaunchedEffect(online) { Log.d("NET", "Scaffold observed online=$online") }
-
+    LaunchedEffect(online) {
+    }
+    // Modal drawer wraps the entire screen with a navigation drawer
     ModalNavigationDrawer(
         drawerState = drawerState,
         // Disable gestures on GeneralPool to avoid conflicts with the map
@@ -354,18 +354,25 @@ private fun searchTextField(
     )
 }
 
+// Right-side action buttons in top app bar
 @Composable
 private fun topBarActions(
     config: TopBarConfigWithTitle,
     searching: Boolean,
 ) {
     if (!searching) {
+        // Optional text button (MY POOL / GENERAL POOL)
         config.actionButtonLabel?.let { label ->
             TextButton(onClick = { config.onActionButtonClick?.invoke() }) {
-                Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onPrimary)
+                Text(
+                    label,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                )
             }
             Spacer(Modifier.width(4.dp))
         }
+        // Optional custom icon (e.g. MoreVert)
         config.actionIcon?.let { icon ->
             IconButton(onClick = { config.onActionIconClick?.invoke() }) {
                 Icon(icon, contentDescription = stringResource(R.string.action), tint = MaterialTheme.colorScheme.onPrimary)

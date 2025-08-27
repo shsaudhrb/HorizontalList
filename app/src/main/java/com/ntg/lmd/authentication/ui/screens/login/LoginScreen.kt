@@ -109,6 +109,7 @@ fun loginScreen(navController: NavController) {
         loginScaffold(
             card = cardUi,
             messageRes = ui.message,
+            messageText = ui.errorMessage,
         ) {
             authFields(
                 navController = navController,
@@ -128,6 +129,7 @@ fun loginScreen(navController: NavController) {
 private fun loginScaffold(
     card: CardUi,
     messageRes: Int?,
+    messageText: String?,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Box(
@@ -142,7 +144,7 @@ private fun loginScaffold(
             modifier = Modifier.fillMaxWidth(),
         ) {
             appLogo()
-            messageBanner(messageRes)
+            messageBanner(messageRes = messageRes, messageText = messageText)
             authCard(
                 cardScale = card.scale,
                 cardElevation = card.elevation,
@@ -155,14 +157,18 @@ private fun loginScaffold(
 
 // result message chip
 @Composable
-private fun messageBanner(messageRes: Int?) {
+private fun messageBanner(
+    messageRes: Int?,
+    messageText: String?,
+) {
+    val textToShow = messageText ?: messageRes?.let { stringResource(it) }
     AnimatedVisibility(
-        visible = messageRes != null,
+        visible = !textToShow.isNullOrEmpty(),
         enter = slideInVertically { -it } + fadeIn(),
         exit = slideOutVertically { -it } + fadeOut(),
     ) {
-        messageRes?.let { id ->
-            AssistChip(onClick = {}, label = { Text(stringResource(id)) })
+        textToShow?.let { txt ->
+            AssistChip(onClick = {}, label = { Text(txt) })
         }
     }
 }

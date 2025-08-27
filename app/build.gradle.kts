@@ -1,5 +1,8 @@
 @file:Suppress("DEPRECATION")
 
+import java.io.File
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -8,6 +11,10 @@ plugins {
     id("io.gitlab.arturbosch.detekt") version "1.23.8"
     alias(libs.plugins.google.gms.google.services)
     id("org.jetbrains.kotlin.kapt")
+    id("com.google.android.libraries.mapsplatform.secrets-gradle-plugin")
+}
+secrets {
+    defaultPropertiesFileName = ".env"
 }
 android {
     namespace = "com.ntg.lmd"
@@ -27,17 +34,21 @@ android {
 
         val mapsKey = (project.findProperty("MAPS_API_KEY") as String?) ?: System.getenv("MAPS_API_KEY") ?: ""
         manifestPlaceholders["MAPS_API_KEY"] = mapsKey
-        // === REST base URL ===
-        val baseUrl = providers.gradleProperty("BASE_URL").orNull
-            ?: error("Missing BASE_URL in gradle.properties")
-        // === WebSocket URL ===
-        val wsBaseUrl = providers.gradleProperty("WS_BASE_URL").orNull
-            ?: error("Missing WS_BASE_URL in gradle.properties")
-        val supabaseKey = providers.gradleProperty("SUPABASE_KEY").orNull
-            ?: error("Missing SUPABASE_KEY in gradle.properties")
+
+        val envFile = rootProject.file(".env")
+        val props =
+            Properties().apply {
+                if (envFile.exists()) {
+                    envFile.inputStream().use { this.load(it) }
+                }
+            }
+        val baseUrl = props.getProperty("BASE_URL") ?: error("Missing BASE_URL in .env")
+        val wsBaseUrl = props.getProperty("WS_BASE_URL") ?: error("Missing WS_BASE_URL in .env")
+        val supaKey = props.getProperty("SUPABASE_KEY") ?: error("Missing SUPABASE_KEY in .env")
+
         buildConfigField("String", "BASE_URL", "\"$baseUrl\"")
         buildConfigField("String", "WS_BASE_URL", "\"$wsBaseUrl\"")
-        buildConfigField("String", "SUPABASE_KEY", "\"$supabaseKey\"")
+        buildConfigField("String", "SUPABASE_KEY", "\"$supaKey\"")
     }
 
     buildTypes {
