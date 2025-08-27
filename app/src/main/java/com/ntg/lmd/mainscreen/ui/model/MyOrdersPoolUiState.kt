@@ -5,6 +5,8 @@ import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 
 data class MyOrdersPoolUiState(
     val isLoading: Boolean = true,
+    val isLoadingMore: Boolean = false,
+    val endReached: Boolean = false,
     val orders: List<OrderInfo> = emptyList(),
     val selectedOrderNumber: String? = null,
     override val distanceThresholdKm: Double = Double.MAX_VALUE,

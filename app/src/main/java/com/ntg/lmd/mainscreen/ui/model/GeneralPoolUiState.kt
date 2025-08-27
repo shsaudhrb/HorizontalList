@@ -1,6 +1,6 @@
-package com.ntg.lmd.mainscreen.domain.model
+package com.ntg.lmd.mainscreen.ui.model
 
-import com.ntg.lmd.mainscreen.ui.model.MapUiState
+import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 
 data class GeneralPoolUiState(
     val isLoading: Boolean = true,

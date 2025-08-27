@@ -1,9 +1,13 @@
 package com.ntg.lmd.mainscreen.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -11,6 +15,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.CameraPositionState
@@ -24,6 +29,13 @@ import com.ntg.lmd.mainscreen.ui.viewmodel.MyPoolViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
+private const val INITIAL_CAMERA_ZOOM = 14f
+private const val MY_ORDER_FOCUS_ZOOM = 15f
+private val PAGING_SPINNER_BOTTOM_PADDING = 12.dp
+private val ZERO_LATLNG = LatLng(0.0, 0.0)
+
+private fun OrderInfo.hasValidLatLng(): Boolean = lat.isFinite() && lng.isFinite() && !(lat == 0.0 && lng == 0.0)
+
 @Composable
 fun myPoolScreen(
     viewModel: MyPoolViewModel =
@@ -36,44 +48,67 @@ fun myPoolScreen(
     val mapStates =
         remember {
             MapStates(
-                cameraPositionState = CameraPositionState(),
-                markerState = MarkerState(LatLng(30.0444, 31.2357)), // default Cairo
+                CameraPositionState(),
+                MarkerState(ZERO_LATLNG),
             )
         }
-
     val scope = rememberCoroutineScope()
-
-    // 👇 get the focusOnOrder lambda from rememberFocusOnOrder
     val focusOnOrder =
         rememberFocusOnMyOrder(
-            viewModel = viewModel,
-            markerState = mapStates.markerState,
-            cameraPositionState = mapStates.cameraPositionState,
-            scope = scope,
+            viewModel,
+            mapStates.markerState,
+            mapStates.cameraPositionState,
+            scope,
         )
 
+    // Initial zoom to first valid order
+    LaunchedEffect(ui.orders) {
+        ui.orders.firstOrNull { it.hasValidLatLng() }?.let { first ->
+            val target = LatLng(first.lat, first.lng)
+            mapStates.markerState.position = target
+            mapStates.cameraPositionState.move(
+                CameraUpdateFactory.newLatLngZoom(
+                    target,
+                    INITIAL_CAMERA_ZOOM,
+                ),
+            )
+        }
+    }
+
     Box(Modifier.fillMaxSize()) {
-        // top: map
+        // Map background
         mapCenter(
             ui = ui,
             mapStates = mapStates,
-            deviceLatLng = LatLng(30.0444, 31.2357),
+            deviceLatLng = ZERO_LATLNG,
         )
 
-        // bottom: carousel
-        Box(Modifier.align(Alignment.BottomCenter)) {
-            customBottom(
-                orders = ui.orders,
-                selectedOrderNumber = ui.selectedOrderNumber,
-                onOrderClick = { order ->
-                    focusOnOrder(order, false) // center map on tapped card
-                },
-                onCenteredOrderChange = { order, _ ->
-                    focusOnOrder(order, false) // center map on centered card
-                },
-            )
+        // Bottom carousel
+        if (ui.orders.isNotEmpty()) {
+            Column(Modifier.align(Alignment.BottomCenter)) {
+                customBottom(
+                    orders = ui.orders,
+                    selectedOrderNumber = ui.selectedOrderNumber,
+                    onOrderClick = { order -> focusOnOrder(order, false) },
+                    onCenteredOrderChange = { order, index ->
+                        focusOnOrder(order, false)
+                        viewModel.onCenteredOrderChange(order, index)
+                    },
+                )
+
+                // Paging loader
+                AnimatedVisibility(visible = ui.isLoadingMore) {
+                    CircularProgressIndicator(
+                        modifier =
+                            Modifier
+                                .align(Alignment.CenterHorizontally)
+                                .padding(bottom = PAGING_SPINNER_BOTTOM_PADDING),
+                    )
+                }
+            }
         }
 
+        // Initial loader
         if (ui.isLoading) {
             CircularProgressIndicator(
                 modifier = Modifier.align(Alignment.Center),
@@ -82,16 +117,14 @@ fun myPoolScreen(
     }
 }
 
-// we will use this focusOnOrder when we search orders and click on it to be showing on the map
 @Composable
 fun rememberFocusOnMyOrder(
     viewModel: MyPoolViewModel,
     markerState: MarkerState,
     cameraPositionState: CameraPositionState,
     scope: CoroutineScope,
-    focusZoom: Float = ORDER_FOCUS_ZOOM,
+    focusZoom: Float = MY_ORDER_FOCUS_ZOOM,
 ): (OrderInfo, Boolean) -> Unit {
-    // keep latest references without re-allocating the lambda on every recomposition
     val vm = rememberUpdatedState(viewModel)
     val marker = rememberUpdatedState(markerState)
     val camera = rememberUpdatedState(cameraPositionState)
@@ -99,13 +132,12 @@ fun rememberFocusOnMyOrder(
 
     return remember {
         { order: OrderInfo, _: Boolean ->
-            // update ViewModel
-            vm.value.onCenteredOrderChange(order) // or pass index if you track it
+            vm.value.onCenteredOrderChange(order)
 
-            // move the marker on the map to that order's location
+            // update marker position
             marker.value.position = LatLng(order.lat, order.lng)
 
-            // animate the map camera to zoom in on the order
+            // animate camera zoom
             coroutineScope.value.launch {
                 camera.value.animate(
                     CameraUpdateFactory.newLatLngZoom(

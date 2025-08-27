@@ -50,10 +50,10 @@ import com.google.maps.android.compose.CameraPositionState
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.ntg.lmd.R
-import com.ntg.lmd.mainscreen.domain.model.GeneralPoolUiState
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.ui.components.customBottom
 import com.ntg.lmd.mainscreen.ui.components.mapCenter
+import com.ntg.lmd.mainscreen.ui.model.GeneralPoolUiState
 import com.ntg.lmd.mainscreen.ui.model.MapStates
 import com.ntg.lmd.mainscreen.ui.viewmodel.GeneralPoolUiEvent
 import com.ntg.lmd.mainscreen.ui.viewmodel.GeneralPoolViewModel
