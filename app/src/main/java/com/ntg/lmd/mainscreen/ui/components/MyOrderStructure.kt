@@ -52,7 +52,10 @@ fun distanceBadge(
     val fg = MaterialTheme.colorScheme.onPrimary
     val value = distanceMeters?.div(KM_DIVISOR)
     Box(
-        modifier = modifier.size(56.dp).background(bg, CircleShape),
+        modifier =
+            modifier
+                .size(56.dp)
+                .background(bg, CircleShape),
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -167,14 +170,20 @@ fun orderHeaderLeft(order: OrderUI) {
         )
         Column {
             Text(
-                "#${order.orderNumber}",
+                order.customerName,
                 style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                "#${order.orderNumber}",
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
             )
-            Text(order.customerName, style = MaterialTheme.typography.bodyMedium)
             order.details?.let {
                 Spacer(modifier = Modifier.height(dimensionResource(R.dimen.extraSmallSpace)))
-                Text(it, style = MaterialTheme.typography.bodySmall)
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodySmall,
+                )
             }
         }
     }
@@ -234,7 +243,7 @@ fun orderHeaderRight(
         }
         Spacer(modifier = Modifier.height(dimensionResource(R.dimen.smallerSpace)))
         Text(
-            text = String.format(Locale.getDefault(), "%.2f", order.totalPrice),
+            text = order.totalPrice,
             style = MaterialTheme.typography.titleMedium,
         )
     }

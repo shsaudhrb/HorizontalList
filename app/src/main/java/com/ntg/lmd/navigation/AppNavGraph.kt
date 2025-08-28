@@ -258,7 +258,7 @@ private fun drawerNavGraph(
 
         composable(Screen.DeliveriesLog.route) { deliveriesLogScreen(navController) }
         composable(Screen.Settings.route) { settingsOptions(navController) }
-        composable(Screen.MyPool.route) { myPoolScreen(navController) }
+        composable(Screen.MyPool.route) { myPoolScreen() }
         composable(Screen.Chat.route) { chatScreen() }
     }
 }

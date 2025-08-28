@@ -1,4 +1,4 @@
-package com.ntg.lmd.mainscreen.domain.model
+package com.ntg.lmd.mainscreen.ui.model
 
 import com.google.maps.android.compose.CameraPositionState
 import com.google.maps.android.compose.MarkerState

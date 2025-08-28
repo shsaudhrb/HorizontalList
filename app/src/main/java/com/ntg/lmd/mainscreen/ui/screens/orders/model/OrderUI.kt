@@ -1,12 +1,12 @@
 package com.ntg.lmd.mainscreen.ui.screens.orders.model
 
 data class OrderUI( // single order
-    val id: Long,
+    val id: Long = 0,
     val orderNumber: String,
     val status: String,
     val customerName: String,
     val customerPhone: String?,
-    val totalPrice: Double,
+    val totalPrice: String,
     val details: String?,
     val distanceMeters: Double?,
 )
