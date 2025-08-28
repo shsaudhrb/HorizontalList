@@ -24,7 +24,6 @@ class OrdersRepositoryImpl(
     private val liveOrdersApi: LiveOrdersApiService,
     private val socket: SocketIntegration,
 ) : OrdersRepository {
-
     // fetch all live orders with pagination support
     override suspend fun getAllLiveOrders(pageSize: Int): Result<List<Order>> =
         try {
@@ -97,13 +96,18 @@ class OrdersRepositoryImpl(
 
     // expose live orders from socket as a flow
     fun orders() = socket.orders
-
 }
 
 private val PREFERRED_ARRAY_KEYS =
     listOf(
-        "items", "orders", "initialOrders", "results",
-        "rows", "list", "liveOrders", "data"
+        "items",
+        "orders",
+        "initialOrders",
+        "results",
+        "rows",
+        "list",
+        "liveOrders",
+        "data",
     )
 
 // call API endpoint to fetch a single page of orders
