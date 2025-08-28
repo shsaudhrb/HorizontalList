@@ -50,11 +50,11 @@ import com.google.maps.android.compose.CameraPositionState
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.ntg.lmd.R
-import com.ntg.lmd.mainscreen.domain.model.GeneralPoolUiState
-import com.ntg.lmd.mainscreen.domain.model.MapStates
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.ui.components.customBottom
 import com.ntg.lmd.mainscreen.ui.components.mapCenter
+import com.ntg.lmd.mainscreen.ui.model.GeneralPoolUiState
+import com.ntg.lmd.mainscreen.ui.model.MapStates
 import com.ntg.lmd.mainscreen.ui.viewmodel.GeneralPoolUiEvent
 import com.ntg.lmd.mainscreen.ui.viewmodel.GeneralPoolViewModel
 import kotlinx.coroutines.launch
@@ -62,7 +62,7 @@ import kotlin.math.roundToInt
 
 // Map / Camera behavior
 private const val INITIAL_MAP_ZOOM = 12f
-private const val ORDER_FOCUS_ZOOM = 14f
+const val ORDER_FOCUS_ZOOM = 14f
 
 // Slider constraints
 private const val DISTANCE_MIN_KM: Double = 1.0
@@ -95,8 +95,9 @@ fun generalPoolScreen(
         }
     }
 
-    // Load Local orders.json from assets
-    LaunchedEffect(Unit) { generalPoolViewModel.loadOrdersFromAssets(context) }
+    LaunchedEffect(Unit) {
+        generalPoolViewModel.attach(context) // loads API, connects socket
+    }
 
     // handle location permission
     locationPermissionGate(viewModel = generalPoolViewModel)
@@ -156,7 +157,7 @@ fun generalPoolScreen(
             Box(Modifier.align(Alignment.BottomCenter)) {
                 customBottom(
                     orders = ui.mapOrders,
-                    selectedOrderNumber = ui.selected?.orderNumber, // ← drives auto-centering
+                    selectedOrderNumber = ui.selected?.orderNumber,
                     onOrderClick = { order -> focusOnOrder(order, false) },
                     onCenteredOrderChange = { order, _ -> focusOnOrder(order, false) },
                     onAddClick = { },

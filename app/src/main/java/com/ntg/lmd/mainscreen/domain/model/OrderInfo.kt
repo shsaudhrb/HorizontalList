@@ -1,11 +1,24 @@
 package com.ntg.lmd.mainscreen.domain.model
 
 data class OrderInfo(
-    val name: String,
-    val orderNumber: String,
-    val timeAgo: String,
-    val itemsCount: Int,
-    val distanceKm: Double,
-    val lat: Double,
-    val lng: Double,
+    val name: String = "",
+    val orderNumber: String = "",
+    val timeAgo: String = "0m ago",
+    val itemsCount: Int = 0,
+    val distanceKm: Double = 0.0,
+    val lat: Double = 0.0,
+    val lng: Double = 0.0,
+    val status: OrderStatus = OrderStatus.ADDED,
+    val price: String = "---",
 )
+
+enum class OrderStatus {
+    ADDED,
+    CONFIRMED,
+    CANCELED,
+    REASSIGNED,
+    PICKUP,
+    START_DELIVERY,
+    DELIVERY_FAILED,
+    DELIVERY_DONE,
+}
