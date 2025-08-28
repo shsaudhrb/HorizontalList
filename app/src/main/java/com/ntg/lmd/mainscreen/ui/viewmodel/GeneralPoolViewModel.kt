@@ -9,14 +9,13 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationServices
-import com.google.android.gms.location.Priority
 import com.google.android.gms.maps.model.LatLng
+import com.ntg.lmd.mainscreen.domain.model.GeneralPoolUiState
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
 import com.google.gson.reflect.TypeToken
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
+import com.ntg.lmd.mainscreen.ui.mapper.toUi
 import com.ntg.lmd.mainscreen.ui.model.GeneralPoolUiState
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,7 +25,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.io.IOException
 
 sealed class GeneralPoolUiEvent {
     data object RequestLocationPermission : GeneralPoolUiEvent()
@@ -41,23 +39,53 @@ class GeneralPoolViewModel : ViewModel() {
     private val _events = MutableSharedFlow<GeneralPoolUiEvent>(extraBufferCapacity = 1)
     val events: SharedFlow<GeneralPoolUiEvent> = _events.asSharedFlow()
 
-    // hold the device lat/lng
+    // hold the device lat/lng (current location)
     private val _deviceLatLng = MutableStateFlow<LatLng?>(null)
     val deviceLatLng: StateFlow<LatLng?> = _deviceLatLng.asStateFlow()
 
-    // location client held as a property and cleared in onCleared()
-    private var fusedLocationClient: FusedLocationProviderClient? = null
+    // Context reference
+    @SuppressLint("StaticFieldLeak")
+    private lateinit var ctx: Context
 
-    // meters -> kilometers
-    companion object {
-        private const val METERS_IN_KILOMETER = 1000.0
+    private var realtimeStarted = false
+
+    // distance computation use case
+    private val computeDistances by lazy { GeneralPoolProvider.computeDistancesUseCase() }
+
+    // Cache last non-empty orders to guard against empty realtime emissions
+    private var lastNonEmptyOrders: List<OrderInfo> = emptyList()
+
+    // whether the user explicitly picked a card (don't auto-override selection if true)
+    private var userPinnedSelection: Boolean = false
+
+    fun attach(context: Context) {
+        if (::ctx.isInitialized) return
+        ctx = context.applicationContext
+
+        if (!realtimeStarted) {
+            realtimeStarted = true
+            GeneralPoolProvider
+                .ordersRepository(ctx)
+                .connectToOrders("orders")
+        }
+
+        loadOrdersFromApi()
+        ensureLocationReady(ctx, promptIfMissing = true)
+    }
+
+    override fun onCleared() {
+        if (::ctx.isInitialized) {
+            GeneralPoolProvider.ordersRepository(ctx).disconnectFromOrders()
+        }
+        realtimeStarted = false
+        super.onCleared()
     }
 
     // toggle the search mode, for showing/hiding the search fields and results
-    fun onSearchingChange(value: Boolean) = _ui.update { it.copy(searching = value) }
+    fun onSearchingChange(v: Boolean) = _ui.update { it.copy(searching = v) }
 
     // update the search text for filtering orders
-    fun onSearchTextChange(value: String) = _ui.update { it.copy(searchText = value) }
+    fun onSearchTextChange(v: String) = _ui.update { it.copy(searchText = v) }
 
     // change the max distance, used to filter map orders
     fun onDistanceChange(km: Double) {
@@ -65,119 +93,114 @@ class GeneralPoolViewModel : ViewModel() {
         ensureSelectedStillVisible()
     }
 
-    // set or clear the currently selected order
-    fun onOrderSelected(order: OrderInfo?) = _ui.update { it.copy(selected = order) }
+    fun onOrderSelected(order: OrderInfo?) {
+        userPinnedSelection = order != null
+        _ui.update { it.copy(selected = order) }
+    }
 
-    // for location permission
     fun ensureLocationReady(
         context: Context,
         promptIfMissing: Boolean,
     ) {
-        val fine =
+        val fineGranted =
             ContextCompat.checkSelfPermission(
                 context,
                 Manifest.permission.ACCESS_FINE_LOCATION,
             ) == PackageManager.PERMISSION_GRANTED
-        val coarse =
+        val coarseGranted =
             ContextCompat.checkSelfPermission(
                 context,
                 Manifest.permission.ACCESS_COARSE_LOCATION,
             ) == PackageManager.PERMISSION_GRANTED
-        val granted = fine || coarse
-
+        val granted = fineGranted || coarseGranted
         _ui.update { it.copy(hasLocationPerm = granted) }
-
         if (granted) {
-            // permission already granted -> fetch device location and distances
-            if (fusedLocationClient == null) {
-                val appCtx = context.applicationContext
-                fusedLocationClient = LocationServices.getFusedLocationProviderClient(appCtx)
-            }
-            fetchAndApplyDistances()
+            fetchAndApplyDistances(context)
         } else if (promptIfMissing) {
-            // permission missing -> ask UI layer to request it
             _events.tryEmit(GeneralPoolUiEvent.RequestLocationPermission)
         }
     }
 
-    // for loading orders from assets (orders.json)
-    fun loadOrdersFromAssets(context: Context) {
+    fun fetchAndApplyDistances(context: Context) {
+        if (_ui.value.orders.isEmpty()) return
         viewModelScope.launch {
-            val list =
-                try {
-                    val json =
-                        context.assets
-                            .open("orders.json")
-                            .bufferedReader()
-                            .use { it.readText() }
-                    val type = object : TypeToken<List<OrderInfo>>() {}.type
-                    Gson().fromJson<List<OrderInfo>>(json, type) ?: emptyList()
-                } catch (e: IOException) {
-                    Log.e("Orders", "Failed to read orders.json from assets", e)
-                    emptyList()
-                } catch (e: JsonSyntaxException) {
-                    Log.e("Orders", "Invalid JSON format in orders.json", e)
-                    emptyList()
+            val (last, current) = GeneralPoolProvider.getDeviceLocationsUseCase().invoke(context)
+            val origin: Location? = current ?: last
+
+            if (origin != null) {
+                val updated = computeDistances(origin, _ui.value.orders)
+                val nearest: OrderInfo? = updated.minByOrNull { it.distanceKm }
+
+                _ui.update { prev ->
+                    val currentSel = prev.selected
+                    val selectionHadNoDistance = currentSel?.distanceKm?.isFinite() != true
+
+                    val nextSelected =
+                        when {
+                            userPinnedSelection -> currentSel
+                            currentSel == null -> nearest
+                            selectionHadNoDistance -> nearest
+                            else -> currentSel
+                        }
+
+                    prev.copy(orders = updated, selected = nextSelected)
                 }
 
-            _ui.update {
-                it.copy(
-                    orders = list.map { o -> o.copy(distanceKm = Double.POSITIVE_INFINITY) },
-                    isLoading = false,
-                )
+                if (updated.isNotEmpty()) lastNonEmptyOrders = updated
+                _deviceLatLng.value = LatLng(origin.latitude, origin.longitude)
+                ensureSelectedStillVisible()
+            } else {
+                Log.d("GeneralPoolVM", "No device location yet")
             }
-            ensureSelectedStillVisible()
         }
     }
 
-    // for calculating distance between two coordinates (in km)
-    private fun calculateDistanceKm(
-        lat1: Double,
-        lng1: Double,
-        lat2: Double,
-        lng2: Double,
-    ): Double {
-        val result = FloatArray(1)
-        Location.distanceBetween(lat1, lng1, lat2, lng2, result)
-        return result[0] / METERS_IN_KILOMETER
-    }
+    private fun loadOrdersFromApi() {
+        _ui.update { it.copy(isLoading = true) }
 
-    // fetch device location, compute distance to each order, and sort by nearest first
-    @SuppressLint("MissingPermission")
-    fun fetchAndApplyDistances() {
-        val client = fusedLocationClient ?: return
-        val currentOrders = _ui.value.orders
-        if (currentOrders.isEmpty()) return
+        viewModelScope.launch {
+            val loadUseCase = GeneralPoolProvider.loadOrdersUseCase(ctx)
+            val result = loadUseCase(pageSize = 25)
 
-        fun List<OrderInfo>.withDistancesFrom(loc: Location): List<OrderInfo> =
-            map { o ->
-                o.copy(distanceKm = calculateDistanceKm(loc.latitude, loc.longitude, o.lat, o.lng))
-            }.sortedBy { it.distanceKm }
+            result
+                .onSuccess { allOrders ->
+                    val initial = allOrders.map { it.toUi(ctx) }
 
-        fun applyFrom(loc: Location) {
-            _deviceLatLng.value = LatLng(loc.latitude, loc.longitude)
-            _ui.update { it.copy(orders = currentOrders.withDistancesFrom(loc)) }
-            ensureSelectedStillVisible()
+                    val defaultSelection =
+                        _ui.value.selected
+                            ?: initial.firstOrNull { it.lat != 0.0 && it.lng != 0.0 }
+                            ?: initial.firstOrNull()
+
+                    userPinnedSelection = false
+
+                    _ui.update {
+                        it.copy(
+                            orders = initial,
+                            isLoading = false,
+                            selected = defaultSelection,
+                            errorMessage = null,
+                        )
+                    }
+                    if (initial.isNotEmpty()) lastNonEmptyOrders = initial
+
+                    if (_ui.value.hasLocationPerm) {
+                        fetchAndApplyDistances(ctx)
+                    }
+
+                    ensureSelectedStillVisible()
+                }.onFailure { e ->
+                    Log.e("GeneralPoolVM", "Failed to load paged orders: ${e.message}", e)
+                    _ui.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = "Unable to load orders.",
+                        )
+                    }
+                }
         }
-
-        // lastLocation (fast, may be null/outdated)
-        client.lastLocation
-            .addOnSuccessListener { last ->
-                if (last != null) applyFrom(last)
-            }
-
-        // getCurrentLocation
-        client
-            .getCurrentLocation(
-                Priority.PRIORITY_BALANCED_POWER_ACCURACY,
-                null,
-            ).addOnSuccessListener { loc ->
-                if (loc != null) applyFrom(loc)
-            }.addOnFailureListener {
-            }
     }
 
-    fun ensureSelectedStillVisible() =
+    fun ensureSelectedStillVisible() {
         _ui.update { s ->
             val sel = s.selected
             if (sel != null && s.mapOrders.none { it.orderNumber == sel.orderNumber }) {
@@ -186,10 +209,5 @@ class GeneralPoolViewModel : ViewModel() {
                 s
             }
         }
-
-    // clean up
-    override fun onCleared() {
-        super.onCleared()
-        fusedLocationClient = null
     }
 }

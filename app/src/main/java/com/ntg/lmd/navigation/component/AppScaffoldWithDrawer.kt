@@ -244,7 +244,8 @@ private fun appTopBar(
     val search = config.search
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
-    val fadeSpec = remember { tween<Float>(FADE_ANIMATION_DURATION_MS, easing = FastOutSlowInEasing) }
+    val fadeSpec =
+        remember { tween<Float>(FADE_ANIMATION_DURATION_MS, easing = FastOutSlowInEasing) }
 
     LaunchedEffect(search.searching.value) {
         if (search.searching.value) focusRequester.requestFocus()
@@ -363,7 +364,10 @@ private fun searchTextField(
                 unfocusedTextColor = onPrimary,
             ),
         textStyle = MaterialTheme.typography.bodyMedium.copy(color = onPrimary),
-        modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .focusRequester(focusRequester),
     )
 }
 
@@ -388,15 +392,20 @@ private fun topBarActions(
         // Optional custom icon (e.g. MoreVert)
         config.actionIcon?.let { icon ->
             IconButton(onClick = { config.onActionIconClick?.invoke() }) {
-                Icon(icon,
+                Icon(
+                    icon,
                     contentDescription = stringResource(R.string.action),
-                    tint = MaterialTheme.colorScheme.onPrimary)
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                )
             }
             Spacer(Modifier.width(4.dp))
         }
         config.searchActionIcon?.let { icon ->
             IconButton(onClick = { config.onSearchIconClick?.invoke() }) {
-                Icon(icon, contentDescription = stringResource(R.string.search_order_number_customer_name))
+                Icon(
+                    icon,
+                    contentDescription = stringResource(R.string.search_order_number_customer_name),
+                )
             }
         }
     }
@@ -420,7 +429,10 @@ fun drawerHeader(name: String) {
             Image(
                 painter = painterResource(R.drawable.ic_user_placeholder),
                 contentDescription = null,
-                modifier = Modifier.size(dimensionResource(R.dimen.drawer_avatar_size)).clip(CircleShape),
+                modifier =
+                    Modifier
+                        .size(dimensionResource(R.dimen.drawer_avatar_size))
+                        .clip(CircleShape),
             )
             Spacer(Modifier.width(dimensionResource(R.dimen.smallSpace)))
             Text(

@@ -3,6 +3,7 @@ package com.ntg.lmd.network.core
 import android.content.Context
 import com.ntg.lmd.BuildConfig
 import com.ntg.lmd.authentication.data.datasource.remote.api.AuthApi
+import com.ntg.lmd.mainscreen.data.datasource.remote.LiveOrdersApiService
 import com.ntg.lmd.mainscreen.data.datasource.remote.OrdersApi
 import com.ntg.lmd.network.authheader.AuthInterceptor
 import com.ntg.lmd.network.authheader.SecureTokenStore
@@ -60,6 +61,16 @@ object RetrofitProvider {
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(AuthApi::class.java)
+    }
+
+    val liveOrderApi: LiveOrdersApiService by lazy {
+        Retrofit
+            .Builder()
+            .baseUrl(BuildConfig.BASE_URL)
+            .client(authedOkHttp)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(liveOrderApi::class.java)
     }
 
     val okHttpForWs: OkHttpClient get() = authedOkHttp
