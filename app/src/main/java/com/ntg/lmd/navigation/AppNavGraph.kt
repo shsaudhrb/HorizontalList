@@ -254,7 +254,6 @@ private fun drawerNavGraph(
         composable(Screen.Settings.route) { entry ->
             settingsScreen(entry)
         }
-        composable(Screen.MyPool.route) { myPoolScreen(navController) }
         composable(Screen.MyPool.route) { myPoolScreen() }
         composable(Screen.Chat.route) { chatScreen() }
     }

@@ -149,7 +149,6 @@ fun appScaffoldWithDrawer(
                     Screen.GeneralPool.route,
                     Screen.MyPool.route,
                 ),
-        gesturesEnabled = currentRoute?.startsWith(Screen.GeneralPool.route) != true,
         drawerContent = {
             ModalDrawerSheet(drawerContainerColor = CupertinoSystemBackground) {
                 drawerContent(
