@@ -206,30 +206,37 @@ private fun JsonObject.findFirstItemsArray(): Pair<JsonArray?, String?> {
 // extract pagination info
 private fun JsonObject.extractPageInfo(): PageInfo {
     val pageInfoObj =
-        when {
-            has("pageInfo") && get("pageInfo").isJsonObject -> getAsJsonObject("pageInfo")
-            has("pagination") && get("pagination").isJsonObject -> getAsJsonObject("pagination")
-            else -> null
-        }
+        (if (has("pageInfo") && get("pageInfo").isJsonObject) getAsJsonObject("pageInfo") else null)
+            ?: (if (has("pagination") && get("pagination").isJsonObject) getAsJsonObject("pagination") else null)
 
     return PageInfo(
-        page = this.optInt("page")
-            ?: pageInfoObj?.optInt("page")
-            ?: pageInfoObj?.optInt("current_page"),
-        totalPages = this.optInt("totalPages")
-            ?: pageInfoObj?.optInt("totalPages")
-            ?: pageInfoObj?.optInt("total_pages"),
-        nextPage = this.optInt("nextPage")
-            ?: pageInfoObj?.optInt("nextPage"),
-        hasMore = this.optBool("hasMore")
-            ?: pageInfoObj?.optBool("hasNextPage")
-            ?: pageInfoObj?.optBool("has_next_page"),
-        cursor = this.optString("cursor")
-            ?: pageInfoObj?.optString("cursor")
-            ?: pageInfoObj?.optString("endCursor"),
-        nextCursor = this.optString("nextCursor")
-            ?: pageInfoObj?.optString("endCursor"),
+        page = firstFrom(pageInfoObj, "page", "current_page") { k -> optInt(k) },
+        totalPages = firstFrom(pageInfoObj, "totalPages", "total_pages") { k -> optInt(k) },
+        nextPage = firstFrom(pageInfoObj, "nextPage") { k -> optInt(k) },
+        hasMore =
+            firstFrom(
+                pageInfoObj,
+                "hasMore",
+                "hasNextPage",
+                "has_next_page",
+            ) { k -> optBool(k) },
+        cursor = firstFrom(pageInfoObj, "cursor", "endCursor") { k -> optString(k) },
+        nextCursor = firstFrom(pageInfoObj, "nextCursor", "endCursor") { k -> optString(k) },
     )
+}
+
+private inline fun <T> JsonObject.firstFrom(
+    other: JsonObject?,
+    vararg keys: String,
+    crossinline getter: JsonObject.(String) -> T?,
+): T? {
+    var found: T? = null
+    keys.forEach { k ->
+        if (found == null) {
+            found = this.getter(k) ?: other?.getter(k)
+        }
+    }
+    return found
 }
 
 // access extensions
