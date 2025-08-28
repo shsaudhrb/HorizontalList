@@ -2,7 +2,8 @@ package com.ntg.lmd.order.data.remote.dto
 
 data class OrdersListResponse(
     val success: Boolean,
-    val data: OrdersData
+    val data: OrdersData,
+    val error: String? = null
 )
 
 data class OrdersData(

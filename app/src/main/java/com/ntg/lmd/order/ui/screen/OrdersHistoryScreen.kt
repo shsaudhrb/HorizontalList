@@ -50,7 +50,7 @@ import kotlin.collections.isNotEmpty
 
 @Composable
 fun ordersHistoryRoute(registerOpenMenu: ((() -> Unit) -> Unit)? = null) {
-    val repo = OrdersRepositoryImpl(RetrofitProvider.ordersApi)
+    val repo = OrdersRepositoryImpl(RetrofitProvider.ordersHistoryApi)
     val useCase = GetOrdersUseCase(repo)
     val vm: OrderHistoryViewModel = viewModel(
         factory = OrderHistoryViewModelFactory(useCase)
@@ -76,8 +76,11 @@ fun ordersHistoryRoute(registerOpenMenu: ((() -> Unit) -> Unit)? = null) {
     }
     //LaunchedEffect(Unit) { vm.loadFromAssets(ctx) }
     LaunchedEffect(Unit) {
-        val token = "YOUR_TOKEN_FROM_STORE" // هنا تجيب التوكن من SecureTokenStore
-        vm.loadOrders(token)
+        if (token.isNotBlank()) {
+            vm.loadOrders(token)
+        } else {
+            println(" Token is empty, please login first")
+        }
     }
     LaunchedEffect(Unit) { registerOpenMenu?.invoke { menuOpen = true } }
     LaunchedEffect(listState, orders) {

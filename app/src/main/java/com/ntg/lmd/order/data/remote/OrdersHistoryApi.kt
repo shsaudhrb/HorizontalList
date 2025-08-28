@@ -5,7 +5,7 @@ import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.Query
 
-interface OrdersApi {
+interface OrdersHistoryApi {
     @GET("orders-list")
     suspend fun getOrders(
         @Header("Authorization") token: String,

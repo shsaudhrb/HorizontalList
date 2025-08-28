@@ -1,5 +1,6 @@
 package com.ntg.lmd.order.ui.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ntg.lmd.order.domain.model.OrderHistoryUi
@@ -81,13 +82,36 @@ class OrderHistoryViewModel(
     fun loadMoreIfNeeded(lastVisibleIndex: Int, token: String) {
         if (_endReached.value || _isLoadingMore.value) return
         if (lastVisibleIndex >= _orders.value.size - PREFETCH_THRESHOLD) {
-            loadMoreOrders(token)
+            if (!_endReached.value) {
+                loadMoreOrders(token)
+            }
         }
     }
 
     fun refreshOrders(token: String) {
-        loadOrders(token)
+        if (_isRefreshing.value) return
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            try {
+                val result = getOrdersUseCase(token, page = 1, limit = PAGE_SIZE)
+                    .filterByStatus(_filter.value.allowed)
+
+                if (result.isNotEmpty()) {
+                    currentPage = 1
+                    _orders.value = result
+                    _endReached.value = false
+                } else {
+                    Log.w("OrderHistoryVM", "Refresh returned empty list, keeping existing data")
+                }
+            } catch (e: Exception) {
+                Log.e("OrderHistoryVM", "Refresh failed: ${e.message}", e)
+                // ✅ Keep old data, just log
+            } finally {
+                _isRefreshing.value = false
+            }
+        }
     }
+
 
     private fun List<OrderHistoryUi>.filterByStatus(allowed: Set<OrderHistoryStatus>): List<OrderHistoryUi> {
         return this.filter { it.status in allowed }
