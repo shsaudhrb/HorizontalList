@@ -32,7 +32,7 @@ object OrdersLoaderHelper {
                     status = o.getString("status"),
                     customerName = o.getString("customerName"),
                     customerPhone = phone,
-                    totalPrice = o.getDouble("total"),
+                    totalPrice = "---",
                     distanceMeters =
                         o
                             .optDouble("distanceMeters", Double.NaN)
