@@ -25,5 +25,5 @@ fun OrderDto.toDomain(): OrderInfo =
                 "start delivery" -> OrderStatus.START_DELIVERY
                 else -> OrderStatus.ADDED
             },
-        price = 0.0,
+        price = "---",
     )

@@ -243,7 +243,7 @@ fun orderHeaderRight(
         }
         Spacer(modifier = Modifier.height(dimensionResource(R.dimen.smallerSpace)))
         Text(
-            text = String.format(Locale.getDefault(), "%.2f", order.totalPrice),
+            text = order.totalPrice,
             style = MaterialTheme.typography.titleMedium,
         )
     }

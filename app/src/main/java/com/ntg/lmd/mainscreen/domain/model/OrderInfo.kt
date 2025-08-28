@@ -9,7 +9,7 @@ data class OrderInfo(
     val lat: Double = 0.0,
     val lng: Double = 0.0,
     val status: OrderStatus = OrderStatus.ADDED,
-    val price: Double = 0.0,
+    val price: String = "---",
 )
 
 enum class OrderStatus {

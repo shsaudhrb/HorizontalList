@@ -6,7 +6,7 @@ data class OrderUI( // single order
     val status: String,
     val customerName: String,
     val customerPhone: String?,
-    val totalPrice: Double,
+    val totalPrice: String,
     val details: String?,
     val distanceMeters: Double?,
 )
