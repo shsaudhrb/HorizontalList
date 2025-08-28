@@ -1,10 +1,10 @@
 package com.ntg.lmd.mainscreen.domain.usecase
 
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
-import com.ntg.lmd.mainscreen.domain.repository.OrdersRepository
+import com.ntg.lmd.mainscreen.domain.repository.MyOrdersRepository
 
 class GetMyOrdersUseCase(
-    private val repo: OrdersRepository,
+    private val repo: MyOrdersRepository,
 ) {
     suspend operator fun invoke(
         page: Int,

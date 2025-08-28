@@ -10,10 +10,6 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.maps.model.LatLng
-import com.ntg.lmd.mainscreen.domain.model.GeneralPoolUiState
-import com.google.gson.Gson
-import com.google.gson.JsonSyntaxException
-import com.google.gson.reflect.TypeToken
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.ui.mapper.toUi
 import com.ntg.lmd.mainscreen.ui.model.GeneralPoolUiState

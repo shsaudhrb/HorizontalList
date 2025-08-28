@@ -1,8 +1,5 @@
 package com.ntg.lmd.mainscreen.data.repository
 
-import com.ntg.lmd.mainscreen.data.datasource.remote.OrdersApi
-import com.ntg.lmd.mainscreen.data.mapper.toDomain
-import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.JsonArray
@@ -24,20 +21,9 @@ import kotlin.coroutines.cancellation.CancellationException
 private const val ORDERS_TAG = "OrdersRepo"
 
 class OrdersRepositoryImpl(
-    private val api: OrdersApi,
     private val liveOrdersApi: LiveOrdersApiService,
     private val socket: SocketIntegration,
 ) : OrdersRepository {
-    override suspend fun getOrders(
-        page: Int,
-        limit: Int,
-    ): List<OrderInfo> {
-        val env = api.getOrders(page = page, limit = limit)
-        if (!env.success) error(env.error ?: "Unknown error from orders-list")
-        return env.data
-            ?.orders
-            .orEmpty()
-            .map { it.toDomain() }
     // fetch all live orders with pagination support
     override suspend fun getAllLiveOrders(pageSize: Int): Result<List<Order>> =
         try {

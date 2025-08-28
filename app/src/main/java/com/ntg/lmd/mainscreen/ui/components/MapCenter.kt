@@ -97,13 +97,6 @@ fun mapCenter(
                     zIndex = 1f,
                 )
             }
-        ui.selected?.let {
-            Marker(
-                state = markerState,
-                title = it.name,
-                snippet = it.orderNumber,
-                zIndex = 1f,
-            )
         }
     }
 }

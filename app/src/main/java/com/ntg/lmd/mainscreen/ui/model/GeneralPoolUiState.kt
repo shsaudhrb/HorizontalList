@@ -5,44 +5,22 @@ import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 data class GeneralPoolUiState(
     val isLoading: Boolean = false,
     val orders: List<OrderInfo> = emptyList(),
-    val selected: OrderInfo? = null,
-    val hasLocationPerm: Boolean = false,
-    val distanceThresholdKm: Double = 100.0,
-    val searching: Boolean = false,
+    override val hasLocationPerm: Boolean = false,
     override val distanceThresholdKm: Double = 100.0,
-    val orders: List<OrderInfo> = emptyList(),
     val searchText: String = "",
     val errorMessage: String? = null,
-) {
-    val searching: Boolean = false,
     override val selected: OrderInfo? = null,
+    val searching: Boolean = false,
 ) : MapUiState {
     companion object {
         private const val MAX_LATITUDE = 90.0
         private const val MAX_LONGITUDE = 180.0
-        private const val DISTANCE_EPSILON = 1e-3f
     }
 
-    val filteredOrders: List<OrderInfo>
-        get() {
-            val q = searchText.trim()
-            if (q.isBlank()) return emptyList()
-            return orders.filter { o ->
-                o.orderNumber.contains(q, ignoreCase = true) ||
-                    o.name.contains(q, ignoreCase = true)
-            }
-        }
-
     // orders that are within the selected distance
-    val mapOrders: List<OrderInfo>
-        get() {
-            // keep only valid coords
-            val base =
     override val mapOrders: List<OrderInfo>
-        get() =
-            if (distanceThresholdKm <= 0.0) {
-                emptyList()
-            } else {
+        get() {
+            val base =
                 orders.filter {
                     it.lat.isFinite() &&
                         it.lng.isFinite() &&
@@ -59,7 +37,7 @@ data class GeneralPoolUiState(
             return base.filter { it.distanceKm.isFinite() && it.distanceKm <= distanceThresholdKm }
         }
 
-    // orders that match the current search text
+    // orders that are both in range AND match search text
     val filteredOrdersInRange: List<OrderInfo>
         get() {
             val q = searchText.trim()

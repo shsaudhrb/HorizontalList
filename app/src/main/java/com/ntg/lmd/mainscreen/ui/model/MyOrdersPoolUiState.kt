@@ -10,6 +10,7 @@ data class MyOrdersPoolUiState(
     val orders: List<OrderInfo> = emptyList(),
     val selectedOrderNumber: String? = null,
     override val distanceThresholdKm: Double = Double.MAX_VALUE,
+    override val hasLocationPerm: Boolean = false,
 ) : MapUiState {
     override val mapOrders: List<OrderInfo>
         get() {
