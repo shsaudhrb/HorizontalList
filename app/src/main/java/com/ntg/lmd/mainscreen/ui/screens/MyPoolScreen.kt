@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
@@ -31,7 +30,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.unit.dp
@@ -41,11 +39,8 @@ import com.google.maps.android.compose.CameraPositionState
 import com.google.maps.android.compose.MarkerState
 import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
-import com.ntg.lmd.mainscreen.ui.components.customBottom
 import com.ntg.lmd.mainscreen.ui.components.mapCenter
 import com.ntg.lmd.mainscreen.ui.model.MapStates
-import com.ntg.lmd.mainscreen.ui.screens.orders.model.LocalUiOnlyStatusBus
-import com.ntg.lmd.mainscreen.ui.screens.orders.model.OrderStatus
 import com.ntg.lmd.mainscreen.ui.screens.orders.model.OrderUI
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyPoolVMFactory
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyPoolViewModel
@@ -59,17 +54,17 @@ private val PAGING_SPINNER_BOTTOM_PADDING = 12.dp
 private val ZERO_LATLNG = LatLng(0.0, 0.0)
 
 private fun OrderInfo.hasValidLatLng(): Boolean = lat.isFinite() && lng.isFinite() && !(lat == 0.0 && lng == 0.0)
+
 // --- OrderInfo -> OrderUI mapper (adapt field names if yours differ) ---
 private fun OrderInfo.toOrderUI(): OrderUI =
     OrderUI(
-        // OrderUI expects Long
+        status = status.name.lowercase(), // matches your statusEnum mapping
+        customerName = name,
         orderNumber = orderNumber,
-        status = status.name.lowercase(),              // matches your statusEnum mapping
-        customerName = name ,           // fallback to `name`
         customerPhone = null,
         totalPrice = price,
-        details =null,
-        distanceMeters = distanceKm
+        details = null,
+        distanceMeters = distanceKm,
     )
 
 @Composable
@@ -125,7 +120,6 @@ fun myPoolScreen(
                 myPoolBottom(
                     orders = ui.orders,
                     selectedOrderNumber = ui.selectedOrderNumber,
-
                     onCenteredOrderChange = { order, index ->
                         focusOnOrder(order, false)
                         viewModel.onCenteredOrderChange(order, index)
@@ -193,8 +187,6 @@ fun myPoolBottom(
     onCenteredOrderChange: (OrderInfo, Int) -> Unit = { _, _ -> },
 ) {
     val listState = rememberLazyListState()
-    val scope = rememberCoroutineScope()
-    val context = LocalContext.current
 
     val sidePadding =
         ((LocalConfiguration.current.screenWidthDp.dp - dimensionResource(id = R.dimen.orders_card_width)) / 2)
@@ -210,7 +202,11 @@ fun myPoolBottom(
             val i = orders.indexOfFirst { it.orderNumber == selectedOrderNumber }
             if (i >= 0) {
                 programmatic = true
-                try { listState.animateScrollToItem(i, -px) } finally { programmatic = false }
+                try {
+                    listState.animateScrollToItem(i, -px)
+                } finally {
+                    programmatic = false
+                }
                 lastCentered = i
                 onCenteredOrderChange(orders[i], i)
             }
@@ -223,9 +219,10 @@ fun myPoolBottom(
             if (!moving && !programmatic && orders.isNotEmpty()) {
                 val info = listState.layoutInfo
                 val center = (info.viewportStartOffset + info.viewportEndOffset) / 2
-                val nearest = info.visibleItemsInfo.minByOrNull {
-                    kotlin.math.abs((it.offset + it.size / 2) - center)
-                } ?: return@collect
+                val nearest =
+                    info.visibleItemsInfo.minByOrNull {
+                        abs((it.offset + it.size / 2) - center)
+                    } ?: return@collect
                 val idx = nearest.index
                 if (idx in orders.indices && idx != lastCentered) {
                     lastCentered = idx
@@ -240,7 +237,7 @@ fun myPoolBottom(
     Box(
         Modifier
             .fillMaxWidth()
-            .height(200.dp)
+            .height(250.dp)
             .background(MaterialTheme.colorScheme.primary),
     ) {
         LazyRow(
@@ -259,6 +256,7 @@ fun myPoolBottom(
                     onDetails = {},
                     onConfirmOrPick = { /* not used inside the card body; keep if needed later */ },
                     onCall = {},
+                    modifier = Modifier.padding(22.dp),
                 )
             }
         }

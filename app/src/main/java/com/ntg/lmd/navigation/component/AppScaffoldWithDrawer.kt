@@ -106,6 +106,7 @@ data class AppBarConfig(
     val searchValue: String = "",
     val onSearchChange: (String) -> Unit = {},
 )
+
 @Suppress("UnusedParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -387,7 +388,9 @@ private fun topBarActions(
         // Optional custom icon (e.g. MoreVert)
         config.actionIcon?.let { icon ->
             IconButton(onClick = { config.onActionIconClick?.invoke() }) {
-                Icon(icon, contentDescription = stringResource(R.string.action), tint = MaterialTheme.colorScheme.onPrimary)
+                Icon(icon,
+                    contentDescription = stringResource(R.string.action),
+                    tint = MaterialTheme.colorScheme.onPrimary)
             }
             Spacer(Modifier.width(4.dp))
         }

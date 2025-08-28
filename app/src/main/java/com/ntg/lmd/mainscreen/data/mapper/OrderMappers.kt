@@ -15,12 +15,15 @@ fun OrderDto.toDomain(): OrderInfo =
         lng = coordinates?.longitude ?: Double.NaN,
         status =
             when (orderstatuses?.statusName?.lowercase()) {
-                "added" -> OrderStatus.NEW
+                "added" -> OrderStatus.ADDED
                 "confirmed" -> OrderStatus.CONFIRMED
-                "picked" -> OrderStatus.PICKED
-                "on_route" -> OrderStatus.ON_ROUTE
-                "delivered" -> OrderStatus.DELIVERED
-                else -> OrderStatus.NEW
+                "picked" -> OrderStatus.PICKUP
+                "reassigned" -> OrderStatus.REASSIGNED
+                "canceled" -> OrderStatus.CANCELED
+                "delivered" -> OrderStatus.DELIVERY_DONE
+                "deliver failed" -> OrderStatus.DELIVERY_FAILED
+                "start delivery" -> OrderStatus.START_DELIVERY
+                else -> OrderStatus.ADDED
             },
         price = 0.0,
     )

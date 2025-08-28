@@ -8,8 +8,11 @@ data class OrderInfo(
     val distanceKm: Double = 0.0,
     val lat: Double = 0.0,
     val lng: Double = 0.0,
-    val status: OrderStatus = OrderStatus.NEW,
+    val status: OrderStatus = OrderStatus.ADDED,
     val price: Double = 0.0,
 )
 
-enum class OrderStatus { NEW, CONFIRMED, PICKED, ON_ROUTE, DELIVERED }
+enum class OrderStatus {
+   ADDED, CONFIRMED, CANCELED,
+    REASSIGNED, PICKUP,
+    START_DELIVERY, DELIVERY_FAILED, DELIVERY_DONE }
