@@ -95,8 +95,9 @@ fun generalPoolScreen(
         }
     }
 
-    // Load Local orders.json from assets
-    LaunchedEffect(Unit) { generalPoolViewModel.loadOrdersFromAssets(context) }
+    LaunchedEffect(Unit) {
+        generalPoolViewModel.attach(context) // loads API, connects socket
+    }
 
     // handle location permission
     locationPermissionGate(viewModel = generalPoolViewModel)
@@ -156,7 +157,7 @@ fun generalPoolScreen(
             Box(Modifier.align(Alignment.BottomCenter)) {
                 customBottom(
                     orders = ui.mapOrders,
-                    selectedOrderNumber = ui.selected?.orderNumber, // ← drives auto-centering
+                    selectedOrderNumber = ui.selected?.orderNumber,
                     onOrderClick = { order -> focusOnOrder(order, false) },
                     onCenteredOrderChange = { order, _ -> focusOnOrder(order, false) },
                     onAddClick = { },
