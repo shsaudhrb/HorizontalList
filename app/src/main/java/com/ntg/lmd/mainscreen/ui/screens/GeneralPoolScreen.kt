@@ -3,27 +3,13 @@ package com.ntg.lmd.mainscreen.ui.screens
 import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,9 +20,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -52,21 +35,18 @@ import com.google.maps.android.compose.rememberCameraPositionState
 import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.ui.components.customBottom
+import com.ntg.lmd.mainscreen.ui.components.distanceFilterBar
 import com.ntg.lmd.mainscreen.ui.components.mapCenter
+import com.ntg.lmd.mainscreen.ui.components.searchResultsDropdown
 import com.ntg.lmd.mainscreen.ui.model.GeneralPoolUiState
 import com.ntg.lmd.mainscreen.ui.model.MapStates
 import com.ntg.lmd.mainscreen.ui.viewmodel.GeneralPoolUiEvent
 import com.ntg.lmd.mainscreen.ui.viewmodel.GeneralPoolViewModel
 import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
 
 // Map / Camera behavior
 private const val INITIAL_MAP_ZOOM = 12f
-const val ORDER_FOCUS_ZOOM = 14f
-
-// Slider constraints
-private const val DISTANCE_MIN_KM: Double = 1.0
-private const val DISTANCE_MAX_KM: Double = 100.0
+private const val ORDER_FOCUS_ZOOM = 14f
 
 @Composable
 fun generalPoolScreen(
@@ -153,7 +133,7 @@ fun generalPoolScreen(
                         .padding(16.dp),
                 color = MaterialTheme.colorScheme.onBackground,
             )
-        } else {
+        } else if (ui.mapOrders.isNotEmpty()) {
             Box(Modifier.align(Alignment.BottomCenter)) {
                 customBottom(
                     orders = ui.mapOrders,
@@ -179,15 +159,12 @@ private fun generalPoolContent(
         Modifier
             .fillMaxSize(),
     ) {
-        // Map at the bottom layer (≤5 params now)
         mapCenter(
             ui = ui,
             mapStates = mapStates,
             deviceLatLng = deviceLatLng,
             modifier = Modifier.fillMaxSize(),
         )
-
-        // Distance filter OVER the map — only if location is granted
         if (ui.hasLocationPerm) {
             Row(
                 modifier =
@@ -233,167 +210,6 @@ private fun generalPoolContent(
                     orders = ui.filteredOrdersInRange,
                     onPick = { focusOnOrder(it, true) },
                 )
-            }
-        }
-    }
-}
-
-// used to select max distance in km for filtering orders
-@Composable
-private fun distanceFilterBar(
-    maxDistanceKm: Double,
-    onMaxDistanceKm: (Double) -> Unit,
-    enabled: Boolean,
-) {
-    // Do not draw anything if not enabled (no location permission)
-    if (!enabled) return
-
-    val value = maxDistanceKm.coerceIn(DISTANCE_MIN_KM, DISTANCE_MAX_KM)
-
-    Surface(
-        modifier =
-            Modifier
-                .width(280.dp)
-                .padding(vertical = 8.dp),
-        color = MaterialTheme.colorScheme.background,
-        shape = RoundedCornerShape(12.dp),
-        tonalElevation = 6.dp,
-        shadowElevation = 6.dp,
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            val context = LocalContext.current
-            Text(
-                text = "${value.roundToInt()} ${context.getString(R.string.kilometer)}",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-            )
-
-            // Straight track + circular thumb
-            circleSlider(
-                value = value,
-                onValueChange = { onMaxDistanceKm(it.coerceIn(DISTANCE_MIN_KM, DISTANCE_MAX_KM)) },
-                valueRange = DISTANCE_MIN_KM..DISTANCE_MAX_KM,
-                enabled = enabled,
-            )
-        }
-    }
-}
-
-@Composable
-fun circleSlider(
-    value: Double,
-    onValueChange: (Double) -> Unit,
-    valueRange: ClosedFloatingPointRange<Double> = DISTANCE_MIN_KM..DISTANCE_MAX_KM,
-    enabled: Boolean = true,
-) {
-    val trackWidth = 220.dp
-    val thumbRadius = 10.dp
-
-    // Capture theme colors in composable scope (OK to read MaterialTheme here)
-    val trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
-    val thumbColor: Color = MaterialTheme.colorScheme.primary
-
-    Box(
-        modifier =
-            Modifier
-                .width(trackWidth)
-                .padding(vertical = 12.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        // Thin straight line
-        Box(
-            modifier =
-                Modifier
-                    .height(2.dp)
-                    .fillMaxWidth()
-                    .background(trackColor),
-        )
-
-        // Draggable circular thumb
-        Canvas(
-            modifier =
-                Modifier
-                    .matchParentSize()
-                    .then(
-                        if (enabled) {
-                            Modifier.pointerInput(Unit) {
-                                detectDragGestures { change, _ ->
-                                    change.consume()
-                                    val posX = change.position.x.coerceIn(0f, size.width.toFloat())
-                                    val fraction = posX / size.width // Float 0..1
-                                    val newValue =
-                                        valueRange.start +
-                                            (
-                                                fraction.toDouble() *
-                                                    (valueRange.endInclusive - valueRange.start)
-                                            )
-                                    onValueChange(newValue)
-                                }
-                            }
-                        } else {
-                            Modifier
-                        },
-                    ),
-        ) {
-            val fraction =
-                (value - valueRange.start) / (valueRange.endInclusive - valueRange.start)
-            val x = size.width * fraction.toFloat()
-            drawCircle(
-                color = thumbColor,
-                radius = thumbRadius.toPx(),
-                center = Offset(x, size.height / 2),
-            )
-        }
-    }
-}
-
-@Composable
-private fun searchResultsDropdown(
-    visible: Boolean,
-    orders: List<OrderInfo>,
-    onPick: (OrderInfo) -> Unit,
-) {
-    AnimatedVisibility(
-        visible,
-        enter = fadeIn() + expandVertically(),
-        exit = fadeOut() + shrinkVertically(),
-    ) {
-        Surface(
-            color = MaterialTheme.colorScheme.primaryContainer,
-            tonalElevation = 2.dp,
-        ) {
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-            ) {
-                if (orders.isEmpty()) {
-                    Text(
-                        text = stringResource(R.string.no_orders),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                    )
-                } else {
-                    orders.forEach { order ->
-                        Row(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .clickable { onPick(order) }
-                                    .padding(horizontal = 16.dp, vertical = 10.dp),
-                        ) {
-                            Text(
-                                text = "${order.orderNumber} • ${order.name}",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onBackground,
-                            )
-                        }
-                    }
-                }
             }
         }
     }

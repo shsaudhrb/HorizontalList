@@ -1,11 +1,5 @@
 package com.ntg.lmd.navigation.component
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.FiniteAnimationSpec
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -21,27 +15,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarColors
-import androidx.compose.material3.TopAppBarDefaults.topAppBarColors
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -52,25 +36,16 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusManager
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color.Companion.Transparent
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.ntg.lmd.MyApp
 import com.ntg.lmd.R
-import com.ntg.lmd.mainscreen.domain.model.SearchController
 import com.ntg.lmd.navigation.AppNavConfig
 import com.ntg.lmd.navigation.Screen
 import com.ntg.lmd.navigation.TopBarConfigWithTitle
@@ -85,7 +60,6 @@ import kotlinx.coroutines.launch
 const val ENABLED_ICON = 1f
 const val DISABLED_ICON = 0.38f
 private const val FIRST_GROUP_SIZE = 3
-private const val FADE_ANIMATION_DURATION_MS = 280
 
 // ---------- Navigation Helper ----------
 // Extension function on NavHostController to navigate without creating multiple copies
@@ -97,9 +71,6 @@ fun NavHostController.navigateSingleTop(route: String) {
     }
 }
 
-/**
- * Bundle app-bar/search params to avoid LongParameterList.
- */
 data class AppBarConfig(
     val title: String,
     val showSearch: Boolean = false,
@@ -130,12 +101,7 @@ fun appScaffoldWithDrawer(
     ModalNavigationDrawer(
         drawerState = drawerState,
         // Disable gestures on GeneralPool to avoid conflicts with the map
-        gesturesEnabled =
-            currentRoute !in
-                listOf(
-                    Screen.GeneralPool.route,
-                    Screen.MyPool.route,
-                ),
+        gesturesEnabled = currentRoute?.startsWith(Screen.GeneralPool.route) != true,
         drawerContent = {
             ModalDrawerSheet(drawerContainerColor = CupertinoSystemBackground) {
                 drawerContent(
@@ -221,190 +187,6 @@ private fun drawerContent(
                     modifier = Modifier.padding(start = dimensionResource(R.dimen.drawer_divider_inset)),
                     thickness = dimensionResource(R.dimen.hairline),
                     color = CupertinoSeparator,
-                )
-            }
-        }
-    }
-}
-
-// ---------- Top App Bar ----------
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun appTopBar(
-    config: TopBarConfigWithTitle,
-    onOpenDrawer: () -> Unit,
-    colors: TopAppBarColors =
-        topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.primary,
-            titleContentColor = MaterialTheme.colorScheme.onPrimary,
-            navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
-            actionIconContentColor = MaterialTheme.colorScheme.onPrimary,
-        ),
-) {
-    val search = config.search
-    val focusRequester = remember { FocusRequester() }
-    val focusManager = LocalFocusManager.current
-    val fadeSpec =
-        remember { tween<Float>(FADE_ANIMATION_DURATION_MS, easing = FastOutSlowInEasing) }
-
-    LaunchedEffect(search.searching.value) {
-        if (search.searching.value) focusRequester.requestFocus()
-    }
-
-    TopAppBar(
-        colors = colors,
-        navigationIcon = {
-            if (!search.searching.value) {
-                IconButton(onClick = onOpenDrawer, modifier = Modifier.padding(start = 8.dp)) {
-                    Icon(Icons.Filled.Menu, contentDescription = stringResource(R.string.open_menu))
-                }
-            } else {
-                Icon(
-                    imageVector = Icons.Filled.Menu,
-                    contentDescription = null, // decorative when searching
-                    tint = MaterialTheme.colorScheme.primary, // keep space, de-emphasize
-                    modifier = Modifier.padding(start = 8.dp),
-                )
-            }
-        },
-        title = {
-            topBarTitle(
-                title = config.title,
-                showTitle = !search.searching.value,
-                fadeSpec = fadeSpec,
-            )
-            if (config.showSearchIcon && search.searching.value) {
-                searchTextField(
-                    search = search,
-                    placeholder =
-                        config.searchPlaceholder
-                            ?: stringResource(R.string.search_order_number_customer_name),
-                    focusRequester = focusRequester,
-                    focusManager = focusManager,
-                )
-            }
-        },
-        actions = { topBarActions(config = config, searching = search.searching.value) },
-    )
-}
-
-@Composable
-private fun topBarTitle(
-    title: String,
-    showTitle: Boolean,
-    fadeSpec: FiniteAnimationSpec<Float>,
-) {
-    AnimatedVisibility(visible = showTitle, enter = fadeIn(fadeSpec), exit = fadeOut(fadeSpec)) {
-        Text(
-            title,
-            style =
-                MaterialTheme.typography.titleLarge.copy(
-                    fontWeight = FontWeight.Medium,
-                    textAlign = TextAlign.Start,
-                ),
-        )
-    }
-}
-
-@Composable
-private fun searchTextField(
-    search: SearchController,
-    placeholder: String,
-    focusRequester: FocusRequester,
-    focusManager: FocusManager,
-) {
-    val onPrimary = MaterialTheme.colorScheme.onPrimary
-    TextField(
-        value = search.text.value,
-        onValueChange = search.onTextChange,
-        singleLine = true,
-        placeholder = {
-            Text(
-                text = placeholder,
-                color = onPrimary.copy(alpha = 0.7f),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        },
-        trailingIcon = {
-            IconButton(onClick = {
-                if (search.text.value.isNotEmpty()) {
-                    search.onTextChange("")
-                } else {
-                    search.onToggle(false)
-                    focusManager.clearFocus()
-                }
-            }) {
-                Icon(
-                    Icons.Filled.Close,
-                    contentDescription = stringResource(R.string.clear_or_close),
-                    tint = onPrimary,
-                )
-            }
-        },
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-        keyboardActions =
-            androidx.compose.foundation.text.KeyboardActions(
-                onSearch = {
-                    search.onSubmit(search.text.value)
-                    focusManager.clearFocus()
-                },
-            ),
-        colors =
-            TextFieldDefaults.colors(
-                focusedIndicatorColor = Transparent,
-                unfocusedIndicatorColor = Transparent,
-                disabledIndicatorColor = Transparent,
-                errorIndicatorColor = Transparent,
-                focusedContainerColor = Transparent,
-                unfocusedContainerColor = Transparent,
-                disabledContainerColor = Transparent,
-                errorContainerColor = Transparent,
-                cursorColor = onPrimary,
-                focusedTextColor = onPrimary,
-                unfocusedTextColor = onPrimary,
-            ),
-        textStyle = MaterialTheme.typography.bodyMedium.copy(color = onPrimary),
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .focusRequester(focusRequester),
-    )
-}
-
-// Right-side action buttons in top app bar
-@Composable
-private fun topBarActions(
-    config: TopBarConfigWithTitle,
-    searching: Boolean,
-) {
-    if (!searching) {
-        // Optional text button (MY POOL / GENERAL POOL)
-        config.actionButtonLabel?.let { label ->
-            TextButton(onClick = { config.onActionButtonClick?.invoke() }) {
-                Text(
-                    label,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                )
-            }
-            Spacer(Modifier.width(4.dp))
-        }
-        // Optional custom icon (e.g. MoreVert)
-        config.actionIcon?.let { icon ->
-            IconButton(onClick = { config.onActionIconClick?.invoke() }) {
-                Icon(
-                    icon,
-                    contentDescription = stringResource(R.string.action),
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                )
-            }
-            Spacer(Modifier.width(4.dp))
-        }
-        config.searchActionIcon?.let { icon ->
-            IconButton(onClick = { config.onSearchIconClick?.invoke() }) {
-                Icon(
-                    icon,
-                    contentDescription = stringResource(R.string.search_order_number_customer_name),
                 )
             }
         }
