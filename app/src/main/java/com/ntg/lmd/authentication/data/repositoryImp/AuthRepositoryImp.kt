@@ -14,19 +14,19 @@ class AuthRepositoryImp(
     suspend fun login(
         email: String,
         password: String,
-    ): NetworkResult<Unit> {
-        return try {
+    ): NetworkResult<Unit> =
+        try {
             val response = loginApi.login(LoginRequest(email, password))
 
             if (!response.success) {
                 NetworkResult.Error(
-                    NetworkError.BadRequest(response.error ?: "Login failed")
+                    NetworkError.BadRequest(response.error ?: "Login failed"),
                 )
             } else {
                 val payload = response.data
                 if (payload == null) {
                     NetworkResult.Error(
-                        NetworkError.BadRequest(response.error ?: "Login failed: no data received")
+                        NetworkError.BadRequest(response.error ?: "Login failed: no data received"),
                     )
                 } else {
                     store.saveFromPayload(
@@ -41,5 +41,4 @@ class AuthRepositoryImp(
         } catch (e: HttpException) {
             NetworkResult.Error(NetworkError.fromException(e))
         }
-    }
 }

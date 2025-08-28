@@ -101,13 +101,18 @@ fun mapCenter(
         }
 
         // render the single marker only if we have a selection (special/high zIndex)
-        ui.selected?.let {
-            Marker(
-                state = markerState,
-                title = it.name,
-                snippet = it.orderNumber,
-                zIndex = 1f,
-            )
+        ui.selected?.let { sel ->
+            val withinRange =
+                !ui.hasLocationPerm || (sel.distanceKm.isFinite() && sel.distanceKm <= ui.distanceThresholdKm)
+
+            if (withinRange) {
+                Marker(
+                    state = markerState,
+                    title = sel.name,
+                    snippet = sel.orderNumber,
+                    zIndex = 1f,
+                )
+            }
         }
     }
 }
