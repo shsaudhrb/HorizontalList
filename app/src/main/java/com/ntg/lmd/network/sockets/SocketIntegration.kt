@@ -65,7 +65,7 @@ class SocketIntegration(
     fun connect() {
         val access = tokenStore.getAccessToken().orEmpty()
         lastAccess = access
-        val anon = com.ntg.lmd.BuildConfig.SUPABASE_KEY
+        val anon = BuildConfig.SUPABASE_KEY
         val url = "$baseWsUrl?apikey=$anon&access_token=$access"
         Log.d(logTag, "WebSocket URL = $url")
         val req = Request.Builder().url(url).build()
