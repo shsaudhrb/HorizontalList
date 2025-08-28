@@ -1,5 +1,6 @@
 package com.ntg.lmd.mainscreen.ui.screens
 
+import android.content.pm.PackageManager
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -30,9 +32,13 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.CameraPositionState
@@ -41,7 +47,7 @@ import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.ui.components.mapCenter
 import com.ntg.lmd.mainscreen.ui.model.MapStates
-import com.ntg.lmd.mainscreen.ui.screens.orders.model.OrderUI
+import com.ntg.lmd.mainscreen.ui.screens.orders.model.LocalUiOnlyStatusBus
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyPoolVMFactory
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyPoolViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -55,26 +61,29 @@ private val ZERO_LATLNG = LatLng(0.0, 0.0)
 
 private fun OrderInfo.hasValidLatLng(): Boolean = lat.isFinite() && lng.isFinite() && !(lat == 0.0 && lng == 0.0)
 
-// --- OrderInfo -> OrderUI mapper (adapt field names if yours differ) ---
-private fun OrderInfo.toOrderUI(): OrderUI =
-    OrderUI(
-        status = status.name.lowercase(), // matches your statusEnum mapping
-        customerName = name,
-        orderNumber = orderNumber,
-        customerPhone = null,
-        totalPrice = price,
-        details = null,
-        distanceMeters = distanceKm,
-    )
-
 @Composable
 fun myPoolScreen(
-    viewModel: MyPoolViewModel =
-        androidx.lifecycle.viewmodel.compose.viewModel(
-            factory = MyPoolVMFactory(),
-        ),
+    viewModel: MyPoolViewModel = viewModel(factory = MyPoolVMFactory()),
+    onOpenOrderDetails: (String) -> Unit,
 ) {
     val ui by viewModel.ui.collectAsState()
+    val context = LocalContext.current
+
+    // One-shot last known location (keep your shared VM if you have one)
+    LaunchedEffect(Unit) {
+        if (ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.ACCESS_FINE_LOCATION,
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            val fused =
+                com.google.android.gms.location.LocationServices
+                    .getFusedLocationProviderClient(context)
+            fused.lastLocation.addOnSuccessListener { loc ->
+                viewModel.updateDeviceLocation(loc)
+            }
+        }
+    }
 
     val mapStates =
         remember {
@@ -86,10 +95,10 @@ fun myPoolScreen(
     val scope = rememberCoroutineScope()
     val focusOnOrder =
         rememberFocusOnMyOrder(
-            viewModel,
-            mapStates.markerState,
-            mapStates.cameraPositionState,
-            scope,
+            viewModel = viewModel,
+            markerState = mapStates.markerState,
+            cameraPositionState = mapStates.cameraPositionState,
+            scope = scope,
         )
 
     // Initial zoom to first valid order
@@ -124,6 +133,7 @@ fun myPoolScreen(
                         focusOnOrder(order, false)
                         viewModel.onCenteredOrderChange(order, index)
                     },
+                    onOpenOrderDetails = onOpenOrderDetails,
                 )
 
                 // Paging loader
@@ -164,17 +174,14 @@ fun rememberFocusOnMyOrder(
         { order: OrderInfo, _: Boolean ->
             vm.value.onCenteredOrderChange(order)
 
-            // update marker position
-            marker.value.position = LatLng(order.lat, order.lng)
-
-            // animate camera zoom
-            coroutineScope.value.launch {
-                camera.value.animate(
-                    CameraUpdateFactory.newLatLngZoom(
-                        LatLng(order.lat, order.lng),
-                        focusZoom,
-                    ),
-                )
+            if (order.hasValidLatLng()) {
+                val target = LatLng(order.lat, order.lng)
+                marker.value.position = target
+                coroutineScope.value.launch {
+                    camera.value.animate(
+                        CameraUpdateFactory.newLatLngZoom(target, focusZoom),
+                    )
+                }
             }
         }
     }
@@ -185,18 +192,21 @@ fun myPoolBottom(
     orders: List<OrderInfo>,
     selectedOrderNumber: String?,
     onCenteredOrderChange: (OrderInfo, Int) -> Unit = { _, _ -> },
+    onOpenOrderDetails: (String) -> Unit,
 ) {
     val listState = rememberLazyListState()
 
+    // Center the first/selected card visually by padding the sides
     val sidePadding =
-        ((LocalConfiguration.current.screenWidthDp.dp - dimensionResource(id = R.dimen.orders_card_width)) / 2)
+        ((LocalConfiguration.current.screenWidthDp.dp - dimensionResource(id = R.dimen.myOrders_card_width)) / 2)
             .coerceAtLeast(0.dp)
     val px = with(LocalDensity.current) { sidePadding.roundToPx() }
 
     var lastCentered by remember { mutableIntStateOf(-1) }
     var programmatic by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
-    // Jump to externally selected order
+    // Scroll to selected order (by orderNumber)
     LaunchedEffect(selectedOrderNumber, orders) {
         if (!selectedOrderNumber.isNullOrEmpty()) {
             val i = orders.indexOfFirst { it.orderNumber == selectedOrderNumber }
@@ -213,7 +223,7 @@ fun myPoolBottom(
         }
     }
 
-    // Notify when a new card becomes centered
+    // Detect centered item after user scroll
     LaunchedEffect(orders, listState) {
         snapshotFlow { listState.isScrollInProgress }.collect { moving ->
             if (!moving && !programmatic && orders.isNotEmpty()) {
@@ -232,32 +242,53 @@ fun myPoolBottom(
         }
     }
 
-    if (orders.isEmpty()) return
-
     Box(
         Modifier
             .fillMaxWidth()
-            .height(250.dp)
+            .height(dimensionResource(R.dimen.orders_carousel_height))
             .background(MaterialTheme.colorScheme.primary),
     ) {
         LazyRow(
             state = listState,
             flingBehavior = rememberSnapFlingBehavior(lazyListState = listState),
-            modifier = Modifier.fillMaxWidth().align(Alignment.Center),
-            horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.smallerSpace)),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.Center),
+            horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.largeSpace)),
             contentPadding = PaddingValues(start = sidePadding, end = sidePadding),
         ) {
-            itemsIndexed(orders, key = { _, order -> order.orderNumber }) { index, info ->
-                // Map once per item and remember
-                val uiOrder = remember(info) { info.toOrderUI() }
-
-                myOrderorderCard(
-                    order = uiOrder,
-                    onDetails = {},
-                    onConfirmOrPick = { /* not used inside the card body; keep if needed later */ },
-                    onCall = {},
-                    modifier = Modifier.padding(22.dp),
-                )
+            itemsIndexed(
+                items = orders,
+                key = { _, order -> order.orderNumber },
+            ) { _, info ->
+                // Constrain width; do NOT let the card fill the whole row
+                Box(Modifier.width(dimensionResource(R.dimen.myOrders_card_width))) {
+                    myOrderCard(
+                        order = info, // pass OrderInfo directly
+                        onDetails = {
+                            // Your nav callback expects String; using orderNumber (adjust if you prefer id)
+                            onOpenOrderDetails(info.orderNumber)
+                            // or: onOpenOrderDetails(info.id.toString())
+                        },
+                        onConfirmOrPick = { /* TODO: hook your action here */ },
+                        onCall = {
+                            val phone = info.customerPhone
+                            if (!phone.isNullOrBlank()) {
+                                val intent =
+                                    android.content.Intent(
+                                        android.content.Intent.ACTION_DIAL,
+                                        "tel:$phone".toUri(),
+                                    )
+                                context.startActivity(intent)
+                            } else {
+                                LocalUiOnlyStatusBus.errorEvents.tryEmit(
+                                    context.getString(R.string.phone_missing) to null,
+                                )
+                            }
+                        },
+                    )
+                }
             }
         }
     }

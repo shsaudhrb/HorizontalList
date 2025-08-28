@@ -155,7 +155,8 @@ private fun drawerHost(
         topBar = topBar,
         onLogout = onLogout,
         appBar =
-            AppBarConfig( // required by your scaffold
+            AppBarConfig(
+                // required by your scaffold
                 title = spec.title,
             ),
     ) {
@@ -219,7 +220,7 @@ private fun drawerNavGraph(
     startDestination: String,
     registerOpenMenu: (setter: (() -> Unit)?) -> Unit,
     externalQuery: String,
-    onOpenOrderDetails: (Long) -> Unit,
+    onOpenOrderDetails: (String) -> Unit,
 ) {
     NavHost(
         navController = navController,
@@ -240,7 +241,7 @@ private fun drawerNavGraph(
             arguments = listOf(navArgument("id") { type = NavType.StringType }),
         ) { backStackEntry ->
             val idStr = backStackEntry.arguments?.getString("id")
-            val id = idStr?.toLongOrNull()
+            val id = idStr
             orderDetailsScreen(
                 orderId = id, // nullable is OK
                 navController = navController,
@@ -258,7 +259,11 @@ private fun drawerNavGraph(
 
         composable(Screen.DeliveriesLog.route) { deliveriesLogScreen(navController) }
         composable(Screen.Settings.route) { settingsOptions(navController) }
-        composable(Screen.MyPool.route) { myPoolScreen() }
+        composable(Screen.MyPool.route) {
+            myPoolScreen(
+                onOpenOrderDetails = onOpenOrderDetails,
+            )
+        }
         composable(Screen.Chat.route) { chatScreen() }
     }
 }

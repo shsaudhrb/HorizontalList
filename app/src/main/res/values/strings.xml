@@ -32,7 +32,7 @@
 
     <string name="my_orders_title">My Orders (%1$d)</string>
     <string name="search_by_order_number">Search by Order Number</string>
-    <string name="order_details">Order Details</string>
+    <string name="order_details">Details</string>
     <string name="call">Call</string>
     <string name="retry">Retry</string>
     <string name="no_active_orders">No active orders.</string>

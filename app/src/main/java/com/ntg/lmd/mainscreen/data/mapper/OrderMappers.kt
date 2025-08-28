@@ -6,6 +6,7 @@ import com.ntg.lmd.mainscreen.domain.model.OrderStatus
 
 fun OrderDto.toDomain(): OrderInfo =
     OrderInfo(
+        id = orderId,
         name = customerName.orEmpty(),
         orderNumber = orderNumber,
         timeAgo = "now", // you can replace this with proper relative time later
@@ -26,4 +27,6 @@ fun OrderDto.toDomain(): OrderInfo =
                 else -> OrderStatus.ADDED
             },
         price = "---",
+        customerPhone = null,
+        details = null,
     )

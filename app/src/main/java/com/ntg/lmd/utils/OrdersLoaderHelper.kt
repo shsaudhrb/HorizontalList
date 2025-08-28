@@ -1,16 +1,18 @@
 package com.ntg.lmd.utils
 
-import com.ntg.lmd.mainscreen.ui.screens.orders.model.OrderUI
+/*
+import com.ntg.lmd.mainscreen.domain.model.OrderInfo
+
 
 object OrdersLoaderHelper {
-    fun loadFromAssets(context: android.content.Context): List<OrderUI> {
+    fun loadFromAssets(context: android.content.Context): List<OrderInfo> {
         val json =
             context.assets
                 .open("order.json")
                 .bufferedReader()
                 .use { it.readText() }
         val arr = org.json.JSONArray(json)
-        val out = ArrayList<OrderUI>(arr.length())
+        val out = ArrayList<OrderInfo>(arr.length())
 
         for (i in 0 until arr.length()) {
             val o = arr.getJSONObject(i)
@@ -26,8 +28,8 @@ object OrdersLoaderHelper {
                     }
                 ).trim().takeIf { it.isNotEmpty() }
             out +=
-                OrderUI(
-                    id = o.getInt("id").toLong(),
+                OrderInfo(
+                    id = o.getInt("id").toString(),
                     orderNumber = o.getString("orderNumber"),
                     status = o.getString("status"),
                     customerName = o.getString("customerName"),
@@ -43,3 +45,4 @@ object OrdersLoaderHelper {
         return out
     }
 }
+*/
