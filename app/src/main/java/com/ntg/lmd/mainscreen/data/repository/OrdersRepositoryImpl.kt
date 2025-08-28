@@ -102,7 +102,7 @@ private val PREFERRED_ARRAY_KEYS =
     listOf(
         "items",
         "orders",
-        "initialOrders",
+        "initial_orders",
         "results",
         "rows",
         "list",
@@ -206,18 +206,29 @@ private fun JsonObject.findFirstItemsArray(): Pair<JsonArray?, String?> {
 // extract pagination info
 private fun JsonObject.extractPageInfo(): PageInfo {
     val pageInfoObj =
-        if (has("pageInfo") && get("pageInfo").isJsonObject) getAsJsonObject("pageInfo") else null
+        when {
+            has("pageInfo") && get("pageInfo").isJsonObject -> getAsJsonObject("pageInfo")
+            has("pagination") && get("pagination").isJsonObject -> getAsJsonObject("pagination")
+            else -> null
+        }
 
     return PageInfo(
-        page = this.optInt("page") ?: pageInfoObj?.optInt("page"),
-        totalPages = this.optInt("totalPages") ?: pageInfoObj?.optInt("totalPages"),
-        nextPage = this.optInt("nextPage") ?: pageInfoObj?.optInt("nextPage"),
-        hasMore = this.optBool("hasMore") ?: pageInfoObj?.optBool("hasNextPage"),
-        cursor =
-            this.optString("cursor")
-                ?: pageInfoObj?.optString("cursor")
-                ?: pageInfoObj?.optString("endCursor"),
-        nextCursor = this.optString("nextCursor") ?: pageInfoObj?.optString("endCursor"),
+        page = this.optInt("page")
+            ?: pageInfoObj?.optInt("page")
+            ?: pageInfoObj?.optInt("current_page"),
+        totalPages = this.optInt("totalPages")
+            ?: pageInfoObj?.optInt("totalPages")
+            ?: pageInfoObj?.optInt("total_pages"),
+        nextPage = this.optInt("nextPage")
+            ?: pageInfoObj?.optInt("nextPage"),
+        hasMore = this.optBool("hasMore")
+            ?: pageInfoObj?.optBool("hasNextPage")
+            ?: pageInfoObj?.optBool("has_next_page"),
+        cursor = this.optString("cursor")
+            ?: pageInfoObj?.optString("cursor")
+            ?: pageInfoObj?.optString("endCursor"),
+        nextCursor = this.optString("nextCursor")
+            ?: pageInfoObj?.optString("endCursor"),
     )
 }
 
