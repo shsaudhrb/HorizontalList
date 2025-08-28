@@ -30,15 +30,19 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ntg.lmd.R
+import com.ntg.lmd.network.core.RetrofitProvider
+import com.ntg.lmd.order.data.remote.repository.OrdersRepositoryImpl
 import com.ntg.lmd.order.domain.model.OrdersDialogsCallbacks
 import com.ntg.lmd.order.domain.model.OrdersDialogsState
 import com.ntg.lmd.order.domain.model.OrdersHistoryUiState
+import com.ntg.lmd.order.domain.model.usecase.GetOrdersUseCase
 import com.ntg.lmd.order.ui.components.exportOrdersHistoryPdf
 import com.ntg.lmd.order.ui.components.orderHistoryCard
 import com.ntg.lmd.order.ui.components.ordersHistoryDialogs
 import com.ntg.lmd.order.ui.components.ordersHistoryMenu
 import com.ntg.lmd.order.ui.components.sharePdf
 import com.ntg.lmd.order.ui.viewmodel.OrderHistoryViewModel
+import com.ntg.lmd.order.ui.viewmodel.OrderHistoryViewModelFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -46,7 +50,13 @@ import kotlin.collections.isNotEmpty
 
 @Composable
 fun ordersHistoryRoute(registerOpenMenu: ((() -> Unit) -> Unit)? = null) {
-    val vm: OrderHistoryViewModel = viewModel()
+    val repo = OrdersRepositoryImpl(RetrofitProvider.ordersApi)
+    val useCase = GetOrdersUseCase(repo)
+    val vm: OrderHistoryViewModel = viewModel(
+        factory = OrderHistoryViewModelFactory(useCase)
+    )
+    val token = RetrofitProvider.tokenStore.getAccessToken() ?: ""
+    //val vm: OrderHistoryViewModel = viewModel()
     val orders by vm.orders.collectAsState(emptyList())
     val filter by vm.filter.collectAsState()
     val isLoadingMore by vm.isLoadingMore.collectAsState()
@@ -64,14 +74,18 @@ fun ordersHistoryRoute(registerOpenMenu: ((() -> Unit) -> Unit)? = null) {
             listState.scrollToItem(0, 0)
         }
     }
-    LaunchedEffect(Unit) { vm.loadFromAssets(ctx) }
+    //LaunchedEffect(Unit) { vm.loadFromAssets(ctx) }
+    LaunchedEffect(Unit) {
+        val token = "YOUR_TOKEN_FROM_STORE" // هنا تجيب التوكن من SecureTokenStore
+        vm.loadOrders(token)
+    }
     LaunchedEffect(Unit) { registerOpenMenu?.invoke { menuOpen = true } }
     LaunchedEffect(listState, orders) {
         snapshotFlow {
             listState.layoutInfo.visibleItemsInfo
                 .lastOrNull()
                 ?.index ?: 0
-        }.collect { lastVisible -> vm.loadMoreIfNeeded(lastVisible) }
+        }.collect { lastVisible -> vm.loadMoreIfNeeded(lastVisible, token) }
     }
 
     ordersHistoryContent(
@@ -84,7 +98,7 @@ fun ordersHistoryRoute(registerOpenMenu: ((() -> Unit) -> Unit)? = null) {
             ),
         listState = listState,
         ctx = ctx,
-        onRefresh = { vm.refreshOrders() },
+        onRefresh = { vm.refreshOrders(token) },
     )
 
     ordersHistoryDialogs(
@@ -98,8 +112,8 @@ fun ordersHistoryRoute(registerOpenMenu: ((() -> Unit) -> Unit)? = null) {
             OrdersDialogsCallbacks(
                 onFilterDismiss = { showFilterDialog = false },
                 onSortDismiss = { showSortDialog = false },
-                onApplyFilter = { allowed -> vm.setAllowedStatuses(allowed) },
-                onApplySort = { asc -> vm.setAgeAscending(asc) },
+                onApplyFilter = { allowed -> vm.setAllowedStatuses(allowed,token) },
+                onApplySort = { asc -> vm.setAgeAscending(asc,token) },
             ),
     )
 

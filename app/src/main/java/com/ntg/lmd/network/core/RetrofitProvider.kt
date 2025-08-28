@@ -6,6 +6,7 @@ import com.ntg.lmd.authentication.data.datasource.remote.api.AuthApi
 import com.ntg.lmd.network.authheader.AuthInterceptor
 import com.ntg.lmd.network.authheader.SecureTokenStore
 import com.ntg.lmd.network.authheader.TokenAuthenticator
+import com.ntg.lmd.order.data.remote.OrdersApi
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -62,4 +63,13 @@ object RetrofitProvider {
     }
 
     val okHttpForWs: OkHttpClient get() = authedOkHttp
+
+    val ordersApi: OrdersApi by lazy {
+        Retrofit
+            .Builder()
+            .baseUrl(BuildConfig.BASE_URL)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(OrdersApi::class.java)
+    }
 }
