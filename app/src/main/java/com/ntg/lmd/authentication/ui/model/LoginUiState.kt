@@ -16,6 +16,7 @@ data class LoginUiState(
     val showUsernameError: Boolean = false,
     val showPasswordError: Boolean = false,
     val loginSuccess: Boolean = false,
+    val displayName: String? = null,
 )
 
 sealed class UiText {

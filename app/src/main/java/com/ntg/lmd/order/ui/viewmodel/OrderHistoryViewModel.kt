@@ -1,35 +1,32 @@
 package com.ntg.lmd.order.ui.viewmodel
 
-import android.content.Context
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import com.ntg.lmd.order.domain.model.OrderHistoryStatus
 import com.ntg.lmd.order.domain.model.OrderHistoryUi
 import com.ntg.lmd.order.domain.model.OrdersHistoryFilter
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
+import com.ntg.lmd.order.domain.model.usecase.GetOrdersUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import retrofit2.HttpException
+import java.io.IOException
 
-class OrderHistoryViewModel : ViewModel() {
+// // ViewModel for managing orders history state (loading, filtering, sorting, pagination)
+class OrderHistoryViewModel(
+    private val getOrdersUseCase: GetOrdersUseCase,
+) : ViewModel() {
     companion object {
-        private const val PAGE_SIZE = 10
+        private const val PAGE_SIZE = 20
         private const val PREFETCH_THRESHOLD = 3
-        private const val LOADING_DELAY_MS = 600L
     }
-
-    private var all: List<OrderHistoryUi> = emptyList()
-    private val _isRefreshing = MutableStateFlow(false)
-    val isRefreshing: StateFlow<Boolean> = _isRefreshing
-    private val _filter = MutableStateFlow(OrdersHistoryFilter())
-    val filter: StateFlow<OrdersHistoryFilter> = _filter
 
     private val _orders = MutableStateFlow<List<OrderHistoryUi>>(emptyList())
     val orders: StateFlow<List<OrderHistoryUi>> = _orders
+
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing
 
     private val _isLoadingMore = MutableStateFlow(false)
     val isLoadingMore: StateFlow<Boolean> = _isLoadingMore
@@ -37,89 +34,116 @@ class OrderHistoryViewModel : ViewModel() {
     private val _endReached = MutableStateFlow(false)
     val endReached: StateFlow<Boolean> = _endReached
 
-    fun loadFromAssets(
-        context: Context,
-        fileName: String = "OrderHistory.json",
-    ) {
-        viewModelScope.launch {
-            val items =
-                withContext(Dispatchers.IO) {
-                    val json =
-                        context.assets
-                            .open(fileName)
-                            .bufferedReader()
-                            .use { it.readText() }
-                    val type = object : TypeToken<List<OrderHistoryUi>>() {}.type
-                    Gson().fromJson<List<OrderHistoryUi>>(json, type)
-                }
-            all = items
-            recomputeAndResetPaging()
-        }
-    }
+    private val _filter = MutableStateFlow(OrdersHistoryFilter())
+    val filter: StateFlow<OrdersHistoryFilter> = _filter
 
-    fun setAllowedStatuses(statuses: Set<OrderHistoryStatus>) {
-        _filter.value = _filter.value.copy(allowed = statuses)
-        recomputeAndResetPaging()
-    }
+    private var currentPage = 1
 
-    fun setAgeAscending(ascending: Boolean) {
-        _filter.value = _filter.value.copy(ageAscending = ascending)
-        recomputeAndResetPaging()
-    }
-
-    fun loadMoreIfNeeded(lastVisibleIndex: Int) {
-        if (_endReached.value || _isLoadingMore.value) return
-        if (lastVisibleIndex >= _orders.value.size - PREFETCH_THRESHOLD) loadMore()
-    }
-
-    private fun recomputeAndResetPaging() {
-        _endReached.value = false
-        val filtered = currentFilteredSorted()
-        _orders.value = filtered.take(PAGE_SIZE)
-        if (_orders.value.size >= filtered.size) _endReached.value = true
-    }
-
-    private fun loadMore() {
-        viewModelScope.launch {
-            _isLoadingMore.value = true
-            try {
-                delay(LOADING_DELAY_MS)
-                val current = _orders.value
-                val filtered = currentFilteredSorted()
-                if (current.size >= filtered.size) {
-                    _endReached.value = true
-                    return@launch
-                }
-                val next = filtered.drop(current.size).take(PAGE_SIZE)
-                _orders.value = current + next
-                if (_orders.value.size >= filtered.size) _endReached.value = true
-            } finally {
-                _isLoadingMore.value = false
-            }
-        }
-    }
-
-    fun refreshOrders() {
-        if (_isRefreshing.value) return
+    fun loadOrders(token: String) {
         viewModelScope.launch {
             _isRefreshing.value = true
             try {
-                delay(LOADING_DELAY_MS)
-                all = all.shuffled()
-                recomputeAndResetPaging()
+                currentPage = 1
+                val result =
+                    getOrdersUseCase(token, currentPage, PAGE_SIZE)
+                        .filterByStatus(_filter.value.allowed)
+                        .applySorting(_filter.value.ageAscending)
+
+                _orders.value = result
+                _endReached.value = result.isEmpty()
             } finally {
                 _isRefreshing.value = false
             }
         }
     }
 
-    private fun currentFilteredSorted(): List<OrderHistoryUi> {
-        val f = _filter.value
-        val filtered = all.filter { it.status in f.allowed }
-        return if (f.ageAscending) {
-            filtered.sortedBy { it.createdAtMillis }
-        } else {
-            filtered.sortedByDescending { it.createdAtMillis }
+    fun loadMoreOrders(token: String) {
+        if (_isLoadingMore.value || _endReached.value) return
+
+        viewModelScope.launch {
+            _isLoadingMore.value = true
+            try {
+                currentPage++
+                val more =
+                    getOrdersUseCase(token, currentPage, PAGE_SIZE)
+                        .filterByStatus(_filter.value.allowed)
+
+                if (more.isEmpty()) {
+                    _endReached.value = true
+                } else {
+                    _orders.value = _orders.value + more
+                }
+            } finally {
+                _isLoadingMore.value = false
+            }
         }
+    }
+
+    fun setAllowedStatuses(
+        statuses: Set<OrderHistoryStatus>,
+        token: String,
+    ) {
+        _filter.value = _filter.value.copy(allowed = statuses)
+        loadOrders(token)
+    }
+
+    fun loadMoreIfNeeded(
+        lastVisibleIndex: Int,
+        token: String,
+    ) {
+        if (_endReached.value || _isLoadingMore.value) return
+        if (lastVisibleIndex >= _orders.value.size - PREFETCH_THRESHOLD) {
+            if (!_endReached.value) {
+                loadMoreOrders(token)
+            }
+        }
+    }
+
+    fun refreshOrders(token: String) {
+        if (_isRefreshing.value) return
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            try {
+                val result =
+                    getOrdersUseCase(token, page = 1, limit = PAGE_SIZE)
+                        .filterByStatus(_filter.value.allowed)
+
+                if (result.isNotEmpty()) {
+                    currentPage = 1
+                    _orders.value = result
+                    _endReached.value = false
+                } else {
+                    Log.w("OrderHistoryVM", "Refresh returned empty list, keeping existing data")
+                }
+            } catch (e: IOException) {
+                Log.e("OrderHistoryVM", "Network error: ${e.message}", e)
+            } catch (e: HttpException) {
+                Log.e("OrderHistoryVM", "HTTP error: ${e.message}", e)
+            } finally {
+                _isRefreshing.value = false
+            }
+        }
+    }
+
+    private fun List<OrderHistoryUi>.filterByStatus(allowed: Set<OrderHistoryStatus>): List<OrderHistoryUi> =
+        if (allowed.isEmpty()) {
+            this
+        } else {
+            this.filter { it.status in allowed }
+        }
+
+    private fun List<OrderHistoryUi>.applySorting(ageAscending: Boolean): List<OrderHistoryUi> =
+        if (ageAscending) {
+            this.sortedBy { it.createdAtMillis }
+        } else {
+            this.sortedByDescending { it.createdAtMillis }
+        }
+
+    fun setAgeAscending(
+        ascending: Boolean,
+        token: String,
+    ) {
+        _filter.value = _filter.value.copy(ageAscending = ascending)
+        loadOrders(token)
     }
 }

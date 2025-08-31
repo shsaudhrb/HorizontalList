@@ -1,6 +1,5 @@
 package com.ntg.lmd.order.ui.components
 
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -44,17 +43,9 @@ fun ordersSortDialog(
         tonalElevation = elev,
         title = { Text(stringResource(R.string.sort), style = MaterialTheme.typography.titleLarge) },
         text = {
-            Column(Modifier.fillMaxWidth()) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(selected = ageAsc, onClick = { ageAsc = true })
-                    Spacer(Modifier.width(gapSm))
-                    Text(stringResource(R.string.sort_asc))
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(selected = !ageAsc, onClick = { ageAsc = false })
-                    Spacer(Modifier.width(gapSm))
-                    Text(stringResource(R.string.sort_desc))
-                }
+            androidx.compose.foundation.layout.Column(Modifier.fillMaxWidth()) {
+                sortOptionRow(stringResource(R.string.sort_asc), ageAsc, { ageAsc = true }, gapSm)
+                sortOptionRow(stringResource(R.string.sort_desc), !ageAsc, { ageAsc = false }, gapSm)
             }
         },
         confirmButton = {
@@ -66,6 +57,20 @@ fun ordersSortDialog(
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
         modifier = Modifier.padding(horizontal = pad),
     )
+}
+
+@Composable
+private fun sortOptionRow(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    gap: androidx.compose.ui.unit.Dp,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        RadioButton(selected = selected, onClick = onClick)
+        Spacer(Modifier.width(gap))
+        Text(text)
+    }
 }
 
 @Composable

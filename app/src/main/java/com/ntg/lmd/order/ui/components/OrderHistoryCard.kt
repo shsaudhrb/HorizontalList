@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -23,8 +22,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import com.ntg.lmd.R
 import com.ntg.lmd.order.domain.model.OrderHistoryUi
+import com.ntg.lmd.order.ui.screen.statusBadge
+import com.ntg.lmd.ui.theme.ErrorRed
+import com.ntg.lmd.ui.theme.PresentGreen
 import com.ntg.lmd.utils.timeHelper
 
 @SuppressLint("DefaultLocale")
@@ -34,13 +37,10 @@ fun orderHistoryCard(
     order: OrderHistoryUi,
 ) {
     val pad = dimensionResource(R.dimen.mediumSpace)
-    val gapSm = dimensionResource(R.dimen.smallSpace)
-    val gapXs = dimensionResource(R.dimen.smallerSpace)
     val radius = dimensionResource(R.dimen.card_radius)
-    val hair = dimensionResource(R.dimen.hairline)
     val elev = dimensionResource(R.dimen.elevation_small)
-    val currency = stringResource(R.string.currency_egp)
-    val gapV = dimensionResource(R.dimen.smallestSpace)
+    val hair = dimensionResource(R.dimen.hairline)
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(radius),
@@ -49,35 +49,53 @@ fun orderHistoryCard(
         border = BorderStroke(hair, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
     ) {
         Column(Modifier.padding(pad)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(
-                    order.number,
-                    color = Color.Gray,
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                Row(verticalAlignment = Alignment.Bottom) {
-                    Text(
-                        text = order.total.toString(),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Spacer(Modifier.width(gapV))
-                    Text(
-                        currency,
-                        color = Color.Gray,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-            }
-            Spacer(Modifier.height(gapXs))
+            orderHeaderRow(order)
+            Spacer(Modifier.height(4.dp))
+            orderFooterRow(context, order)
+        }
+    }
+}
+
+@Composable
+private fun orderHeaderRow(order: OrderHistoryUi) {
+    val currency = stringResource(R.string.currency_egp)
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(order.number, color = Color.Gray, style = MaterialTheme.typography.titleMedium)
+        Text(
+            text = "${order.total} $currency",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
+}
+
+@Composable
+private fun orderFooterRow(
+    context: Context,
+    order: OrderHistoryUi,
+) {
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column {
             Text(order.customer, style = MaterialTheme.typography.bodyMedium)
-            Spacer(Modifier.height(gapV))
             Text(
                 text = timeHelper(context, order.createdAtMillis),
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(Modifier.height(gapSm))
+        }
+
+        when {
+            order.isCancelled -> statusBadge("Cancelled", ErrorRed)
+            order.isFailed -> statusBadge("Failed", MaterialTheme.colorScheme.onSurfaceVariant)
+            order.isDelivered -> statusBadge("Delivered", PresentGreen)
         }
     }
 }

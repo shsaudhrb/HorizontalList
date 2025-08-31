@@ -131,6 +131,7 @@ class LoginViewModel(
                             isLoading = false,
                             loginSuccess = true,
                             message = R.string.msg_welcome,
+                            displayName = authRepo.lastLoginName
                         )
                     }
                     onResult(true)

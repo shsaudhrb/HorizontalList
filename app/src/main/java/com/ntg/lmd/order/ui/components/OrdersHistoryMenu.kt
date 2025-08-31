@@ -10,7 +10,6 @@ import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -24,6 +23,40 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.ntg.lmd.R
+
+@Composable
+private fun menuItem(
+    text: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit,
+) {
+    androidx.compose.material3.DropdownMenuItem(
+        text = { Text(text) },
+        leadingIcon = { Icon(icon, null) },
+        onClick = onClick,
+    )
+}
+
+@Composable
+private fun menuContent(
+    onClose: () -> Unit,
+    onExportPdfClick: () -> Unit,
+    onFilterClick: () -> Unit,
+    onSortClick: () -> Unit,
+) {
+    menuItem(stringResource(R.string.export_pdf), Icons.Default.PictureAsPdf) {
+        onClose()
+        onExportPdfClick()
+    }
+    menuItem(stringResource(R.string.filter), Icons.Default.FilterList) {
+        onClose()
+        onFilterClick()
+    }
+    menuItem(stringResource(R.string.sort), Icons.Default.Sort) {
+        onClose()
+        onSortClick()
+    }
+}
 
 @Composable
 fun ordersMenuDropdown(
@@ -55,30 +88,7 @@ fun ordersMenuDropdown(
                 modifier = Modifier.width(menuWidth),
                 offset = DpOffset(0.dp, menuOffsetY),
             ) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.export_pdf)) },
-                    leadingIcon = { Icon(Icons.Default.PictureAsPdf, null) },
-                    onClick = {
-                        onClose()
-                        onExportPdfClick()
-                    },
-                )
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.filter)) },
-                    leadingIcon = { Icon(Icons.Default.FilterList, null) },
-                    onClick = {
-                        onClose()
-                        onFilterClick()
-                    },
-                )
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.sort)) },
-                    leadingIcon = { Icon(Icons.Default.Sort, null) },
-                    onClick = {
-                        onClose()
-                        onSortClick()
-                    },
-                )
+                menuContent(onClose, onExportPdfClick, onFilterClick, onSortClick)
             }
         }
     }
@@ -92,11 +102,5 @@ fun ordersHistoryMenu(
     onSortClick: () -> Unit,
     onExportPdfClick: () -> Unit,
 ) {
-    ordersMenuDropdown(
-        open = open,
-        onClose = onClose,
-        onFilterClick = onFilterClick,
-        onSortClick = onSortClick,
-        onExportPdfClick = onExportPdfClick,
-    )
+    ordersMenuDropdown(open, onClose, onFilterClick, onSortClick, onExportPdfClick)
 }
