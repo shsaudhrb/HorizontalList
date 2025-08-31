@@ -3,6 +3,7 @@ package com.ntg.lmd.network.core
 import android.content.Context
 import com.ntg.lmd.BuildConfig
 import com.ntg.lmd.authentication.data.datasource.remote.api.AuthApi
+import com.ntg.lmd.mainscreen.data.datasource.remote.GetUsersApi
 import com.ntg.lmd.mainscreen.data.datasource.remote.LiveOrdersApiService
 import com.ntg.lmd.mainscreen.data.datasource.remote.OrdersApi
 import com.ntg.lmd.mainscreen.data.datasource.remote.UpdatetOrdersStatusApi
@@ -88,10 +89,18 @@ object RetrofitProvider {
     val updateStatusApi: UpdatetOrdersStatusApi by lazy {
         Retrofit
             .Builder()
-            .baseUrl(BuildConfig.BASE_URL) // functions root
-            .client(authedOkHttp) // includes AuthInterceptor + TokenAuthenticator
+            .baseUrl(BuildConfig.BASE_URL)
+            .client(authedOkHttp)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(UpdatetOrdersStatusApi::class.java)
+    }
+    val usersApi: GetUsersApi by lazy {
+        Retrofit.Builder()
+            .baseUrl(BuildConfig.BASE_URL)
+            .client(authedOkHttp)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(GetUsersApi::class.java)
     }
 }

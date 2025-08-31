@@ -53,10 +53,13 @@ import androidx.navigation.NavController
 import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.data.repository.MyOrdersRepositoryImpl
 import com.ntg.lmd.mainscreen.data.repository.UpdateOrdersStatusRepository
+import com.ntg.lmd.mainscreen.data.repository.UsersRepositoryImpl
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
+import com.ntg.lmd.mainscreen.domain.usecase.GetActiveUsersUseCase
 import com.ntg.lmd.mainscreen.domain.usecase.GetMyOrdersUseCase
 import com.ntg.lmd.mainscreen.domain.usecase.UpdateOrderStatusUseCase
+import com.ntg.lmd.mainscreen.ui.components.ReassignBottomSheet
 import com.ntg.lmd.mainscreen.ui.components.bottomStickyButton
 import com.ntg.lmd.mainscreen.ui.components.callButton
 import com.ntg.lmd.mainscreen.ui.components.deliverDialog
@@ -71,6 +74,8 @@ import com.ntg.lmd.mainscreen.ui.components.reassignDialog
 import com.ntg.lmd.mainscreen.ui.components.simpleConfirmDialog
 import com.ntg.lmd.mainscreen.ui.screens.orders.model.LocalUiOnlyStatusBus
 import com.ntg.lmd.mainscreen.ui.screens.orders.model.MyOrdersUiState
+import com.ntg.lmd.mainscreen.ui.viewmodel.ActiveAgentsViewModel
+import com.ntg.lmd.mainscreen.ui.viewmodel.ActiveAgentsViewModelFactory
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyOrdersViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyOrdersViewModelFactory
 import com.ntg.lmd.mainscreen.ui.viewmodel.OrderLogger
@@ -101,7 +106,18 @@ fun myOrdersScreen(
         updateUsecase
     )
     )
+    val repoUsers = remember { UsersRepositoryImpl(RetrofitProvider.usersApi) }
+    val getUsers = remember { GetActiveUsersUseCase(repoUsers) }
+    val agentsVm: ActiveAgentsViewModel = viewModel(factory = ActiveAgentsViewModelFactory(getUsers))
+    val agentsState by agentsVm.state.collectAsState()
 
+    var reassignOrderId by remember { mutableStateOf<String?>(null) }
+
+    // --- pass a lambda to open sheet from card:
+    val onReassignRequested: (String) -> Unit = { orderId ->
+        reassignOrderId = orderId
+        agentsVm.load()
+    }
     val state by ordersVm.state.collectAsState()
     val updatingIds by updateVm.updatingIds.collectAsState()
     val ctx = LocalContext.current
@@ -146,10 +162,23 @@ fun myOrdersScreen(
                 listState = listState,
                 onOpenOrderDetails = onOpenOrderDetails,
                 context = ctx,
-                updatingIds = updatingIds
+                updatingIds = updatingIds,
+                onReassignRequested = onReassignRequested
             )
         }
     }
+    ReassignBottomSheet(
+        open = reassignOrderId != null,
+        state = agentsState,
+        onDismiss = { reassignOrderId = null },
+        onRetry = { agentsVm.load() },
+        onSelect = { user ->
+            val orderId = reassignOrderId ?: return@ReassignBottomSheet
+            OrderLogger.uiTap(orderId, state.orders.firstOrNull { it.id == orderId }?.orderNumber, "Menu:Reassign→${user.name}")
+            updateVm.update(orderId, OrderStatus.REASSIGNED, assignedAgentId = user.id)  // ← POST
+            reassignOrderId = null
+        }
+    )
 }
 
 @Composable
@@ -202,8 +231,10 @@ private fun ordersContent(
     listState: LazyListState,
     onOpenOrderDetails: (String) -> Unit,
     context: Context,
-    updatingIds: Set<String>
-) {
+    updatingIds: Set<String>,
+    onReassignRequested: (String) -> Unit,
+
+    ) {
     Column(Modifier.fillMaxSize()) {
         if (!state.isGpsAvailable) {
             infoBanner(
@@ -222,6 +253,7 @@ private fun ordersContent(
                 updatingIds = updatingIds,
                 updateVm=updateVm,
                 onDetails = onOpenOrderDetails,
+                onReassignRequested = onReassignRequested,
                 onCall = { id ->
                     val order = state.orders.firstOrNull { it.id == id }
                     val phone = order?.customerPhone
@@ -268,6 +300,7 @@ fun orderList(
     isLoadingMore: Boolean,
     updatingIds: Set<String>,
     updateVm:UpdateOrderStatusViewModel ,
+    onReassignRequested: (String) -> Unit,
     onDetails: (String) -> Unit,
     onCall: (String) -> Unit,
     onAction: (String, ActionDialog) -> Unit,
@@ -284,6 +317,7 @@ fun orderList(
                 onDetails = { onDetails(order.id) },
                 onCall = { onCall(order.id) },
                 onAction = { dialog -> onAction(order.id, dialog) },
+                onReassignRequested = { onReassignRequested(order.id) },
                 updateVm = updateVm
             )
         }
@@ -308,6 +342,7 @@ fun myOrderCard(
     onDetails: () -> Unit,
     onCall: () -> Unit,
     onAction: (ActionDialog) -> Unit,
+    onReassignRequested: () -> Unit,
     updateVm: UpdateOrderStatusViewModel,
 ) {
     var dialog by remember { mutableStateOf<ActionDialog?>(null) }
@@ -329,7 +364,7 @@ fun myOrderCard(
                 onCancel = {
                     updateVm.update(order.id, OrderStatus.CANCELED)
                            },
-                onReassign = { showReassign = true },
+                onReassign = { onReassignRequested() }
             )
 
             Spacer(Modifier.height(dimensionResource(R.dimen.mediumSpace)))
