@@ -106,7 +106,7 @@ tasks.register("detektFileSize", io.gitlab.arturbosch.detekt.Detekt::class) {
     group = "verification"
 
     config.setFrom(files("../detekt-file-size.yml"))
-    
+
     source = fileTree("src/main/java")
 
     reports {
@@ -179,6 +179,9 @@ dependencies {
     implementation(libs.androidx.security.crypto)
 
     implementation(libs.material.icons.extended)
+
+    // LeakCanary for memory leak detection
+    debugImplementation(libs.leakcanary.android)
 }
 
 // Custom tasks for code quality checks
