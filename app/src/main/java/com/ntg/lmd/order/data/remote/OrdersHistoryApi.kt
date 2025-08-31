@@ -13,8 +13,8 @@ interface OrdersHistoryApi {
         @Query("status_id") statusIds: String =
             OrderStatusCode.fromList(
                 listOf(
-                    OrderStatusCode.DELIVERED,
                     OrderStatusCode.CANCELLED,
+                    OrderStatusCode.FAILED,
                     OrderStatusCode.DONE,
                 ),
             ),

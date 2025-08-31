@@ -3,8 +3,8 @@ package com.ntg.lmd.order.domain.model
 enum class OrderStatusCode(
     val code: Int,
 ) {
-    DELIVERED(3),
-    CANCELLED(7),
+    CANCELLED(3),
+    FAILED(7),
     DONE(8),
     ;
 
