@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ntg.lmd.mainscreen.domain.model.DeliveryLog
+import com.ntg.lmd.mainscreen.domain.paging.OrdersPaging
+import com.ntg.lmd.mainscreen.domain.usecase.DeliveryStatusIds
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -32,8 +34,6 @@ class DeliveriesLogViewModel : ViewModel() {
 
     companion object {
         private const val LOAD_MORE_DELAY_MS = 250L
-        private const val PAGE_SIZE = 20
-        private val STATUS_FILTERS = listOf(3, 7, 8)
     }
 
     fun load(context: Context) {
@@ -62,7 +62,7 @@ class DeliveriesLogViewModel : ViewModel() {
             try {
                 reset()
                 delay(LOAD_MORE_DELAY_MS)
-                viewModelScope.launch { fetchNext(context) }
+                fetchNext(context)
             } finally {
                 _isRefreshing.value = false
             }
@@ -79,8 +79,8 @@ class DeliveriesLogViewModel : ViewModel() {
             val (items, next) =
                 useCase(
                     page = page,
-                    limit = PAGE_SIZE,
-                    statusIds = STATUS_FILTERS,
+                    limit = OrdersPaging.PAGE_SIZE,
+                    statusIds = DeliveryStatusIds.DEFAULT_LOG_STATUSES,
                     search = currentQuery,
                 )
             if (g == generationCounter) applyPageResult(items, next)
