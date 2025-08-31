@@ -35,7 +35,6 @@ fun ordersFilterDialog(
     val radius = dimensionResource(R.dimen.dialog_corner_radius)
     val elev = dimensionResource(R.dimen.elevation_small)
     val pad = dimensionResource(R.dimen.mediumSpace)
-    val gapSm = dimensionResource(R.dimen.smallSpace)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -43,34 +42,7 @@ fun ordersFilterDialog(
         containerColor = MaterialTheme.colorScheme.surface,
         tonalElevation = elev,
         title = { Text(stringResource(R.string.filter), style = MaterialTheme.typography.titleLarge) },
-        text = {
-            Column(Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.statuses), style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(gapSm))
-
-                statusCheckbox(
-                    stringResource(R.string.delivered),
-                    OrderHistoryStatus.DELIVERED,
-                    allowed,
-                ) { s, checked ->
-                    allowed = if (checked) allowed + s else allowed - s
-                }
-                statusCheckbox(
-                    stringResource(R.string.cancelled),
-                    OrderHistoryStatus.CANCELLED,
-                    allowed,
-                ) { s, checked ->
-                    allowed = if (checked) allowed + s else allowed - s
-                }
-                statusCheckbox(
-                    stringResource(R.string.failed),
-                    OrderHistoryStatus.FAILED,
-                    allowed,
-                ) { s, checked ->
-                    allowed = if (checked) allowed + s else allowed - s
-                }
-            }
-        },
+        text = { filterDialogContent(allowed) { s, checked -> allowed = if (checked) allowed + s else allowed - s } },
         confirmButton = {
             TextButton(onClick = {
                 onApply(allowed)
@@ -80,6 +52,21 @@ fun ordersFilterDialog(
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
         modifier = Modifier.padding(horizontal = pad),
     )
+}
+
+@Composable
+private fun filterDialogContent(
+    allowed: Set<OrderHistoryStatus>,
+    onChange: (OrderHistoryStatus, Boolean) -> Unit,
+) {
+    val gapSm = dimensionResource(R.dimen.smallSpace)
+    Column(Modifier.fillMaxWidth()) {
+        Text(stringResource(R.string.statuses), style = MaterialTheme.typography.titleMedium)
+        Spacer(Modifier.height(gapSm))
+        statusCheckbox(stringResource(R.string.delivered), OrderHistoryStatus.DONE, allowed, onChange)
+        statusCheckbox(stringResource(R.string.cancelled), OrderHistoryStatus.CANCELLED, allowed, onChange)
+        statusCheckbox(stringResource(R.string.failed), OrderHistoryStatus.FAILED, allowed, onChange)
+    }
 }
 
 @Composable
