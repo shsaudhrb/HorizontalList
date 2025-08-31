@@ -1,7 +1,11 @@
 package com.ntg.lmd.mainscreen.ui.screens.orders.model
 
+import com.ntg.lmd.mainscreen.domain.model.OrderInfo
+
+/*
+
 data class OrderUI( // single order
-    val id: Long = 0,
+    val id: String,
     val orderNumber: String,
     val status: String,
     val customerName: String,
@@ -10,9 +14,10 @@ data class OrderUI( // single order
     val details: String?,
     val distanceMeters: Double?,
 )
+*/
 
 data class MyOrdersUiState(
-    val orders: List<OrderUI> = emptyList(),
+    val orders: List<OrderInfo> = emptyList(),
     val isLoading: Boolean = false,
     val isLoadingMore: Boolean = false, // for paging
     val isRefreshing: Boolean = false, // for refresh
@@ -21,6 +26,7 @@ data class MyOrdersUiState(
     val emptyMessage: String? = null,
     val errorMessage: String? = null,
 )
+/*
 
 enum class OrderStatus { ADDED, CONFIRMED, DISPATCHED, DELIVERING, DELIVERED, FAILED, CANCELED }
 
@@ -36,3 +42,4 @@ val OrderUI.statusEnum: OrderStatus
             "canceled" -> OrderStatus.CANCELED
             else -> OrderStatus.ADDED
         }
+*/

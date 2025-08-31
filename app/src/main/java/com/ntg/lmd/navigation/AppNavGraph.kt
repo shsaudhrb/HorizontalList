@@ -219,7 +219,7 @@ private fun drawerNavGraph(
     startDestination: String,
     registerOpenMenu: (setter: (() -> Unit)?) -> Unit,
     externalQuery: String,
-    onOpenOrderDetails: (Long) -> Unit,
+    onOpenOrderDetails: (String) -> Unit,
 ) {
     NavHost(
         navController = navController,
@@ -240,7 +240,7 @@ private fun drawerNavGraph(
             arguments = listOf(navArgument("id") { type = NavType.StringType }),
         ) { backStackEntry ->
             val idStr = backStackEntry.arguments?.getString("id")
-            val id = idStr?.toLongOrNull()
+            val id = idStr
             orderDetailsScreen(
                 orderId = id, // nullable is OK
                 navController = navController,

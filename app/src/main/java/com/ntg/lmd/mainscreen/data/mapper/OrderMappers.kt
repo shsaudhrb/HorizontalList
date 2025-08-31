@@ -3,9 +3,10 @@ package com.ntg.lmd.mainscreen.data.mapper
 import com.ntg.lmd.mainscreen.data.model.OrderDto
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
-
+/// Renad
 fun OrderDto.toDomain(): OrderInfo =
     OrderInfo(
+        id=orderId,
         name = customerName.orEmpty(),
         orderNumber = orderNumber,
         timeAgo = "now", // you can replace this with proper relative time later
@@ -26,4 +27,6 @@ fun OrderDto.toDomain(): OrderInfo =
                 else -> OrderStatus.ADDED
             },
         price = "---",
+        customerPhone = null,
+        details =null
     )

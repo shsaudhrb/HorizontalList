@@ -33,6 +33,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.CameraPositionState
@@ -41,7 +42,6 @@ import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.ui.components.mapCenter
 import com.ntg.lmd.mainscreen.ui.model.MapStates
-import com.ntg.lmd.mainscreen.ui.screens.orders.model.OrderUI
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyPoolVMFactory
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyPoolViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -56,21 +56,23 @@ private val ZERO_LATLNG = LatLng(0.0, 0.0)
 private fun OrderInfo.hasValidLatLng(): Boolean = lat.isFinite() && lng.isFinite() && !(lat == 0.0 && lng == 0.0)
 
 // --- OrderInfo -> OrderUI mapper (adapt field names if yours differ) ---
-private fun OrderInfo.toOrderUI(): OrderUI =
-    OrderUI(
-        status = status.name.lowercase(), // matches your statusEnum mapping
-        customerName = name,
-        orderNumber = orderNumber,
-        customerPhone = null,
-        totalPrice = price,
-        details = null,
-        distanceMeters = distanceKm,
-    )
+//private fun OrderInfo.toOrderUI(): OrderUI =
+//    OrderUI(
+//        id = id,
+//        status = status.name.lowercase(), // matches your statusEnum mapping
+//        customerName = name,
+//        orderNumber = orderNumber,
+//        customerPhone = null,
+//        totalPrice = price,
+//        details = null,
+//        distanceMeters = distanceKm,
+//
+//    )
 
 @Composable
 fun myPoolScreen(
     viewModel: MyPoolViewModel =
-        androidx.lifecycle.viewmodel.compose.viewModel(
+        viewModel(
             factory = MyPoolVMFactory(),
         ),
 ) {
@@ -249,15 +251,15 @@ fun myPoolBottom(
         ) {
             itemsIndexed(orders, key = { _, order -> order.orderNumber }) { index, info ->
                 // Map once per item and remember
-                val uiOrder = remember(info) { info.toOrderUI() }
+              //  val uiOrder = remember(key1 = info) { info.toOrderUI() }
 
-                myOrderorderCard(
-                    order = uiOrder,
-                    onDetails = {},
-                    onConfirmOrPick = { /* not used inside the card body; keep if needed later */ },
-                    onCall = {},
-                    modifier = Modifier.padding(22.dp),
-                )
+//                myOrderCard(
+//                    order = uiOrder,
+//                    onDetails = {},
+//                    onConfirmOrPick = { /* not used inside the card body; keep if needed later */ },
+//                    onCall = {},
+//                    modifier = Modifier.padding(22.dp),
+//                )
             }
         }
     }

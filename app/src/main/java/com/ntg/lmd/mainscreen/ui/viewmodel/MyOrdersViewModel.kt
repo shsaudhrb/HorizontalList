@@ -1,256 +1,181 @@
 package com.ntg.lmd.mainscreen.ui.viewmodel
 
 import android.content.Context
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ntg.lmd.mainscreen.domain.model.OrderInfo
+import com.ntg.lmd.mainscreen.domain.model.OrderStatus
+import com.ntg.lmd.mainscreen.domain.usecase.GetMyOrdersUseCase
 import com.ntg.lmd.mainscreen.ui.screens.orders.model.MyOrdersUiState
-import com.ntg.lmd.mainscreen.ui.screens.orders.model.OrderStatus
-import com.ntg.lmd.mainscreen.ui.screens.orders.model.OrderUI
-import com.ntg.lmd.utils.OrdersLoaderHelper
-import kotlinx.coroutines.Dispatchers
+import com.ntg.lmd.mainscreen.ui.screens.orders.model.LocalUiOnlyStatusBus
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import org.json.JSONException
-import java.io.IOException
+import kotlin.math.min
 
 private const val PAGE_SIZE = 10
-private const val LOAD_DELAY_MS = 600L
-private const val TAG = "MyOrdersViewModel"
+private const val LOAD_DELAY_MS = 600L // only for paging spinner feel
 
-class MyOrdersViewModel : ViewModel() {
-    private val _state = MutableStateFlow(MyOrdersUiState(isLoading = true))
+class MyOrdersViewModel(
+    private val getMyOrders: GetMyOrdersUseCase
+) : ViewModel() {
+
+    private val _state = MutableStateFlow(MyOrdersUiState(isLoading = false))
     val state: StateFlow<MyOrdersUiState> = _state
 
-    private var allOrders: List<OrderUI> = emptyList()
-
-    // cache a pre-sorted list (by nearest distance, nulls last)
-    private var allOrdersSorted: List<OrderUI> = emptyList()
-
-    private var page = 0
+    /** Full dataset accumulated so far (concatenated pages) */
+    private val allOrders: MutableList<OrderInfo> = mutableListOf()
+    /** API is 1-based */
+    private var page = 1
     private var endReached = false
 
-    // One reusable comparator
-    private val byNearest =
-        compareBy<OrderUI> { it.distanceMeters == null }
-            .thenBy { it.distanceMeters ?: Double.MAX_VALUE }
+    // ---------- PUBLIC API ----------
 
-    private suspend fun readAll(context: Context): List<OrderUI> =
-        // Reads all orders from assets
-        withContext(Dispatchers.IO) { OrdersLoaderHelper.loadFromAssets(context) }
-
-    private fun rebuildSortCache() { // Rebuilds the cached list sorted by nearest distance
-        allOrdersSorted = allOrders.sortedWith(byNearest)
-    }
-
-    fun loadOrders(context: Context) { // loads orders, rebuilds cache, resets paging, and publishes the first page
-        viewModelScope.launch {
-            _state.update {
-                it.copy(
-                    isLoading = true,
-                    errorMessage = null,
-                    emptyMessage = null,
-                )
-            }
-            try {
-                allOrders = readAll(context)
-                rebuildSortCache() // sort once
-
-                // reset paging
-                page = 0
-                endReached = false
-
-                val first = currentFilteredFromCache().take(PAGE_SIZE)
-                _state.update {
-                    it.copy(
-                        isLoading = false,
-                        orders = first,
-                        emptyMessage = null,
-                        errorMessage = null,
-                    )
-                }
-                if (first.size < PAGE_SIZE) endReached = true
-            } catch (e: IOException) {
-                Log.e(TAG, "Unable to read orders file.", e)
-                val msg = "Unable to read orders file: ${e.message ?: "IO error"}"
-                _state.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = msg,
-                    )
-                }
-            } catch (e: JSONException) {
-                Log.e(TAG, "Orders file format is invalid.", e)
-                val msg = "Orders file format is invalid: ${e.message ?: "JSON error"}"
-                _state.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = msg,
-                    )
-                }
-            } catch (e: SecurityException) {
-                Log.e(TAG, "Access to orders file denied.", e)
-                _state.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = "Access to orders file denied.",
-                    )
-                }
-            }
-        }
-    }
-
-    fun onQueryChange(newQuery: String) { // Updates the search query
-        _state.update { it.copy(query = newQuery) }
-        page = 0
-        endReached = false
-        applyFilter(resetPaging = true)
-    }
-
-    // returns the cached (already sorted) orders filtered by the current query
-    private fun currentFilteredFromCache(): List<OrderUI> {
-        val q = state.value.query.trim()
-        val source = allOrdersSorted
-        return if (q.isBlank()) {
-            source
-        } else {
-            source.filter { o ->
-                o.orderNumber.contains(q, true) ||
-                    o.customerName.contains(q, true) ||
-                    (o.details?.contains(q, true) == true)
-            }
-        }
-    }
-
-    // Applies the query filter to the cache and updates the visible page
-    private fun applyFilter(resetPaging: Boolean = false) {
-        val base = currentFilteredFromCache() // already sorted
-        val firstPage =
-            if (resetPaging) base.take(PAGE_SIZE) else _state.value.orders
-
-        endReached = base.size <= PAGE_SIZE
-
-        val emptyMsg =
-            when {
-                allOrders.isEmpty() && _state.value.query.isBlank() -> "No active orders."
-                base.isEmpty() && _state.value.query.isNotBlank() -> "No matching orders."
-                else -> null
-            }
+    /** Initial load. Shows big loader only if there’s no data yet. */
+    fun loadOrders(context: Context) {
+        val alreadyHasData = _state.value.orders.isNotEmpty()
+        if (_state.value.isLoading) return
 
         _state.update {
             it.copy(
-                orders = firstPage,
-                emptyMessage = emptyMsg,
+                isLoading = !alreadyHasData,
                 errorMessage = null,
+                emptyMessage = null
             )
         }
-    }
-
-    fun loadNextPage() { //  Appends the next page from the filtered cache
-        val s = state.value
-        if (s.isLoading || s.isLoadingMore || endReached) return
 
         viewModelScope.launch {
-            _state.value = s.copy(isLoadingMore = true)
+            try {
+                page = 1
+                endReached = false
 
-            // simulate network latency
-            kotlinx.coroutines.delay(LOAD_DELAY_MS)
+                val first = fetchPage(page)
+                allOrders.clear()
+                allOrders.addAll(first)
+                endReached = first.size < PAGE_SIZE
 
-            val base = currentFilteredFromCache() // already sorted
-            page += 1
-            val from = page * PAGE_SIZE
-            val next =
-                if (from >= base.size) {
-                    emptyList()
-                } else {
-                    base.drop(from).take(PAGE_SIZE)
+                publishFilteredFirstPage()
+            } catch (t: Throwable) {
+                _state.update {
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = if (!alreadyHasData) (t.message ?: "Load failed") else null
+                    )
                 }
-
-            if (next.isEmpty()) endReached = true
-
-            _state.update {
-                it.copy(
-                    isLoadingMore = false,
-                    orders = it.orders + next,
-                )
+                if (alreadyHasData) {
+                    LocalUiOnlyStatusBus.errorEvents.tryEmit(
+                        Pair(t.message ?: "Load failed") { loadOrders(context) }
+                    )
+                }
             }
         }
     }
 
-    fun updateStatusLocally( // Updates a single order’s status locally in the U
-        id: Long,
-        newStatus: OrderStatus,
-    ) {
-        val updated =
-            state.value.orders.map { o ->
-                if (o.id == id) {
-                    o.copy(
-                        status =
-                            when (newStatus) {
-                                OrderStatus.ADDED -> "added"
-                                OrderStatus.CONFIRMED -> "confirmed"
-                                OrderStatus.DISPATCHED -> "dispatched"
-                                OrderStatus.DELIVERING -> "delivering"
-                                OrderStatus.DELIVERED -> "delivered"
-                                OrderStatus.FAILED -> "failed"
-                                OrderStatus.CANCELED -> "canceled"
-                            },
-                    )
-                } else {
-                    o
-                }
-            }
-        _state.update { it.copy(orders = updated) }
-        // If distance can change dynamically in your app, call rebuildSortCache() when it does.
-    }
-
-    fun refresh(context: Context) { // Pull-to-refresh
+    /** Pull-to-refresh. Keeps list visible; replaces data on success; stops spinner in finally. */
+    fun refresh(context: Context) {
         val s = _state.value
         if (s.isRefreshing || s.isLoading) return
+        _state.update { it.copy(isRefreshing = true, errorMessage = null) }
 
         viewModelScope.launch {
-            _state.update { it.copy(isRefreshing = true, errorMessage = null) }
             try {
-                allOrders = readAll(context)
-                rebuildSortCache() // refresh also updates cache
-
-                // inline former applyFirstPageFrom(base)
-                val base = currentFilteredFromCache()
-                page = 0
-                endReached = false
-                val first = base.take(PAGE_SIZE)
-                if (first.size < PAGE_SIZE) endReached = true
-
-                val emptyMsg =
-                    when {
-                        allOrders.isEmpty() && state.value.query.isBlank() -> "No active orders."
-                        base.isEmpty() && state.value.query.isNotBlank() -> "No matching orders."
-                        else -> null
-                    }
-                _state.update {
-                    it.copy(
-                        orders = first,
-                        emptyMessage = emptyMsg,
-                        errorMessage = null,
-                    )
-                }
-            } catch (e: IOException) {
-                Log.e(TAG, "Refresh IO error.", e)
-                _state.update { it.copy(errorMessage = e.message ?: "Refresh failed (IO)") }
-            } catch (e: JSONException) {
-                Log.e(TAG, "Refresh JSON parse error.", e)
-                _state.update { it.copy(errorMessage = e.message ?: "Refresh failed (JSON)") }
-            } catch (e: SecurityException) {
-                Log.e(TAG, "Refresh security error.", e)
-                _state.update { it.copy(errorMessage = "Access denied during refresh") }
+                val fresh = fetchPage(1)
+                page = 1
+                endReached = fresh.size < PAGE_SIZE
+                allOrders.clear()
+                allOrders.addAll(fresh)
+                publishFilteredFirstPage()
+            } catch (t: Throwable) {
+                LocalUiOnlyStatusBus.errorEvents.tryEmit(
+                    Pair(t.message ?: "Refresh failed") { refresh(context) }
+                )
             } finally {
                 _state.update { it.copy(isRefreshing = false) }
             }
         }
     }
 
+    /** Infinite scroll. Error -> snackbar, keep existing list. */
+    fun loadNextPage(context: Context) {
+        val s = state.value
+        if (s.isLoading || s.isLoadingMore || endReached) return
+
+        viewModelScope.launch {
+            _state.update { it.copy(isLoadingMore = true) }
+            try {
+                delay(LOAD_DELAY_MS) // optional, for spinner feel
+                val nextPage = page + 1
+                val next = fetchPage(nextPage)
+
+                if (next.isEmpty() || next.size < PAGE_SIZE) endReached = true
+                page = nextPage
+                allOrders.addAll(next)
+                publishFilteredAppend()
+            } catch (t: Throwable) {
+                LocalUiOnlyStatusBus.errorEvents.tryEmit(
+                    Pair(t.message ?: "Couldn't load more") { loadNextPage(context) }
+                )
+                _state.update { it.copy(isLoadingMore = false) }
+            }
+        }
+    }
+
     fun retry(context: Context) = loadOrders(context)
+
+    fun onQueryChange(newQuery: String) {
+        _state.update { it.copy(query = newQuery) }
+        publishFilteredFirstPage()
+    }
+
+    /** Local-only status change (for UI). Keep if useful. */
+    fun updateStatusLocally(id: String, newStatus: OrderStatus) {
+        val updated = state.value.orders.map { o -> if (o.id == id) o.copy(status = newStatus) else o }
+        _state.update { it.copy(orders = updated) }
+    }
+
+    // ---------- INTERNALS ----------
+
+    private suspend fun fetchPage(page: Int): List<OrderInfo> {
+        // Use case returns List<OrderInfo>; the use case should call repository/retrofit
+        return getMyOrders(page = page, limit = PAGE_SIZE)
+    }
+
+    private fun currentFiltered(): List<OrderInfo> {
+        val q = state.value.query.trim()
+        if (q.isBlank()) return allOrders
+        return allOrders.filter { o ->
+            o.orderNumber.contains(q, ignoreCase = true) ||
+                    o.name.contains(q, ignoreCase = true) ||
+                    (o.details?.contains(q, ignoreCase = true) == true)
+        }
+    }
+
+    private fun publishFilteredFirstPage() {
+        val base = currentFiltered()
+        val first = base.take(PAGE_SIZE)
+        val emptyMsg =
+            when {
+                base.isEmpty() && state.value.query.isBlank() -> "No active orders."
+                base.isEmpty() && state.value.query.isNotBlank() -> "No matching orders."
+                else -> null
+            }
+
+        _state.update {
+            it.copy(
+                isLoading = false,
+                isLoadingMore = false,
+                orders = first,
+                emptyMessage = emptyMsg,
+                errorMessage = null
+            )
+        }
+    }
+
+    private fun publishFilteredAppend() {
+        val base = currentFiltered()
+        val visibleCount = min(page * PAGE_SIZE, base.size) // page is 1-based
+        _state.update { it.copy(isLoadingMore = false, orders = base.take(visibleCount)) }
+    }
 }

@@ -1,6 +1,8 @@
 package com.ntg.lmd.mainscreen.domain.model
+/// Renad
 
 data class OrderInfo(
+    val id: String = "",
     val name: String = "",
     val orderNumber: String = "",
     val timeAgo: String = "0m ago",
@@ -10,6 +12,8 @@ data class OrderInfo(
     val lng: Double = 0.0,
     val status: OrderStatus = OrderStatus.ADDED,
     val price: String = "---",
+    val customerPhone:String?,
+    val details:String?
 )
 
 enum class OrderStatus {

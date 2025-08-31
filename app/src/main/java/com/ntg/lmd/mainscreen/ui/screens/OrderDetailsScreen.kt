@@ -15,7 +15,7 @@ import androidx.navigation.NavController
 
 @Composable
 fun orderDetailsScreen(
-    orderId: Long?,
+    orderId: String?,
     navController: NavController,
 ) {
     Scaffold { inner ->
@@ -27,7 +27,7 @@ fun orderDetailsScreen(
         ) {
             Text("Order Details", style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(12.dp))
-            Text("Order ID: ${orderId ?: -1}", style = MaterialTheme.typography.bodyLarge)
+            Text("Order ID: ${orderId}", style = MaterialTheme.typography.bodyLarge)
             Spacer(Modifier.height(24.dp))
 
             // Back to previous screen

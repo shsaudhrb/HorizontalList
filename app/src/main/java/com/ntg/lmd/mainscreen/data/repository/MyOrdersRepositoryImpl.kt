@@ -8,15 +8,35 @@ import com.ntg.lmd.mainscreen.domain.repository.MyOrdersRepository
 class MyOrdersRepositoryImpl(
     private val api: OrdersApi,
 ) : MyOrdersRepository {
+
+    // very simple in-memory cache
+    private var cachedPage: Int? = null
+    private var cachedLimit: Int? = null
+    private var cachedOrders: List<OrderInfo>? = null
+
     override suspend fun getOrders(
         page: Int,
         limit: Int,
     ): List<OrderInfo> {
+        if (cachedPage == page && cachedLimit == limit && cachedOrders != null) {
+            return cachedOrders!!
+        }
         val env = api.getOrders(page = page, limit = limit)
         if (!env.success) error(env.error ?: "Unknown error from orders-list")
-        return env.data
+        val list = env.data
             ?.orders
             .orEmpty()
             .map { it.toDomain() }
+
+        cachedPage = page
+        cachedLimit = limit
+        cachedOrders = list
+        return list
+    }
+
+    fun clearCache() {
+        cachedPage = null
+        cachedLimit = null
+        cachedOrders = null
     }
 }

@@ -35,9 +35,8 @@ import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.ntg.lmd.R
-import com.ntg.lmd.mainscreen.ui.screens.orders.model.OrderStatus
-import com.ntg.lmd.mainscreen.ui.screens.orders.model.OrderUI
-import com.ntg.lmd.mainscreen.ui.screens.orders.model.statusEnum
+import com.ntg.lmd.mainscreen.domain.model.OrderInfo
+import com.ntg.lmd.mainscreen.domain.model.OrderStatus
 import com.ntg.lmd.mainscreen.ui.screens.statusTint
 import java.util.Locale
 
@@ -61,7 +60,7 @@ fun distanceBadge(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = value?.let { String.format(Locale.getDefault(), "%.2f", it) } ?: "--",
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.labelSmall,
                 color = fg,
             )
             Text(
@@ -89,8 +88,8 @@ fun primaryActionButton(
             ),
         shape = RoundedCornerShape(dimensionResource(R.dimen.mediumSpace)),
     ) {
-        Spacer(modifier = Modifier.width(dimensionResource(R.dimen.smallerSpace)))
-        Text(text = text)
+        // Spacer(modifier = Modifier.width(dimensionResource(R.dimen.smallerSpace)))
+        Text(text = text, style = MaterialTheme.typography.titleSmall)
     }
 }
 
@@ -146,66 +145,66 @@ fun bottomStickyButton(
 
 @Composable
 fun orderHeaderWithMenu(
-    order: OrderUI,
+    order: OrderInfo,
     onPickUp: () -> Unit,
     onCancel: () -> Unit,
     onReassign: () -> Unit,
 ) {
-    Row(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.Top,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Top,
     ) {
-        orderHeaderLeft(order)
-        orderHeaderRight(order, onPickUp, onCancel, onReassign)
+        orderHeaderLeft(order, onPickUp, onCancel, onReassign)
     }
 }
 
 @Composable
-fun orderHeaderLeft(order: OrderUI) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        distanceBadge(
-            distanceMeters = order.distanceMeters,
-            modifier = Modifier.padding(end = dimensionResource(R.dimen.mediumSpace)),
-        )
-        Column {
-            Text(
-                order.customerName,
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                "#${order.orderNumber}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-            )
-            order.details?.let {
-                Spacer(modifier = Modifier.height(dimensionResource(R.dimen.extraSmallSpace)))
-                Text(
-                    it,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun orderHeaderRight(
-    order: OrderUI,
-    onPickUp: () -> Unit,
+fun orderHeaderLeft(
+    order: OrderInfo, onPickUp: () -> Unit,
     onCancel: () -> Unit,
     onReassign: () -> Unit,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
-    val statusEnum = order.statusEnum
-
-    Column(horizontalAlignment = Alignment.End) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = order.status,
-                color = statusTint(order.status),
-                style = MaterialTheme.typography.titleMedium,
+    val statusEnum = order.status
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            distanceBadge(
+                distanceMeters = order.distanceKm,
+                modifier = Modifier.padding(end = dimensionResource(R.dimen.mediumSpace)),
             )
+            Column {
+                Text(
+                    order.name,
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Text(
+                    "#${order.orderNumber}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    maxLines = 1
+                )
+                Text(
+                    text = order.status.toString(),
+                    color = statusTint(order.status.toString()),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                order.details?.let {
+                    Spacer(modifier = Modifier.height(dimensionResource(R.dimen.extraSmallSpace)))
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+        }
+        Column {
             IconButton(onClick = { menuExpanded = true }, modifier = Modifier.size(24.dp)) {
                 Icon(
                     imageVector = Icons.Filled.MoreVert,
@@ -240,11 +239,12 @@ fun orderHeaderRight(
                     )
                 }
             }
+            Spacer(modifier = Modifier.height(dimensionResource(R.dimen.smallerSpace)))
+
+            Text(
+                text = order.price,
+                style = MaterialTheme.typography.titleSmall,
+            )
         }
-        Spacer(modifier = Modifier.height(dimensionResource(R.dimen.smallerSpace)))
-        Text(
-            text = order.totalPrice,
-            style = MaterialTheme.typography.titleMedium,
-        )
     }
 }
