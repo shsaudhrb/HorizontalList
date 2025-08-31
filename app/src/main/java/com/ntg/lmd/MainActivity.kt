@@ -1,5 +1,6 @@
 package com.ntg.lmd
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -12,8 +13,15 @@ import androidx.navigation.compose.rememberNavController
 import com.ntg.lmd.navigation.appNavGraph
 import com.ntg.lmd.notification.ui.viewmodel.DeepLinkViewModel
 import com.ntg.lmd.ui.theme.lmdTheme
+import com.ntg.lmd.utils.LocaleHelper.applyLanguage
 
 class MainActivity : ComponentActivity() {
+    override fun attachBaseContext(newBase: Context) {
+        val sp = newBase.getSharedPreferences("settings_prefs", Context.MODE_PRIVATE)
+        val langCode = sp.getString("lang", "en") ?: "en"
+        val localized = applyLanguage(newBase, langCode, recreateActivity = false)
+        super.attachBaseContext(localized)
+    }
     private lateinit var navController: NavHostController
     private val deepLinkVM by viewModels<DeepLinkViewModel>()
 
