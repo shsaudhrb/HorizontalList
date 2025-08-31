@@ -9,5 +9,7 @@ interface OrdersApi {
     suspend fun getOrders(
         @Query("page") page: Int,
         @Query("limit") limit: Int,
+        @Query("status_ids[]") statusIds: List<Int>? = null,
+        @Query("search") search: String? = null,
     ): OrdersEnvelope
 }

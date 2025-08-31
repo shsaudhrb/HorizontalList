@@ -1,21 +1,21 @@
 package com.ntg.lmd.mainscreen.ui.viewmodel
 
 import android.content.Context
-import com.google.gson.Gson
-import com.ntg.lmd.mainscreen.data.repository.OrderLogRepositoryImpl
-import com.ntg.lmd.mainscreen.domain.repository.OrderLogRepository
-import com.ntg.lmd.mainscreen.domain.usecase.LoadDeliveryLogsUseCase
+import com.ntg.lmd.mainscreen.data.datasource.remote.OrdersApi
+import com.ntg.lmd.mainscreen.data.repository.DeliveriesLogRepositoryImpl
+import com.ntg.lmd.mainscreen.domain.repository.DeliveriesLogRepository
+import com.ntg.lmd.mainscreen.domain.usecase.GetDeliveriesLogFromApiUseCase
+import com.ntg.lmd.network.core.RetrofitProvider
 
 object DeliveriesLogProvider {
-    private val gson: Gson by lazy { Gson() }
+    private fun repository(
+        @Suppress("UNUSED_PARAMETER") context: Context,
+    ): DeliveriesLogRepository = DeliveriesLogRepositoryImpl(ordersApi())
 
-    private fun repository(context: Context): OrderLogRepository {
-        val appCtx = context.applicationContext
-        return OrderLogRepositoryImpl(appCtx, gson)
-    }
+    fun getLogsUseCase(context: Context): GetDeliveriesLogFromApiUseCase =
+        GetDeliveriesLogFromApiUseCase(
+            repository(context),
+        )
 
-    fun loadDeliveryLogsUseCase(context: Context): LoadDeliveryLogsUseCase {
-        val repo = repository(context)
-        return LoadDeliveryLogsUseCase(repo)
-    }
+    private fun ordersApi(): OrdersApi = RetrofitProvider.ordersApi
 }
