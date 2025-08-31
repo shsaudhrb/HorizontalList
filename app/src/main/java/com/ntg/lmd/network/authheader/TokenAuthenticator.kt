@@ -67,10 +67,11 @@ class TokenAuthenticator(
                     mutex.withLock {
                         store.getAccessToken()?.let { existing ->
                             return@withLock LoginRefreshToken(
-                                existing,
-                                store.getRefreshToken(),
-                                null,
-                                null,
+                                accessToken = existing,
+                                refreshToken = store.getRefreshToken(),
+                                expiresAt = null,
+                                refreshExpiresAt = null,
+                                user = null
                             )
                         }
                         val body = refreshApi.refreshToken(RefreshTokenRequest(refresh))

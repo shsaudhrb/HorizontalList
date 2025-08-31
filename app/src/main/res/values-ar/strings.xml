@@ -154,5 +154,18 @@
     <string name="notification_title">الإشعارات</string>
     <string name="clear_or_close">مسح/إغلاق</string>
     <string name="action">إجراء</string>
+        <string name="back">رجوع</string>
 
+        <!-- Settings / Language -->
+        <string name="app_language_title">لغة التطبيق</string>
+        <string name="app_language_english">الإنجليزية</string>
+        <string name="app_language_arabic">العربية</string>
+        <string name="settings_app_language">لغة التطبيق</string>
+
+        <!-- Settings / Notifications -->
+        <string name="settings_notifications">الإشعارات</string>
+        <string name="every_x_days">كل %1$d يوم</string>
+        <string name="notif_every_15_days">كل 15 يوم</string>
+        <string name="notif_every_30_days">كل 30 يوم</string>
+        <string name="notif_every_90_days">كل 90 يوم</string>
 </resources>

@@ -25,93 +25,208 @@ fun exportOrdersHistoryPdf(
 ): Uri? {
     if (orders.isEmpty()) return null
 
-    val res = context.resources
     val doc = PdfDocument()
-    val paint =
-        Paint().apply {
-            textSize = res.getDimension(R.dimen.pdf_text_size)
-            isAntiAlias = true
-            color = Color.BLACK
-        }
-    val bold =
-        Paint(paint).apply {
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-        }
+    val style = PdfStyle(context)
+    val config = PdfConfig(context)
 
-    // dimens
-    val margin = res.getDimensionPixelSize(R.dimen.pdf_margin)
-    val lineH = res.getDimensionPixelSize(R.dimen.pdf_line_height)
-    val headerSpacing = res.getDimensionPixelSize(R.dimen.pdf_header_spacing)
-    val pageWidth = res.getDimensionPixelSize(R.dimen.pdf_page_width)
-    val pageHeight = res.getDimensionPixelSize(R.dimen.pdf_page_height)
-
-    val colCustomer = res.getDimensionPixelSize(R.dimen.pdf_col_customer)
-    val colTotal = res.getDimensionPixelSize(R.dimen.pdf_col_total)
-    val colStatus = res.getDimensionPixelSize(R.dimen.pdf_col_status)
-    val colAge = res.getDimensionPixelSize(R.dimen.pdf_col_age)
-
-    var y = margin + headerSpacing
+    var y = config.startY
     var pageIndex = 1
+    var currentPage = newPage(PageContext(doc, config, context, style, pageIndex++, y)) { y = it }
 
-    fun newPage(): PdfDocument.Page {
-        val info = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, pageIndex++).create()
-        val page = doc.startPage(info)
-        y = margin + headerSpacing
-
-        val c = page.canvas
-        c.drawText(context.getString(R.string.pdf_title), margin.toFloat(), y.toFloat(), bold)
-        y += lineH
-
-        c.drawText(context.getString(R.string.pdf_header_no), margin.toFloat(), y.toFloat(), bold)
-        c.drawText(context.getString(R.string.pdf_header_customer), (margin + colCustomer).toFloat(), y.toFloat(), bold)
-        c.drawText(context.getString(R.string.pdf_header_total), (pageWidth - colTotal).toFloat(), y.toFloat(), bold)
-        c.drawText(context.getString(R.string.pdf_header_status), (pageWidth - colStatus).toFloat(), y.toFloat(), bold)
-        c.drawText(context.getString(R.string.pdf_header_age), (pageWidth - colAge).toFloat(), y.toFloat(), bold)
-
-        y += lineH
-        c.drawLine(margin.toFloat(), y.toFloat(), (pageWidth - margin).toFloat(), y.toFloat(), paint)
-        y += headerSpacing
-        return page
+    orders.forEach { order ->
+        if (y + config.lineH > config.pageHeight - config.margin) {
+            doc.finishPage(currentPage)
+            currentPage = newPage(PageContext(doc, config, context, style, pageIndex++, config.startY)) { y = it }
+        }
+        y = drawRow(RowContext(currentPage, config, style.paint, context, order, y))
     }
 
-    var page = newPage()
+    doc.finishPage(currentPage)
+    val outFile = writePdfToFile(context, doc)
+    return FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", outFile)
+}
 
-    orders.forEach { o ->
-        if (y + lineH > pageHeight - margin) {
-            doc.finishPage(page)
-            page = newPage()
-        }
-        page.canvas.apply {
-            drawText(o.number, margin.toFloat(), y.toFloat(), paint)
-            drawText(o.customer, (margin + colCustomer).toFloat(), y.toFloat(), paint)
-            drawText(
-                String.format(Locale.ROOT, "%.2f", o.total),
-                (pageWidth - colTotal).toFloat(),
-                y.toFloat(),
-                paint,
-            )
-            drawText(
-                o.status.name
-                    .lowercase()
-                    .replaceFirstChar { it.titlecase() },
-                (pageWidth - colStatus).toFloat(),
-                y.toFloat(),
-                paint,
-            )
-            drawText(timeHelper(context, o.createdAtMillis), (pageWidth - colAge).toFloat(), y.toFloat(), paint)
-        }
-        y += lineH
-    }
+private data class PdfStyle(
+    val paint: Paint,
+    val bold: Paint,
+) {
+    constructor(context: Context) : this(
+        paint =
+            Paint().apply {
+                textSize = context.resources.getDimension(R.dimen.pdf_text_size)
+                isAntiAlias = true
+                color = Color.BLACK
+            },
+        bold =
+            Paint().apply {
+                textSize = context.resources.getDimension(R.dimen.pdf_text_size)
+                isAntiAlias = true
+                color = Color.BLACK
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            },
+    )
+}
 
-    doc.finishPage(page)
+private data class PdfConfig(
+    val margin: Int,
+    val lineH: Int,
+    val headerSpacing: Int,
+    val pageWidth: Int,
+    val pageHeight: Int,
+    val colCustomer: Int,
+    val colTotal: Int,
+    val colStatus: Int,
+    val colAge: Int,
+    val startY: Int,
+) {
+    constructor(context: Context) : this(
+        margin = context.resources.getDimensionPixelSize(R.dimen.pdf_margin),
+        lineH = context.resources.getDimensionPixelSize(R.dimen.pdf_line_height),
+        headerSpacing = context.resources.getDimensionPixelSize(R.dimen.pdf_header_spacing),
+        pageWidth = context.resources.getDimensionPixelSize(R.dimen.pdf_page_width),
+        pageHeight = context.resources.getDimensionPixelSize(R.dimen.pdf_page_height),
+        colCustomer = context.resources.getDimensionPixelSize(R.dimen.pdf_col_customer),
+        colTotal = context.resources.getDimensionPixelSize(R.dimen.pdf_col_total),
+        colStatus = context.resources.getDimensionPixelSize(R.dimen.pdf_col_status),
+        colAge = context.resources.getDimensionPixelSize(R.dimen.pdf_col_age),
+        startY =
+            context.resources.getDimensionPixelSize(R.dimen.pdf_margin) +
+                context.resources.getDimensionPixelSize(R.dimen.pdf_header_spacing),
+    )
+}
 
+private data class PageContext(
+    val doc: PdfDocument,
+    val config: PdfConfig,
+    val context: Context,
+    val style: PdfStyle,
+    val pageIndex: Int,
+    val y: Int,
+)
+
+private fun newPage(
+    ctx: PageContext,
+    onNewY: (Int) -> Unit,
+): PdfDocument.Page {
+    val info = PdfDocument.PageInfo.Builder(ctx.config.pageWidth, ctx.config.pageHeight, ctx.pageIndex).create()
+    val page = ctx.doc.startPage(info)
+    var yPos = ctx.y
+
+    val c = page.canvas
+    yPos = drawTitle(c, ctx, yPos)
+    yPos = drawHeaders(c, ctx, yPos)
+    yPos = drawDivider(c, ctx, yPos)
+
+    onNewY(yPos)
+    return page
+}
+
+private fun drawTitle(
+    c: android.graphics.Canvas,
+    ctx: PageContext,
+    y: Int,
+): Int {
+    c.drawText(ctx.context.getString(R.string.pdf_title), ctx.config.margin.toFloat(), y.toFloat(), ctx.style.bold)
+    return y + ctx.config.lineH
+}
+
+private fun drawHeaders(
+    c: android.graphics.Canvas,
+    ctx: PageContext,
+    y: Int,
+): Int {
+    var yPos = y
+    c.drawText(ctx.context.getString(R.string.pdf_header_no), ctx.config.margin.toFloat(), yPos.toFloat(), ctx.style.bold)
+    c.drawText(
+        ctx.context.getString(R.string.pdf_header_customer),
+        (ctx.config.margin + ctx.config.colCustomer).toFloat(),
+        yPos.toFloat(),
+        ctx.style.bold,
+    )
+    c.drawText(
+        ctx.context.getString(R.string.pdf_header_total),
+        (ctx.config.pageWidth - ctx.config.colTotal).toFloat(),
+        yPos.toFloat(),
+        ctx.style.bold,
+    )
+    c.drawText(
+        ctx.context.getString(R.string.pdf_header_status),
+        (ctx.config.pageWidth - ctx.config.colStatus).toFloat(),
+        yPos.toFloat(),
+        ctx.style.bold,
+    )
+    c.drawText(
+        ctx.context.getString(R.string.pdf_header_age),
+        (ctx.config.pageWidth - ctx.config.colAge).toFloat(),
+        yPos.toFloat(),
+        ctx.style.bold,
+    )
+    return yPos + ctx.config.lineH
+}
+
+private fun drawDivider(
+    c: android.graphics.Canvas,
+    ctx: PageContext,
+    y: Int,
+): Int {
+    c.drawLine(
+        ctx.config.margin.toFloat(),
+        y.toFloat(),
+        (ctx.config.pageWidth - ctx.config.margin).toFloat(),
+        y.toFloat(),
+        ctx.style.paint,
+    )
+    return y + ctx.config.headerSpacing
+}
+
+private data class RowContext(
+    val page: PdfDocument.Page,
+    val config: PdfConfig,
+    val paint: Paint,
+    val context: Context,
+    val order: OrderHistoryUi,
+    val y: Int,
+)
+
+private fun drawRow(ctx: RowContext): Int {
+    val c = ctx.page.canvas
+    val y = ctx.y
+
+    c.drawText(ctx.order.number, ctx.config.margin.toFloat(), y.toFloat(), ctx.paint)
+    c.drawText(ctx.order.customer, (ctx.config.margin + ctx.config.colCustomer).toFloat(), y.toFloat(), ctx.paint)
+    c.drawText(
+        String.format(Locale.ROOT, "%.2f", ctx.order.total),
+        (ctx.config.pageWidth - ctx.config.colTotal).toFloat(),
+        y.toFloat(),
+        ctx.paint,
+    )
+    c.drawText(
+        ctx.order.status.name
+            .lowercase()
+            .replaceFirstChar { it.titlecase() },
+        (ctx.config.pageWidth - ctx.config.colStatus).toFloat(),
+        y.toFloat(),
+        ctx.paint,
+    )
+    c.drawText(
+        timeHelper(ctx.context, ctx.order.createdAtMillis),
+        (ctx.config.pageWidth - ctx.config.colAge).toFloat(),
+        y.toFloat(),
+        ctx.paint,
+    )
+    return y + ctx.config.lineH
+}
+
+private fun writePdfToFile(
+    context: Context,
+    doc: PdfDocument,
+): File {
     val sdf = SimpleDateFormat("yyyyMMdd_HHmm")
     val fileName = "orders_${sdf.format(Date())}.pdf"
     val outFile = File(context.cacheDir, fileName)
     FileOutputStream(outFile).use { doc.writeTo(it) }
     doc.close()
-
-    return FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", outFile)
+    return outFile
 }
 
 fun sharePdf(
@@ -124,7 +239,5 @@ fun sharePdf(
             putExtra(Intent.EXTRA_STREAM, pdfUri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-    context.startActivity(
-        Intent.createChooser(intent, context.getString(R.string.pdf_share_title)),
-    )
+    context.startActivity(Intent.createChooser(intent, context.getString(R.string.pdf_share_title)))
 }

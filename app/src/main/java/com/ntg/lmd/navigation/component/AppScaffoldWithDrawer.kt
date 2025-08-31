@@ -16,7 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -86,7 +86,8 @@ fun appScaffoldWithDrawer(
     topBar: TopBarConfigWithTitle, // UI config for top bar
     appBar: AppBarConfig, // simple title/search config
     onLogout: () -> Unit,
-    content: @Composable () -> Unit,
+    userName: String?,
+    content: @Composable () -> Unit
 ) {
     val navController = navConfig.navController
     val currentRoute = navConfig.currentRoute
@@ -106,6 +107,7 @@ fun appScaffoldWithDrawer(
             ModalDrawerSheet(drawerContainerColor = CupertinoSystemBackground) {
                 drawerContent(
                     currentRoute = currentRoute,
+                    displayName = userName ?: "—",
                     onLogout = onLogout,
                     onNavigate = { route ->
                         scope.launch { drawerState.close() }
@@ -133,6 +135,7 @@ fun appScaffoldWithDrawer(
 @Composable
 private fun drawerContent(
     currentRoute: String?,
+    displayName: String?,
     onLogout: () -> Unit,
     onNavigate: (String) -> Unit,
 ) {
@@ -142,7 +145,7 @@ private fun drawerContent(
             Pair(drawerItems.take(FIRST_GROUP_SIZE), drawerItems.drop(FIRST_GROUP_SIZE))
         }
 
-    drawerHeader(name = "Sherif")
+    drawerHeader(name = displayName ?: "—")
 
     // Section title ("Orders")
     Text(
@@ -292,7 +295,7 @@ fun drawerItemRow(
 
         if (entry.enabled && entry.route != Screen.Logout.route) {
             Icon(
-                imageVector = Icons.Filled.ChevronRight,
+                imageVector =  Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
                 tint = CupertinoLabelSecondary,
             )
