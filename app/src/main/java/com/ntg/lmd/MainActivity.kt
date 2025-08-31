@@ -1,5 +1,6 @@
 package com.ntg.lmd
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -14,6 +15,16 @@ import com.ntg.lmd.notification.ui.viewmodel.DeepLinkViewModel
 import com.ntg.lmd.ui.theme.lmdTheme
 
 class MainActivity : ComponentActivity() {
+    override fun attachBaseContext(newBase: Context) {
+        val sp = newBase.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+        val langCode = sp.getString("lang_code", "en") ?: "en"
+        val localized = com.ntg.lmd.utils.LocaleHelper.applyLanguage(
+            newBase,
+            langCode,
+            recreateActivity = false
+        )
+        super.attachBaseContext(localized)
+    }
     private lateinit var navController: NavHostController
     private val deepLinkVM by viewModels<DeepLinkViewModel>()
 

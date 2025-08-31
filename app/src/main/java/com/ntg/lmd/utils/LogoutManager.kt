@@ -13,7 +13,7 @@ class LogoutManager(
 ) {
     suspend fun logout() =
         withContext(Dispatchers.IO) {
-            runCatching { socket?.close() }
+            runCatching { socket?.disconnect() }
             runCatching { db?.clearAllTables() }
             tokenStore.clear()
         }

@@ -86,7 +86,7 @@ fun languageSettingsScreen(
                     text = stringResource(R.string.apply),
                     loading = false,
                     onClick = {
-                        vm.setLanguage(selected)
+                        vm.setLanguage(selected,ctx)
                         LocaleHelper.applyLanguage(
                             ctx,
                             if (selected == AppLanguage.AR) "ar" else "en",

@@ -1,5 +1,6 @@
 package com.ntg.lmd.settings.ui.viewmodel
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ntg.lmd.settings.data.LogoutUiState
@@ -45,9 +46,10 @@ class SettingsViewModel(
         )
     val ui: StateFlow<SettingsUiState> = _ui
 
-    fun setLanguage(lang: AppLanguage) {
-        _ui.update { it.copy(language = lang) }
-        prefs.setLanguage(if (lang == AppLanguage.AR) LANGUAGE_AR else LANGUAGE_EN)
+    fun setLanguage(lang: AppLanguage, context: Context) {
+        val code = if (lang == AppLanguage.AR) "ar" else "en"
+        context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+            .edit().putString("lang_code", code).apply()
     }
 
     fun setNotificationWindow(win: NotificationWindow) {
@@ -69,9 +71,7 @@ class SettingsViewModel(
                 logoutManager.logout()
                 _logoutState.value = LogoutUiState.Success
             } catch (e: IOException) {
-                _logoutState.value = LogoutUiState.Error("Network error: ${e.message}")
-            } catch (e: IOException) {
-                _logoutState.value = LogoutUiState.Error(e.message ?: "Logout failed")
+                _logoutState.value = LogoutUiState.Error("Network error: ${e.message ?: "Logout failed"}")
             }
         }
     }
