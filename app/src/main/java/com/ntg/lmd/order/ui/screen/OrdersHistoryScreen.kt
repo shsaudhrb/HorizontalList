@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -26,8 +27,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ntg.lmd.R
 import com.ntg.lmd.network.core.RetrofitProvider
@@ -46,17 +50,17 @@ import com.ntg.lmd.order.ui.viewmodel.OrderHistoryViewModelFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlin.collections.isNotEmpty
 
 @Composable
 fun ordersHistoryRoute(registerOpenMenu: ((() -> Unit) -> Unit)? = null) {
     val repo = OrdersRepositoryImpl(RetrofitProvider.ordersHistoryApi)
     val useCase = GetOrdersUseCase(repo)
-    val vm: OrderHistoryViewModel = viewModel(
-        factory = OrderHistoryViewModelFactory(useCase)
-    )
+    val vm: OrderHistoryViewModel =
+        viewModel(
+            factory = OrderHistoryViewModelFactory(useCase),
+        )
     val token = RetrofitProvider.tokenStore.getAccessToken() ?: ""
-    //val vm: OrderHistoryViewModel = viewModel()
+    // val vm: OrderHistoryViewModel = viewModel()
     val orders by vm.orders.collectAsState(emptyList())
     val filter by vm.filter.collectAsState()
     val isLoadingMore by vm.isLoadingMore.collectAsState()
@@ -74,12 +78,10 @@ fun ordersHistoryRoute(registerOpenMenu: ((() -> Unit) -> Unit)? = null) {
             listState.scrollToItem(0, 0)
         }
     }
-    //LaunchedEffect(Unit) { vm.loadFromAssets(ctx) }
-    LaunchedEffect(Unit) {
-        if (token.isNotBlank()) {
+    // LaunchedEffect(Unit) { vm.loadFromAssets(ctx) }
+    LaunchedEffect(token, orders.isEmpty()) {
+        if (token.isNotBlank() && orders.isEmpty()) {
             vm.loadOrders(token)
-        } else {
-            println(" Token is empty, please login first")
         }
     }
     LaunchedEffect(Unit) { registerOpenMenu?.invoke { menuOpen = true } }
@@ -115,8 +117,8 @@ fun ordersHistoryRoute(registerOpenMenu: ((() -> Unit) -> Unit)? = null) {
             OrdersDialogsCallbacks(
                 onFilterDismiss = { showFilterDialog = false },
                 onSortDismiss = { showSortDialog = false },
-                onApplyFilter = { allowed -> vm.setAllowedStatuses(allowed,token) },
-                onApplySort = { asc -> vm.setAgeAscending(asc,token) },
+                onApplyFilter = { allowed -> vm.setAllowedStatuses(allowed, token) },
+                onApplySort = { asc -> vm.setAgeAscending(asc, token) },
             ),
     )
 
@@ -182,5 +184,25 @@ fun ordersHistoryContent(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun statusBadge(
+    text: String,
+    color: Color,
+) {
+    Box(
+        modifier = Modifier.padding(start = 8.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = text,
+            style =
+                MaterialTheme.typography.bodySmall.copy(
+                    color = color,
+                    fontWeight = FontWeight.SemiBold,
+                ),
+        )
     }
 }

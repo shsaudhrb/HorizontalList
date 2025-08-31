@@ -9,12 +9,10 @@ import com.ntg.lmd.network.authheader.AuthInterceptor
 import com.ntg.lmd.network.authheader.SecureTokenStore
 import com.ntg.lmd.network.authheader.TokenAuthenticator
 import com.ntg.lmd.order.data.remote.OrdersHistoryApi
-//import com.ntg.lmd.order.data.remote.OrdersApi
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import java.util.concurrent.TimeUnit
 
 object RetrofitProvider {
     lateinit var tokenStore: SecureTokenStore
@@ -34,9 +32,6 @@ object RetrofitProvider {
                 b.header("apikey", key)
                 chain.proceed(b.build())
             }.addInterceptor(HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY })
-            .connectTimeout(60, TimeUnit.SECONDS)   // زيادة المهلة
-            .readTimeout(60, TimeUnit.SECONDS)
-            .writeTimeout(60, TimeUnit.SECONDS)
             .build()
     }
 
@@ -91,6 +86,7 @@ object RetrofitProvider {
             .create(OrdersApi::class.java)
     }
 
+// initialize Retrofit API client
     val ordersHistoryApi: OrdersHistoryApi by lazy {
         Retrofit
             .Builder()

@@ -9,7 +9,10 @@ data class OrderHistoryUi(
     val total: Double,
     val isLoading: Boolean = false,
     val isLoadingMore: Boolean = false,
-    val statusColor: String = ""
+    val statusColor: String = "",
+    val isCancelled: Boolean = false,
+    val isFailed: Boolean = false,
+    val isDelivered: Boolean = false,
 )
 
 data class OrdersHistoryUiState(

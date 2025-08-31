@@ -9,8 +9,8 @@ interface OrdersHistoryApi {
     @GET("orders-list")
     suspend fun getOrders(
         @Header("Authorization") token: String,
-        @Query("status_id") statusIds: String = "3,7,8",
+        @Query("status_id") statusIds: String = "3,7,8", // cancelled, delivered, done
         @Query("page") page: Int = 1,
-        @Query("limit") limit: Int = 20
+        @Query("limit") limit: Int = 20,
     ): OrdersListResponse
 }
