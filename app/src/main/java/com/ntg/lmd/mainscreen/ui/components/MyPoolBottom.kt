@@ -1,13 +1,16 @@
 package com.ntg.lmd.mainscreen.ui.components
 
+import android.content.Context
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -16,7 +19,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -25,12 +27,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.ui.model.LocalUiOnlyStatusBus
-import com.ntg.lmd.mainscreen.ui.screens.myOrderCard
 import com.ntg.lmd.mainscreen.ui.viewmodel.NEAR_END_THRESHOLD
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlin.math.abs
@@ -43,15 +45,73 @@ fun myPoolBottom(
     onNearEnd: (Int) -> Unit = {},
 ) {
     val listState = rememberLazyListState()
-
-    val sidePadding =
-        ((LocalConfiguration.current.screenWidthDp.dp - dimensionResource(id = R.dimen.myOrders_card_width)) / 2)
-            .coerceAtLeast(0.dp)
-
-    var lastCentered by remember { mutableIntStateOf(-1) }
-    var programmatic by remember { mutableStateOf(false) }
+    val sidePadding = rememberSidePadding()
     val context = LocalContext.current
 
+    observeCenteredItem(orders, listState, onCenteredOrderChange)
+    observeNearEnd(orders, listState, onNearEnd)
+
+    myPoolBottomScaffold(
+        orders = orders,
+        listState = listState,
+        sidePadding = sidePadding,
+        onOpenOrderDetails = onOpenOrderDetails,
+        onCall = { phone -> makeCallOrError(context, phone) },
+    )
+}
+
+@Composable
+fun myPoolBottomScaffold(
+    orders: List<OrderInfo>,
+    listState: LazyListState,
+    sidePadding: Dp,
+    onOpenOrderDetails: (String) -> Unit,
+    onCall: (String?) -> Unit,
+) {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(dimensionResource(R.dimen.orders_carousel_height))
+            .background(MaterialTheme.colorScheme.primary),
+    ) {
+        ordersCarousel(
+            orders = orders,
+            listState = listState,
+            sidePadding = sidePadding,
+            onOpenOrderDetails = onOpenOrderDetails,
+            onCall = onCall,
+        )
+    }
+}
+
+fun makeCallOrError(
+    context: Context,
+    phone: String?,
+) {
+    if (!phone.isNullOrBlank()) {
+        val intent = Intent(Intent.ACTION_DIAL, "tel:$phone".toUri())
+        context.startActivity(intent)
+    } else {
+        LocalUiOnlyStatusBus.errorEvents.tryEmit(
+            context.getString(R.string.phone_missing) to null,
+        )
+    }
+}
+
+@Composable
+fun rememberSidePadding(): Dp {
+    val cardWidth = dimensionResource(R.dimen.myOrders_card_width)
+    val screen = LocalConfiguration.current.screenWidthDp.dp
+    return ((screen - cardWidth) / 2).coerceAtLeast(0.dp)
+}
+
+@Composable
+fun observeCenteredItem(
+    orders: List<OrderInfo>,
+    listState: LazyListState,
+    onCenteredOrderChange: (OrderInfo, Int) -> Unit,
+) {
+    var lastCentered by remember { mutableIntStateOf(-1) }
     LaunchedEffect(orders, listState) {
         snapshotFlow {
             val info = listState.layoutInfo
@@ -64,15 +124,21 @@ fun myPoolBottom(
                         abs((it.offset + it.size / 2) - center)
                     }?.index ?: -1
             }
-        }.distinctUntilChanged()
-            .collect { idx ->
-                if (!programmatic && idx in orders.indices && idx != lastCentered) {
-                    lastCentered = idx
-                    onCenteredOrderChange(orders[idx], idx)
-                }
+        }.distinctUntilChanged().collect { idx ->
+            if (idx in orders.indices && idx != lastCentered) {
+                lastCentered = idx
+                onCenteredOrderChange(orders[idx], idx)
             }
+        }
     }
+}
 
+@Composable
+fun observeNearEnd(
+    orders: List<OrderInfo>,
+    listState: LazyListState,
+    onNearEnd: (Int) -> Unit,
+) {
     LaunchedEffect(orders, listState) {
         snapshotFlow {
             listState.layoutInfo.visibleItemsInfo
@@ -82,56 +148,39 @@ fun myPoolBottom(
             .collect { lastVisible ->
                 if (lastVisible >= 0 && orders.isNotEmpty()) {
                     val triggerIndex = (orders.size - NEAR_END_THRESHOLD).coerceAtLeast(0)
-                    if (lastVisible >= triggerIndex) {
-                        onNearEnd(lastVisible) // delegate to VM
-                    }
+                    if (lastVisible >= triggerIndex) onNearEnd(lastVisible)
                 }
             }
     }
+}
 
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .height(dimensionResource(R.dimen.orders_carousel_height))
-            .background(MaterialTheme.colorScheme.primary),
+@Composable
+fun BoxScope.ordersCarousel(
+    orders: List<OrderInfo>,
+    listState: LazyListState,
+    sidePadding: Dp,
+    onOpenOrderDetails: (String) -> Unit,
+    onCall: (String?) -> Unit,
+) {
+    LazyRow(
+        state = listState,
+        flingBehavior = rememberSnapFlingBehavior(lazyListState = listState),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .align(Alignment.Center),
+        horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.largeSpace)),
+        contentPadding = PaddingValues(start = sidePadding, end = sidePadding),
     ) {
-        LazyRow(
-            state = listState,
-            flingBehavior = rememberSnapFlingBehavior(lazyListState = listState),
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.Center),
-            horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.largeSpace)),
-            contentPadding = PaddingValues(start = sidePadding, end = sidePadding),
-        ) {
-            itemsIndexed(
-                items = orders,
-                key = { _, order -> order.orderNumber },
-            ) { _, info ->
-                Box(Modifier.width(dimensionResource(R.dimen.myOrders_card_width))) {
-                    myOrderCard(
-                        order = info,
-                        onDetails = { onOpenOrderDetails(info.orderNumber) },
-                        onConfirmOrPick = { },
-                        onCall = {
-                            val phone = info.customerPhone
-                            if (!phone.isNullOrBlank()) {
-                                val intent =
-                                    android.content.Intent(
-                                        android.content.Intent.ACTION_DIAL,
-                                        "tel:$phone".toUri(),
-                                    )
-                                context.startActivity(intent)
-                            } else {
-                                LocalUiOnlyStatusBus.errorEvents.tryEmit(
-                                    context.getString(R.string.phone_missing) to null,
-                                )
-                            }
-                        },
-                    )
-                }
-            }
+        itemsIndexed(
+            items = orders,
+            key = { _, order -> order.orderNumber },
+        ) { _, info ->
+            myPoolOrderCardItem(
+                order = info,
+                onOpenOrderDetails = onOpenOrderDetails,
+                onCall = onCall,
+            )
         }
     }
 }
