@@ -5,7 +5,6 @@ import com.google.gson.Gson
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
-import com.google.gson.JsonParseException
 import com.google.gson.JsonSyntaxException
 import com.google.gson.reflect.TypeToken
 import com.ntg.lmd.mainscreen.data.datasource.remote.LiveOrdersApiService
@@ -62,12 +61,6 @@ class OrdersRepositoryImpl(
         } catch (e: JsonSyntaxException) {
             Log.e(ORDERS_TAG, "JSON syntax error: ${e.message}", e)
             Result.failure(IllegalStateException("JSON syntax error: ${e.message}", e))
-        } catch (e: JsonParseException) {
-            Log.e(ORDERS_TAG, "JSON parse error: ${e.message}", e)
-            Result.failure(IllegalStateException("JSON parse error: ${e.message}", e))
-        } catch (e: IllegalStateException) {
-            Log.e(ORDERS_TAG, "Unexpected JSON structure: ${e.message}", e)
-            Result.failure(IllegalStateException("Unexpected JSON structure: ${e.message}", e))
         }
 
     // Connect to socket channel and start listening for live order updates
