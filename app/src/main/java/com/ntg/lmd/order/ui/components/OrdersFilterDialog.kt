@@ -63,7 +63,7 @@ private fun filterDialogContent(
     Column(Modifier.fillMaxWidth()) {
         Text(stringResource(R.string.statuses), style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(gapSm))
-        statusCheckbox(stringResource(R.string.delivered), OrderHistoryStatus.DELIVERED, allowed, onChange)
+        statusCheckbox(stringResource(R.string.delivered), OrderHistoryStatus.DONE, allowed, onChange)
         statusCheckbox(stringResource(R.string.cancelled), OrderHistoryStatus.CANCELLED, allowed, onChange)
         statusCheckbox(stringResource(R.string.failed), OrderHistoryStatus.FAILED, allowed, onChange)
     }

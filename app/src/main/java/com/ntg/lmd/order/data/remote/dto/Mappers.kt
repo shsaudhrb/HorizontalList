@@ -18,7 +18,7 @@ fun OrderHistoryDto.toUi(): OrderHistoryUi {
             when (orderStatus.statusName.lowercase()) {
                 "cancelled", "canceled" -> OrderHistoryStatus.CANCELLED
                 "delivery failed" -> OrderHistoryStatus.FAILED
-                "delivery done", "delivered" -> OrderHistoryStatus.DELIVERED
+                "delivery done", "delivered" -> OrderHistoryStatus.DONE
                 else -> {
                     Log.w("OrderMapper", "Unknown status from API: ${orderStatus.statusName}")
                     OrderHistoryStatus.UNKNOWN
