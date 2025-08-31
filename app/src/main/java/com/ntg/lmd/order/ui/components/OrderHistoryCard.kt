@@ -40,7 +40,6 @@ fun orderHistoryCard(
     val radius = dimensionResource(R.dimen.card_radius)
     val elev = dimensionResource(R.dimen.elevation_small)
     val hair = dimensionResource(R.dimen.hairline)
-    val currency = stringResource(R.string.currency_egp)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -50,45 +49,53 @@ fun orderHistoryCard(
         border = BorderStroke(hair, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
     ) {
         Column(Modifier.padding(pad)) {
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    order.number,
-                    color = Color.Gray,
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                Text(
-                    text = "${order.total} $currency",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
-
+            orderHeaderRow(order)
             Spacer(Modifier.height(4.dp))
+            orderFooterRow(context, order)
+        }
+    }
+}
 
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column {
-                    Text(order.customer, style = MaterialTheme.typography.bodyMedium)
-                    Text(
-                        text = timeHelper(context, order.createdAtMillis),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+@Composable
+private fun orderHeaderRow(order: OrderHistoryUi) {
+    val currency = stringResource(R.string.currency_egp)
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(order.number, color = Color.Gray, style = MaterialTheme.typography.titleMedium)
+        Text(
+            text = "${order.total} $currency",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
+}
 
-                when {
-                    order.isCancelled -> statusBadge("Cancelled", ErrorRed)
-                    order.isFailed -> statusBadge("Failed", MaterialTheme.colorScheme.onSurfaceVariant)
-                    order.isDelivered -> statusBadge("Delivered", PresentGreen)
-                }
-            }
+@Composable
+private fun orderFooterRow(
+    context: Context,
+    order: OrderHistoryUi,
+) {
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column {
+            Text(order.customer, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                text = timeHelper(context, order.createdAtMillis),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        when {
+            order.isCancelled -> statusBadge("Cancelled", ErrorRed)
+            order.isFailed -> statusBadge("Failed", MaterialTheme.colorScheme.onSurfaceVariant)
+            order.isDelivered -> statusBadge("Delivered", PresentGreen)
         }
     }
 }
