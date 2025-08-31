@@ -70,7 +70,7 @@ object RetrofitProvider {
             .client(authedOkHttp)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
-            .create(liveOrderApi::class.java)
+            .create(LiveOrdersApiService::class.java)
     }
 
     val okHttpForWs: OkHttpClient get() = authedOkHttp

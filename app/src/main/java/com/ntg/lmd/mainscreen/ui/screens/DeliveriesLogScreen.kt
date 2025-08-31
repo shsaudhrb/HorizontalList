@@ -1,7 +1,7 @@
 package com.ntg.lmd.mainscreen.ui.screens
 
+import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,22 +10,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Cancel
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -38,113 +31,114 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.domain.model.DeliveryLog
-import com.ntg.lmd.mainscreen.domain.model.DeliveryState
+import com.ntg.lmd.mainscreen.domain.model.LogsUi
+import com.ntg.lmd.mainscreen.ui.components.deliveryLogItem
+import com.ntg.lmd.mainscreen.ui.components.emptyState
+import com.ntg.lmd.mainscreen.ui.components.loadingFooter
+import com.ntg.lmd.mainscreen.ui.components.observeNearEnd
 import com.ntg.lmd.mainscreen.ui.viewmodel.DeliveriesLogViewModel
-import com.ntg.lmd.ui.theme.SuccessGreen
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.merge
 
-private const val ICON_COL_WEIGHT = 1f
-private const val DETAILS_COL_WEIGHT = 3f
-private const val TIME_COL_WEIGHT = 2f
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 @Suppress("UNUSED_PARAMETER")
 fun deliveriesLogScreen(
     navController: NavController,
     vm: DeliveriesLogViewModel = viewModel(),
 ) {
-    val context = LocalContext.current
-    LaunchedEffect(Unit) { vm.load(context) }
+    val ctx = LocalContext.current
+    LaunchedEffect(Unit) { vm.load(ctx) }
+    observeSearch(navController, vm, ctx)
+    val ui = rememberLogsUi(vm)
 
-    val backStackEntry = navController.currentBackStackEntry
-
-    val logs by vm.logs.collectAsState()
-    val isLoadingMore by vm.isLoadingMore.collectAsState()
-    val endReached by vm.endReached.collectAsState()
-
-    LaunchedEffect(backStackEntry) {
-        val h = backStackEntry?.savedStateHandle ?: return@LaunchedEffect
-        val searchingFlow = h.getStateFlow("searching", false)
-        val textFlow = h.getStateFlow("search_text", "")
-        combine(
-            searchingFlow,
-            textFlow,
-        ) { enabled, text -> if (enabled) text else "" } // when search is closed, reset
-            .distinctUntilChanged()
-            .collect { query -> vm.searchById(query) }
-    }
-
-    LaunchedEffect(backStackEntry) {
-        val h = backStackEntry?.savedStateHandle ?: return@LaunchedEffect
-        h.getStateFlow("searching", false).collect { enabled ->
-            if (!enabled) vm.searchById("") // restore full list
-        }
-    }
-
-    LaunchedEffect(backStackEntry) {
-        val h = backStackEntry?.savedStateHandle ?: return@LaunchedEffect
-        h.getStateFlow("search_submit", "").collect { submitted ->
-            if (submitted.isNotEmpty()) vm.searchById(submitted)
-        }
-    }
-
-    Column(
-        modifier =
+    PullToRefreshBox(isRefreshing = ui.refreshing, onRefresh = { vm.refresh(ctx) }) {
+        Column(
             Modifier
                 .fillMaxSize()
                 .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        // Header Row
-        headerRow()
-
-        HorizontalDivider()
-
-        // Logs
-        logsList(
-            logs = logs,
-            isLoadingMore = isLoadingMore,
-            endReached = endReached,
-            onLoadMore = { vm.loadMore() },
-            modifier = Modifier.weight(1f),
-        )
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            headerRow()
+            HorizontalDivider()
+            logsList(
+                logs = ui.logs,
+                isLoadingMore = ui.loadingMore,
+                endReached = ui.endReached,
+                onLoadMore = { vm.loadMore(ctx) },
+                modifier = Modifier.weight(1f),
+            )
+        }
     }
+}
+
+@Composable
+private fun observeSearch(
+    navController: NavController,
+    vm: DeliveriesLogViewModel,
+    ctx: Context,
+) {
+    val back = navController.currentBackStackEntry
+    LaunchedEffect(back) {
+        val h = back?.savedStateHandle ?: return@LaunchedEffect
+        combine(
+            h.getStateFlow("searching", false),
+            h.getStateFlow("search_text", ""),
+        ) { en, t -> if (en) t else "" }
+            .distinctUntilChanged()
+            .collect { q ->
+                vm.searchById(q)
+                vm.load(ctx)
+            }
+    }
+    LaunchedEffect(back) {
+        val h = back?.savedStateHandle ?: return@LaunchedEffect
+        h.getStateFlow("search_submit", "").collect { s ->
+            if (s.isNotEmpty()) {
+                vm.searchById(s)
+                vm.load(ctx)
+                h["search_submit"] = ""
+            }
+        }
+    }
+}
+
+@Composable
+private fun rememberLogsUi(vm: DeliveriesLogViewModel): LogsUi {
+    val logs by vm.logs.collectAsState()
+    val lm by vm.isLoadingMore.collectAsState()
+    val er by vm.endReached.collectAsState()
+    val rf by vm.isRefreshing.collectAsState()
+    return LogsUi(logs, lm, er, rf)
 }
 
 @Composable
 private fun headerRow() {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(modifier = Modifier.weight(ICON_COL_WEIGHT), contentAlignment = Alignment.Center) {
-            Text(
-                stringResource(R.string.SLA),
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-                color = MaterialTheme.colorScheme.onBackground,
-                textAlign = TextAlign.Center,
-            )
-        }
-        Text(
-            stringResource(R.string.order_details),
-            fontWeight = FontWeight.Bold,
-            fontSize = 16.sp,
-            color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.weight(DETAILS_COL_WEIGHT),
-            textAlign = TextAlign.Center,
-        )
-        Text(
-            stringResource(R.string.delivery_time),
-            fontWeight = FontWeight.Bold,
-            fontSize = 16.sp,
-            color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.weight(TIME_COL_WEIGHT),
-            textAlign = TextAlign.Center,
-        )
+        headerText(R.string.SLA)
+        headerText(R.string.order_details)
+        headerText(R.string.delivery_time)
     }
+}
+
+@Composable
+private fun headerText(
+    @androidx.annotation.StringRes textRes: Int,
+) {
+    Text(
+        text = stringResource(textRes),
+        fontWeight = FontWeight.Bold,
+        fontSize = 16.sp,
+        color = MaterialTheme.colorScheme.onBackground,
+        textAlign = TextAlign.Center,
+    )
 }
 
 @Composable
@@ -156,50 +150,10 @@ private fun logsList(
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
-
-    val loading by rememberUpdatedState(isLoadingMore)
-    val ended by rememberUpdatedState(endReached)
-    val loadMore by rememberUpdatedState(onLoadMore)
-
-    LaunchedEffect(listState) {
-        // load until list becomes scrollable
-        val notScrollableFlow =
-            snapshotFlow { !listState.canScrollForward }
-                .distinctUntilChanged()
-
-        // load when user nears the end
-        val nearEndFlow =
-            snapshotFlow {
-                val last =
-                    listState.layoutInfo.visibleItemsInfo
-                        .lastOrNull()
-                        ?.index
-                val total = listState.layoutInfo.totalItemsCount
-                last != null && total > 0 && last >= total - 2
-            }.distinctUntilChanged()
-
-        merge(notScrollableFlow, nearEndFlow).collect { shouldLoad ->
-            if (shouldLoad && !ended && !loading) {
-                loadMore()
-            }
-        }
-    }
+    observeNearEnd(listState, isLoadingMore, endReached, onLoadMore)
 
     if (logs.isEmpty() && !isLoadingMore) {
-        // empty state
-        Box(
-            modifier = modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = stringResource(R.string.no_deliveries_yet),
-                style =
-                    MaterialTheme.typography.bodyLarge.copy(
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    ),
-            )
-        }
+        emptyState(modifier)
         return
     }
 
@@ -208,78 +162,7 @@ private fun logsList(
         verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = modifier.fillMaxSize(),
     ) {
-        items(logs) { log -> deliveryLogItem(log) }
-        if (isLoadingMore && !endReached) {
-            item {
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 16.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CircularProgressIndicator()
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun deliveryLogItem(log: DeliveryLog) {
-    Card(modifier = Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(2.dp)) {
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(Modifier.weight(ICON_COL_WEIGHT), contentAlignment = Alignment.Center) {
-                when (log.state) {
-                    DeliveryState.DELIVERED ->
-                        Icon(Icons.Filled.CheckCircle, null, tint = SuccessGreen)
-
-                    DeliveryState.CANCELLED, DeliveryState.FAILED ->
-                        Icon(Icons.Filled.Cancel, null, tint = MaterialTheme.colorScheme.error)
-
-                    else ->
-                        Icon(
-                            Icons.Filled.CheckCircle,
-                            null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                }
-            }
-            Column(
-                Modifier.weight(DETAILS_COL_WEIGHT),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(
-                    log.orderDate,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    textAlign = TextAlign.Center,
-                )
-                Text(
-                    log.orderId,
-                    style =
-                        MaterialTheme.typography.bodyMedium.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onBackground,
-                        ),
-                    textAlign = TextAlign.Center,
-                )
-            }
-            Text(
-                text = log.deliveryTime,
-                color =
-                    when (log.state) {
-                        DeliveryState.DELIVERED -> SuccessGreen
-                        DeliveryState.CANCELLED, DeliveryState.FAILED -> MaterialTheme.colorScheme.error
-                        else -> MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-                modifier = Modifier.weight(TIME_COL_WEIGHT),
-                textAlign = TextAlign.Center,
-            )
-        }
+        items(logs) { deliveryLogItem(it) }
+        if (isLoadingMore && !endReached) item { loadingFooter() }
     }
 }

@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ntg.lmd.mainscreen.domain.model.DeliveryLog
-import com.ntg.lmd.mainscreen.ui.mapper.toUi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,18 +13,13 @@ class DeliveriesLogViewModel : ViewModel() {
     private val _logs = MutableStateFlow<List<DeliveryLog>>(emptyList())
     val logs: StateFlow<List<DeliveryLog>> = _logs
 
-    // for search
-    private var allLogs: List<DeliveryLog> = emptyList()
-
-    companion object {
-        private const val DEFAULT_PAGE_SIZE = 10
-        private const val LOAD_MORE_DELAY_MS = 250L
-    }
+    private var lastRequested: Pair<Int, String?>? = null
+    private var gen: Int = 0 // generation counter that increases every time we reset or refresh data
 
     // paging state
-    private val pageSize = DEFAULT_PAGE_SIZE
-    private var nextIndex = 0
-    private var currentSource: List<DeliveryLog> = emptyList()
+    private var page = 1
+    private var hasNext = true
+    private var currentQuery: String? = null
 
     private val _isLoadingMore = MutableStateFlow(false)
     val isLoadingMore: StateFlow<Boolean> = _isLoadingMore
@@ -33,62 +27,98 @@ class DeliveriesLogViewModel : ViewModel() {
     private val _endReached = MutableStateFlow(false)
     val endReached: StateFlow<Boolean> = _endReached
 
-    // load data
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing
+
+    companion object {
+        private const val LOAD_MORE_DELAY_MS = 250L
+        private const val PAGE_SIZE = 20
+        private val STATUS_FILTERS = listOf(3, 7, 8)
+    }
+
     fun load(context: Context) {
+        reset()
+        viewModelScope.launch { fetchNext(context) }
+    }
+
+    private fun reset() {
+        page = 1
+        hasNext = true
+        lastRequested = null
+        gen += 1
+        _endReached.value = false
+        _logs.value = emptyList()
+    }
+
+    fun loadMore(context: Context) {
+        if (_isLoadingMore.value || _endReached.value) return
+        viewModelScope.launch { fetchNext(context) }
+    }
+
+    fun refresh(context: Context) {
+        if (_isRefreshing.value) return
         viewModelScope.launch {
-            // Get the use case from the Provider
-            val useCase = DeliveriesLogProvider.loadDeliveryLogsUseCase(context)
-            val domain = useCase()
-            val ui = domain.map { it.toUi(context) }
-            allLogs = ui
-            resetPagination(allLogs)
+            _isRefreshing.value = true
+            try {
+                reset()
+                delay(LOAD_MORE_DELAY_MS)
+                viewModelScope.launch { fetchNext(context) }
+            } finally {
+                _isRefreshing.value = false
+            }
         }
     }
 
-    private fun resetPagination(source: List<DeliveryLog>) {
-        currentSource = source
-        nextIndex = 0
-        _endReached.value = source.isEmpty()
-        _logs.value = emptyList()
-        // load first page
-        loadMore()
-    }
-
-    fun loadMore() {
-        if (_isLoadingMore.value || _endReached.value) return
-        viewModelScope.launch {
-            _isLoadingMore.value = true
-
+    private suspend fun fetchNext(context: Context) {
+        if (!prepareNext()) return
+        val g = gen
+        _isLoadingMore.value = true
+        try {
             delay(LOAD_MORE_DELAY_MS)
-
-            val from = nextIndex
-            val to = (nextIndex + pageSize).coerceAtMost(currentSource.size)
-
-            if (from < to) {
-                val nextChunk = currentSource.subList(from, to)
-                _logs.value = _logs.value + nextChunk
-                nextIndex = to
-                _endReached.value = nextIndex >= currentSource.size
-            } else {
-                _endReached.value = true
-            }
+            val useCase = DeliveriesLogProvider.getLogsUseCase(context)
+            val (items, next) =
+                useCase(
+                    page = page,
+                    limit = PAGE_SIZE,
+                    statusIds = STATUS_FILTERS,
+                    search = currentQuery,
+                )
+            if (g == gen) applyPageResult(items, next)
+        } catch (_: Throwable) {
+            if (g == gen) _endReached.value = true
+        } finally {
             _isLoadingMore.value = false
         }
     }
 
-    // search by order ID (supports "#123" or "123")
+    private fun prepareNext(): Boolean {
+        var canProceed = true
+        if (!hasNext) {
+            _endReached.value = true
+            canProceed = false
+        }
+        val key = page to currentQuery
+        if (canProceed && lastRequested == key) {
+            canProceed = false
+        }
+        if (canProceed) {
+            lastRequested = key
+        }
+        return canProceed
+    }
+
+    private fun applyPageResult(
+        items: List<DeliveryLog>,
+        next: Boolean,
+    ) {
+        _logs.value = (_logs.value + items).distinctBy { it.orderId }
+        hasNext = next
+        _endReached.value = !hasNext
+        if (hasNext) page += 1
+    }
+
+    // search by order number
     fun searchById(query: String) {
-        val q = query.trim().removePrefix("#")
-        val filtered =
-            if (q.isEmpty()) {
-                allLogs
-            } else {
-                allLogs.filter {
-                    it.orderId
-                        .removePrefix("#")
-                        .contains(q, ignoreCase = true)
-                }
-            }
-        resetPagination(filtered)
+        currentQuery = query.trim().removePrefix("#").ifEmpty { null }
     }
 }
