@@ -51,7 +51,7 @@ class MyOrdersViewModel(
                 page = 1
                 endReached = false
 
-                val first = fetchPage(page)
+                val first = fetchPage(page, bypassCache = true)
                 allOrders.clear()
                 allOrders.addAll(first)
                 endReached = first.size < PAGE_SIZE
@@ -73,15 +73,18 @@ class MyOrdersViewModel(
         }
     }
 
-    /** Pull-to-refresh. Keeps list visible; replaces data on success; stops spinner in finally. */
+    private suspend fun fetchPage(page: Int, bypassCache: Boolean = false): List<OrderInfo> {
+        return getMyOrders(page = page, limit = PAGE_SIZE, bypassCache = bypassCache)
+    }
+
     fun refresh(context: Context) {
         val s = _state.value
-        if (s.isRefreshing || s.isLoading) return
+        if (s.isRefreshing) return
         _state.update { it.copy(isRefreshing = true, errorMessage = null) }
 
         viewModelScope.launch {
             try {
-                val fresh = fetchPage(1)
+                val fresh = fetchPage(page = 1, bypassCache = true) // <- force network
                 page = 1
                 endReached = fresh.size < PAGE_SIZE
                 allOrders.clear()
@@ -89,7 +92,7 @@ class MyOrdersViewModel(
                 publishFilteredFirstPage()
             } catch (t: Throwable) {
                 LocalUiOnlyStatusBus.errorEvents.tryEmit(
-                    Pair(t.message ?: "Refresh failed") { refresh(context) }
+                    (t.message ?: "Refresh failed") to { refresh(context) }
                 )
             } finally {
                 _state.update { it.copy(isRefreshing = false) }
@@ -169,6 +172,27 @@ class MyOrdersViewModel(
                 orders = first,
                 emptyMessage = emptyMsg,
                 errorMessage = null
+            )
+        }
+    }
+    fun applyServerPatch(updated: OrderInfo) {
+        // replace in visible list
+        val visible = _state.value.orders.toMutableList()
+        val i = visible.indexOfFirst { it.id == updated.id }
+        if (i != -1) {
+            visible[i] = visible[i].copy(
+                status = updated.status,
+                details = updated.details ?: visible[i].details
+                // copy more fields if you want (name, orderNumber, etc.)
+            )
+            _state.update { it.copy(orders = visible) }
+        }
+        // replace in allOrders too (so paging/filtering remains consistent)
+        val j = allOrders.indexOfFirst { it.id == updated.id }
+        if (j != -1) {
+            allOrders[j] = allOrders[j].copy(
+                status = updated.status,
+                details = updated.details ?: allOrders[j].details
             )
         }
     }

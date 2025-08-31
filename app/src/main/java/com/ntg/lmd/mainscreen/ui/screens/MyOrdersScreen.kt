@@ -1,5 +1,8 @@
 package com.ntg.lmd.mainscreen.ui.screens
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -29,6 +33,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -46,8 +51,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.ntg.lmd.R
+import com.ntg.lmd.mainscreen.data.repository.MyOrdersRepositoryImpl
+import com.ntg.lmd.mainscreen.data.repository.UpdateOrdersStatusRepository
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
+import com.ntg.lmd.mainscreen.domain.usecase.GetMyOrdersUseCase
+import com.ntg.lmd.mainscreen.domain.usecase.UpdateOrderStatusUseCase
 import com.ntg.lmd.mainscreen.ui.components.bottomStickyButton
 import com.ntg.lmd.mainscreen.ui.components.callButton
 import com.ntg.lmd.mainscreen.ui.components.deliverDialog
@@ -61,10 +70,13 @@ import com.ntg.lmd.mainscreen.ui.components.reasonDialog
 import com.ntg.lmd.mainscreen.ui.components.reassignDialog
 import com.ntg.lmd.mainscreen.ui.components.simpleConfirmDialog
 import com.ntg.lmd.mainscreen.ui.screens.orders.model.LocalUiOnlyStatusBus
-/*import com.ntg.lmd.mainscreen.ui.screens.orders.model.OrderStatus
-import com.ntg.lmd.mainscreen.ui.screens.orders.model.OrderUI
-import com.ntg.lmd.mainscreen.ui.screens.orders.model.statusEnum*/
+import com.ntg.lmd.mainscreen.ui.screens.orders.model.MyOrdersUiState
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyOrdersViewModel
+import com.ntg.lmd.mainscreen.ui.viewmodel.MyOrdersViewModelFactory
+import com.ntg.lmd.mainscreen.ui.viewmodel.OrderLogger
+import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
+import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModelFactory
+import com.ntg.lmd.network.core.RetrofitProvider
 import com.ntg.lmd.ui.theme.SuccessGreen
 import kotlinx.coroutines.flow.collectLatest
 
@@ -78,51 +90,63 @@ fun myOrdersScreen(
     externalQuery: String,
     onOpenOrderDetails: (String) -> Unit,
 ) {
-    // --- build the use case (no DI) ---
-    val factory = remember {
-        // Repository -> UseCase -> Factory
-        val repo = com.ntg.lmd.mainscreen.data.repository.MyOrdersRepositoryImpl(
-            com.ntg.lmd.network.core.RetrofitProvider.ordersApi
-        )
-        val usecase = com.ntg.lmd.mainscreen.domain.usecase.GetMyOrdersUseCase(repo)
-        com.ntg.lmd.mainscreen.ui.viewmodel.MyOrdersViewModelFactory(usecase)
-    }
+    val repo = remember { MyOrdersRepositoryImpl(RetrofitProvider.ordersApi) }
+    val updaterepo = remember { UpdateOrdersStatusRepository(RetrofitProvider.updateStatusApi) }
 
-    // --- get the VM ---
-    val vm: MyOrdersViewModel = viewModel(factory = factory)
-    val state by vm.state.collectAsState()
-    val context = LocalContext.current
-    val snackbarHostState = remember { SnackbarHostState() }
-    val listState = rememberLazyListState()
+    val getUsecase = remember { GetMyOrdersUseCase(repo) }
+    val updateUsecase = remember { UpdateOrderStatusUseCase(updaterepo) }
 
-    // external query effect kept here (so we don’t add a param to the effects helper)
-    LaunchedEffect(externalQuery) { vm.onQueryChange(externalQuery) }
-
-    ordersEffects(
-        vm = vm,
-        state = state,
-        listState = listState,
-        snackbarHostState = snackbarHostState,
-        context = context,
+    val ordersVm: MyOrdersViewModel = viewModel(factory = MyOrdersViewModelFactory(getUsecase))
+    val updateVm: UpdateOrderStatusViewModel = viewModel(factory = UpdateOrderStatusViewModelFactory(
+        updateUsecase
+    )
     )
 
+    val state by ordersVm.state.collectAsState()
+    val updatingIds by updateVm.updatingIds.collectAsState()
+    val ctx = LocalContext.current
+    val snack = remember { SnackbarHostState() }
+    val listState = rememberLazyListState()
+    val pullState = rememberPullToRefreshState()
+
+    ordersEffects(ordersVm, state, listState, snack, ctx)
+
+    LaunchedEffect(Unit) {
+        updateVm.success.collect { updated ->
+            ordersVm.applyServerPatch(updated)
+        }
+    }
+    LaunchedEffect(Unit) {
+        updateVm.error.collect { (msg, retry) ->
+            val res = snack.showSnackbar(
+                message = msg,
+                actionLabel = ctx.getString(R.string.retry),
+                withDismissAction = true
+            )
+            if (res == SnackbarResult.ActionPerformed) retry()
+        }
+    }
+
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        bottomBar = { bottomStickyButton(text = stringResource(R.string.order_pool)) { } },
+        snackbarHost = { SnackbarHost(snack) },
+        bottomBar = { bottomStickyButton(text = stringResource(R.string.order_pool)) {} },
     ) { innerPadding ->
         PullToRefreshBox(
             isRefreshing = state.isRefreshing,
-            onRefresh = { vm.refresh(context) },
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
+            onRefresh = { ordersVm.refresh(ctx) },
+            state = pullState,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
         ) {
             ordersContent(
+                ordersVm = ordersVm,
+                updateVm = updateVm,
                 state = state,
                 listState = listState,
                 onOpenOrderDetails = onOpenOrderDetails,
-                context = context,
+                context = ctx,
+                updatingIds = updatingIds
             )
         }
     }
@@ -130,12 +154,11 @@ fun myOrdersScreen(
 
 @Composable
 private fun ordersEffects(
-    // Side effects: initial load, listen to status/error events, and trigger infinite scroll
     vm: MyOrdersViewModel,
-    state: com.ntg.lmd.mainscreen.ui.screens.orders.model.MyOrdersUiState,
-    listState: androidx.compose.foundation.lazy.LazyListState,
+    state: MyOrdersUiState,
+    listState: LazyListState,
     snackbarHostState: SnackbarHostState,
-    context: android.content.Context,
+    context: Context,
 ) {
     LaunchedEffect(Unit) { vm.loadOrders(context) }
 
@@ -173,13 +196,14 @@ private fun ordersEffects(
 
 @Composable
 private fun ordersContent(
-    // Chooses what to render (banner/loading/error/empty/list) and hooks up item actions
-    state: com.ntg.lmd.mainscreen.ui.screens.orders.model.MyOrdersUiState,
-    listState: androidx.compose.foundation.lazy.LazyListState,
+    ordersVm: MyOrdersViewModel,
+    updateVm: UpdateOrderStatusViewModel,
+    state: MyOrdersUiState,
+    listState: LazyListState,
     onOpenOrderDetails: (String) -> Unit,
-    context: android.content.Context,
+    context: Context,
+    updatingIds: Set<String>
 ) {
-    val vm: MyOrdersViewModel = viewModel()
     Column(Modifier.fillMaxSize()) {
         if (!state.isGpsAvailable) {
             infoBanner(
@@ -189,50 +213,64 @@ private fun ordersContent(
         }
         when {
             state.isLoading && state.orders.isEmpty() -> loadingView()
-            state.errorMessage != null ->
-                errorView(state.errorMessage!!) {
-                    vm.retry(context)
-                }
-
+            state.errorMessage != null -> errorView(state.errorMessage!!) { ordersVm.retry(context) }
             state.emptyMessage != null -> emptyView(state.emptyMessage!!)
-            else ->
-                orderList(
-                    orders = state.orders,
-                    listState = listState,
-                    actions =
-                        OrderActions(
-                            onDetails = { orderId -> onOpenOrderDetails(orderId) },
-                            onConfirmOrPick = { _ -> },
-                            onCall = { id ->
-                                val order = state.orders.firstOrNull { it.id == id }
-                                val phone = order?.customerPhone
-                                if (!phone.isNullOrBlank()) {
-                                    val intent =
-                                        android.content.Intent(
-                                            android.content.Intent.ACTION_DIAL,
-                                            android.net.Uri.parse("tel:$phone"),
-                                        )
-                                    context.startActivity(intent)
-                                } else {
-                                    LocalUiOnlyStatusBus.errorEvents.tryEmit(
-                                        context.getString(R.string.phone_missing) to null,
-                                    )
-                                }
-                            },
-                        ),
-                    isLoadingMore = state.isLoadingMore,
-                )
+            else -> orderList(
+                orders = state.orders,
+                listState = listState,
+                isLoadingMore = state.isLoadingMore,
+                updatingIds = updatingIds,
+                updateVm=updateVm,
+                onDetails = onOpenOrderDetails,
+                onCall = { id ->
+                    val order = state.orders.firstOrNull { it.id == id }
+                    val phone = order?.customerPhone
+                    if (!phone.isNullOrBlank()) {
+                        val intent = Intent(
+                            Intent.ACTION_DIAL,
+                            Uri.parse("tel:$phone"),
+                        )
+                        context.startActivity(intent)
+                    } else {
+                        LocalUiOnlyStatusBus.errorEvents.tryEmit(
+                            context.getString(R.string.phone_missing) to null,
+                        )
+                    }
+                },
+                onAction = { orderId, dialog ->
+                    val order = state.orders.firstOrNull { it.id == orderId }
+                    val label = when (dialog) {
+                        ActionDialog.Confirm -> "Confirm"
+                        ActionDialog.PickUp  -> "PickUp"
+                        ActionDialog.Start   -> "StartDelivery"
+                        ActionDialog.Deliver -> "Deliver"
+                        ActionDialog.Fail    -> "DeliveryFailed"
+                    }
+                    OrderLogger.uiTap(orderId, order?.orderNumber, label)
+
+                    when (dialog) {
+                        ActionDialog.Confirm -> updateVm.update(orderId, OrderStatus.CONFIRMED)
+                        ActionDialog.PickUp -> updateVm.update(orderId, OrderStatus.PICKUP)
+                        ActionDialog.Start -> updateVm.update(orderId, OrderStatus.START_DELIVERY)
+                        ActionDialog.Deliver -> updateVm.update(orderId, OrderStatus.DELIVERY_DONE)
+                        ActionDialog.Fail -> updateVm.update(orderId, OrderStatus.DELIVERY_FAILED)
+                    }
+                }
+            )
         }
     }
 }
 
 @Composable
 fun orderList(
-    // Lazy list of orders with a paging spinner item when loading more
     orders: List<OrderInfo>,
-    listState: androidx.compose.foundation.lazy.LazyListState,
-    actions: OrderActions,
+    listState: LazyListState,
     isLoadingMore: Boolean,
+    updatingIds: Set<String>,
+    updateVm:UpdateOrderStatusViewModel ,
+    onDetails: (String) -> Unit,
+    onCall: (String) -> Unit,
+    onAction: (String, ActionDialog) -> Unit,
 ) {
     LazyColumn(
         state = listState,
@@ -242,9 +280,11 @@ fun orderList(
         items(items = orders, key = { it.id }) { order ->
             myOrderCard(
                 order = order,
-                onDetails = { actions.onDetails(order.id) },
-                onConfirmOrPick = { actions.onConfirmOrPick(order.id) },
-                onCall = { actions.onCall(order.id) },
+                isUpdating = updatingIds.contains(order.id),
+                onDetails = { onDetails(order.id) },
+                onCall = { onCall(order.id) },
+                onAction = { dialog -> onAction(order.id, dialog) },
+                updateVm = updateVm
             )
         }
         if (isLoadingMore) {
@@ -261,53 +301,95 @@ fun orderList(
     }
 }
 
-@Suppress("UnusedParameter")
 @Composable
 fun myOrderCard(
-    // Single order card
-    modifier: Modifier = Modifier,
     order: OrderInfo,
+    isUpdating: Boolean,
     onDetails: () -> Unit,
-    onConfirmOrPick: () -> Unit,
     onCall: () -> Unit,
+    onAction: (ActionDialog) -> Unit,
+    updateVm: UpdateOrderStatusViewModel,
 ) {
-    val context = LocalContext.current
+    var dialog by remember { mutableStateOf<ActionDialog?>(null) }
     var showReassign by remember { mutableStateOf(false) }
+    val reassignLabel = stringResource(R.string.reassign_order)
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth(),                           // ← restore
         shape = RoundedCornerShape(dimensionResource(R.dimen.card_radius)),
-        elevation = CardDefaults.cardElevation(defaultElevation = CARD_ELEVATION),
-        colors =
-            CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface,
-            ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
     ) {
-        Column(modifier = Modifier.padding(dimensionResource(R.dimen.largeSpace))) {
-            // Header with 3-dots menu
+        Column(Modifier.padding(dimensionResource(R.dimen.largeSpace))) {
             orderHeaderWithMenu(
                 order = order,
+                enabled = !isUpdating,
                 onPickUp = {
-/*
-                    LocalUiOnlyStatusBus.statusEvents.tryEmit(order.id to */
-                    /*OrderStatus.Despatched*//*
-)
-*/
+                    updateVm.update(order.id, OrderStatus.PICKUP)
                 },
                 onCancel = {
-                    LocalUiOnlyStatusBus.statusEvents.tryEmit(order.id to OrderStatus.CANCELED)
-                },
-                onReassign = {
-                    showReassign = true
-                },
+                    updateVm.update(order.id, OrderStatus.CANCELED)
+                           },
+                onReassign = { showReassign = true },
             )
 
-            Spacer(modifier = Modifier.height(dimensionResource(R.dimen.mediumSpace)))
+            Spacer(Modifier.height(dimensionResource(R.dimen.mediumSpace)))
 
-            // Main action row
-            orderActionsRow(
-                order = order,
-                onDetails = onDetails,
-            )
+            Row(horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.smallerSpace))) {
+                OutlinedButton(
+                    onClick = onDetails,
+                    enabled = !isUpdating,
+                    modifier = Modifier.weight(0.8f),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
+                    shape = RoundedCornerShape(dimensionResource(R.dimen.mediumSpace)),
+                ) {
+                    Spacer(Modifier.width(dimensionResource(R.dimen.smallerSpace)))
+                    Text(text = stringResource(R.string.order_details), style = MaterialTheme.typography.titleSmall, maxLines = 1)
+                }
+
+                when (order.status) {
+                    OrderStatus.ADDED ->
+                        primaryActionButton(
+                            text = stringResource(R.string.confirm_order),
+                            modifier = Modifier.weight(1f),
+                            enabled = !isUpdating,
+                            onClick = { dialog = ActionDialog.Confirm },
+                        )
+                    OrderStatus.CONFIRMED ->
+                        primaryActionButton(
+                            text = stringResource(R.string.pick_order),
+                            modifier = Modifier.weight(1f),
+                            enabled = !isUpdating,
+                            onClick = { dialog = ActionDialog.PickUp },
+                        )
+                    OrderStatus.PICKUP ->
+                        primaryActionButton(
+                            text = stringResource(R.string.start_delivery),
+                            modifier = Modifier.weight(1f),
+                            enabled = !isUpdating,
+                            onClick = { dialog = ActionDialog.Start },
+                        )
+                    OrderStatus.START_DELIVERY ->
+                        primaryActionButton(
+                            text = stringResource(R.string.deliver_order),
+                            modifier = Modifier.weight(1f),
+                            enabled = !isUpdating,
+                            onClick = { dialog = ActionDialog.Deliver },
+                        )
+                    else -> {}
+                }
+            }
+
+            Spacer(Modifier.height(dimensionResource(R.dimen.smallerSpace)))
+
+            if (order.status == OrderStatus.PICKUP || order.status == OrderStatus.START_DELIVERY) {
+                OutlinedButton(
+                    onClick = { dialog = ActionDialog.Fail },
+                    enabled = !isUpdating,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(dimensionResource(R.dimen.mediumSpace)),
+                ) { Text(stringResource(R.string.delivery_failed)) }
+            }
 
             callButton(onCall)
         }
@@ -318,11 +400,39 @@ fun myOrderCard(
             onDismiss = { showReassign = false },
             onConfirm = { assignee ->
                 LocalUiOnlyStatusBus.errorEvents.tryEmit(
-                    context.getString(R.string.reassign_order) + " → " + assignee to null,
+                    "$reassignLabel → $assignee" to null
                 )
                 showReassign = false
             },
         )
+    }
+
+    when (dialog) {
+        ActionDialog.Confirm -> simpleConfirmDialog(
+            title = stringResource(R.string.confirm_order),
+            onDismiss = { dialog = null },
+            onConfirm = { onAction(ActionDialog.Confirm); dialog = null },
+        )
+        ActionDialog.PickUp -> simpleConfirmDialog(
+            title = stringResource(R.string.pick_order),
+            onDismiss = { dialog = null },
+            onConfirm = { onAction(ActionDialog.PickUp); dialog = null },
+        )
+        ActionDialog.Start -> simpleConfirmDialog(
+            title = stringResource(R.string.start_delivery),
+            onDismiss = { dialog = null },
+            onConfirm = { onAction(ActionDialog.Start); dialog = null },
+        )
+        ActionDialog.Deliver -> deliverDialog(
+            onDismiss = { dialog = null },
+            onConfirm = { onAction(ActionDialog.Deliver); dialog = null },
+        )
+        ActionDialog.Fail -> reasonDialog(
+            title = stringResource(R.string.delivery_failed),
+            onDismiss = { dialog = null },
+            onConfirm = { onAction(ActionDialog.Fail); dialog = null },
+        )
+        null -> {}
     }
 }
 
@@ -340,7 +450,6 @@ sealed class ActionDialog {
 
 @Composable
 fun orderActionsRow(
-    // keeps which dialog is open in local state
     order: OrderInfo,
     onDetails: () -> Unit,
 ) {
@@ -366,7 +475,6 @@ fun orderActionsRow(
 
 @Composable
 fun actionPrimaryRow(
-    // First action row: details button + primary action based on current order status
     status: OrderStatus,
     onDetails: () -> Unit,
     onAction: (ActionDialog) -> Unit,
@@ -422,7 +530,6 @@ fun actionPrimaryRow(
 
 @Composable
 fun secondaryFailRow(
-    // Optional second row: shows “Delivery failed” button for dispatched/delivering states.
     status: OrderStatus,
     onFailClick: () -> Unit,
 ) {
@@ -440,7 +547,6 @@ fun secondaryFailRow(
 
 @Composable
 fun actionDialogs(
-    // Shows the appropriate confirm/reason dialogs
     dialog: ActionDialog?,
     orderId: String,
     onDismiss: () -> Unit,
@@ -507,7 +613,6 @@ data class OrderActions(
 
 @Composable
 fun statusTint(status: String) =
-    // Returns the tint color for the status label (green for added/confirmed,
     if (status.equals("confirmed", ignoreCase = true) ||
         status.equals("added", ignoreCase = true)
     ) {

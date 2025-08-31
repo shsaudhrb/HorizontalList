@@ -5,6 +5,7 @@ import com.ntg.lmd.BuildConfig
 import com.ntg.lmd.authentication.data.datasource.remote.api.AuthApi
 import com.ntg.lmd.mainscreen.data.datasource.remote.LiveOrdersApiService
 import com.ntg.lmd.mainscreen.data.datasource.remote.OrdersApi
+import com.ntg.lmd.mainscreen.data.datasource.remote.UpdatetOrdersStatusApi
 import com.ntg.lmd.network.authheader.AuthInterceptor
 import com.ntg.lmd.network.authheader.SecureTokenStore
 import com.ntg.lmd.network.authheader.TokenAuthenticator
@@ -83,5 +84,14 @@ object RetrofitProvider {
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(OrdersApi::class.java)
+    }
+    val updateStatusApi: UpdatetOrdersStatusApi by lazy {
+        Retrofit
+            .Builder()
+            .baseUrl(BuildConfig.BASE_URL) // functions root
+            .client(authedOkHttp) // includes AuthInterceptor + TokenAuthenticator
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(UpdatetOrdersStatusApi::class.java)
     }
 }
