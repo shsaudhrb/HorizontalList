@@ -101,6 +101,22 @@ tasks.register("detektUnusedImports", io.gitlab.arturbosch.detekt.Detekt::class)
     }
 }
 
+// Custom detekt task for file size and method size constraints
+tasks.register("detektFileSize", io.gitlab.arturbosch.detekt.Detekt::class) {
+    description = "Run detekt analysis for file size and method size constraints"
+    group = "verification"
+
+    config.setFrom(files("../detekt-file-size.yml"))
+    
+    source = fileTree("src/main/java")
+
+    reports {
+        html.required.set(false)
+        xml.required.set(false)
+        txt.required.set(false)
+    }
+}
+
 dependencies {
 
     implementation(libs.androidx.core.ktx)
