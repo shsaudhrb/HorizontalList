@@ -179,6 +179,9 @@ dependencies {
     implementation(libs.androidx.security.crypto)
 
     implementation(libs.material.icons.extended)
+
+    // LeakCanary for memory leak detection
+    debugImplementation(libs.leakcanary.android)
 }
 
 // Custom tasks for code quality checks
