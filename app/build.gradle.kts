@@ -106,7 +106,7 @@ tasks.register("detektFileSize", io.gitlab.arturbosch.detekt.Detekt::class) {
     group = "verification"
 
     config.setFrom(files("../detekt-file-size.yml"))
-    
+
     source = fileTree("src/main/java")
 
     reports {
