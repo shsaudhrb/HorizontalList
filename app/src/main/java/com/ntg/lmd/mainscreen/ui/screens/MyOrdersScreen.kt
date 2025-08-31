@@ -60,10 +60,8 @@ import com.ntg.lmd.mainscreen.ui.components.primaryActionButton
 import com.ntg.lmd.mainscreen.ui.components.reasonDialog
 import com.ntg.lmd.mainscreen.ui.components.reassignDialog
 import com.ntg.lmd.mainscreen.ui.components.simpleConfirmDialog
-import com.ntg.lmd.mainscreen.ui.screens.orders.model.LocalUiOnlyStatusBus
-/*import com.ntg.lmd.mainscreen.ui.screens.orders.model.OrderStatus
-import com.ntg.lmd.mainscreen.ui.screens.orders.model.OrderUI
-import com.ntg.lmd.mainscreen.ui.screens.orders.model.statusEnum*/
+import com.ntg.lmd.mainscreen.ui.model.LocalUiOnlyStatusBus
+import com.ntg.lmd.mainscreen.ui.model.MyOrdersUiState
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyOrdersViewModel
 import com.ntg.lmd.ui.theme.SuccessGreen
 import kotlinx.coroutines.flow.collectLatest
@@ -103,7 +101,7 @@ fun myOrdersScreen(
     ) { innerPadding ->
         PullToRefreshBox(
             isRefreshing = state.isRefreshing,
-            onRefresh = { vm.refresh(context) },
+            onRefresh = { vm.refresh() },
             modifier =
                 Modifier
                     .fillMaxSize()
@@ -123,12 +121,12 @@ fun myOrdersScreen(
 private fun ordersEffects(
     // Side effects: initial load, listen to status/error events, and trigger infinite scroll
     vm: MyOrdersViewModel,
-    state: com.ntg.lmd.mainscreen.ui.screens.orders.model.MyOrdersUiState,
+    state: MyOrdersUiState,
     listState: androidx.compose.foundation.lazy.LazyListState,
     snackbarHostState: SnackbarHostState,
     context: android.content.Context,
 ) {
-    LaunchedEffect(Unit) { vm.loadOrders(context) }
+    LaunchedEffect(Unit) { vm.loadOrders() }
 
     LaunchedEffect(Unit) {
         LocalUiOnlyStatusBus.statusEvents.collectLatest { (id, newStatus) ->
@@ -165,7 +163,7 @@ private fun ordersEffects(
 @Composable
 private fun ordersContent(
     // Chooses what to render (banner/loading/error/empty/list) and hooks up item actions
-    state: com.ntg.lmd.mainscreen.ui.screens.orders.model.MyOrdersUiState,
+    state: MyOrdersUiState,
     listState: androidx.compose.foundation.lazy.LazyListState,
     onOpenOrderDetails: (String) -> Unit,
     context: android.content.Context,
@@ -182,7 +180,7 @@ private fun ordersContent(
             state.isLoading && state.orders.isEmpty() -> loadingView()
             state.errorMessage != null ->
                 errorView(state.errorMessage!!) {
-                    vm.retry(context)
+                    vm.retry()
                 }
 
             state.emptyMessage != null -> emptyView(state.emptyMessage!!)
@@ -278,12 +276,9 @@ fun myOrderCard(
             orderHeaderWithMenu(
                 order = order,
                 onPickUp = {
-/*
-                    LocalUiOnlyStatusBus.statusEvents.tryEmit(order.id to */
-// OrderStatus.Despatched
-/*
-)
-*/
+                    LocalUiOnlyStatusBus.statusEvents.tryEmit(
+                        order.id to OrderStatus.PICKUP,
+                    )
                 },
                 onCancel = {
                     LocalUiOnlyStatusBus.statusEvents.tryEmit(order.id to OrderStatus.CANCELED)
@@ -375,7 +370,11 @@ fun actionPrimaryRow(
             shape = RoundedCornerShape(dimensionResource(R.dimen.mediumSpace)),
         ) {
             Spacer(modifier = Modifier.width(dimensionResource(R.dimen.smallerSpace)))
-            Text(text = stringResource(id = R.string.order_details), style = MaterialTheme.typography.titleSmall, maxLines = 1)
+            Text(
+                text = stringResource(id = R.string.order_details),
+                style = MaterialTheme.typography.titleSmall,
+                maxLines = 1,
+            )
         }
 
         when (status) {

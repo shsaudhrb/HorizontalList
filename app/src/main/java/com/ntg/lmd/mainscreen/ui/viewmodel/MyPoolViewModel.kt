@@ -17,6 +17,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+const val NEAR_END_THRESHOLD = 2
+private const val PREFETCH_AHEAD_PAGES = 3
+
 class MyPoolViewModel(
     private val getMyOrders: GetMyOrdersUseCase,
     private val computeDistancesUseCase: ComputeDistancesUseCase,
@@ -47,15 +50,16 @@ class MyPoolViewModel(
             viewModelScope.launch {
                 _ui.update { it.copy(isLoading = true, endReached = false) }
                 runCatching { getMyOrders(page = 1, limit = pageSize) }
-                    .onSuccess { list ->
+                    .onSuccess { page1 ->
                         page = 1
+                        val list = page1.items
                         val loc = deviceLocation.value
                         val computed = if (loc != null) computeDistancesUseCase(loc, list) else list
                         _ui.update {
                             it.copy(
                                 isLoading = false,
                                 orders = computed,
-                                endReached = computed.size < pageSize,
+                                endReached = page1.rawCount < pageSize, // <-- raw count decides end
                             )
                         }
                     }.onFailure { e ->
@@ -68,30 +72,66 @@ class MyPoolViewModel(
     fun loadNextIfNeeded(currentIndex: Int) {
         val state = _ui.value
         if (state.isLoading || state.isLoadingMore || state.endReached) return
-        if (currentIndex < state.orders.size - 2) return
+        if (currentIndex < state.orders.size - 2) return // trigger on 2nd last
 
         loadingJob?.cancel()
         loadingJob =
             viewModelScope.launch {
                 _ui.update { it.copy(isLoadingMore = true) }
-                val nextPage = page + 1
-                runCatching { getMyOrders(page = nextPage, limit = pageSize) }
-                    .onSuccess { more ->
-                        val merged = mergeById(_ui.value.orders, more)
+
+                val startPage = page + 1
+                var curPage = startPage
+                var lastRawCount = 0
+                var appended = false
+                var hops = 0
+
+                while (hops < PREFETCH_AHEAD_PAGES) {
+                    val res =
+                        runCatching { getMyOrders(page = curPage, limit = pageSize) }
+                            .getOrElse { e ->
+                                _ui.update { it.copy(isLoadingMore = false) }
+                                Log.e("MyPoolVM", "Paging load failed on p=$curPage: ${e.message}", e)
+                                return@launch
+                            }
+
+                    lastRawCount = res.rawCount
+
+                    if (res.items.isNotEmpty()) {
+                        val merged = mergeById(_ui.value.orders, res.items)
                         val loc = deviceLocation.value
                         val computed = if (loc != null) computeDistancesUseCase(loc, merged) else merged
-                        page = if (more.isNotEmpty()) nextPage else page
+
+                        page = curPage
                         _ui.update {
                             it.copy(
                                 isLoadingMore = false,
                                 orders = computed,
-                                endReached = more.size < pageSize,
+                                endReached = lastRawCount < pageSize, // <-- raw decides end
                             )
                         }
-                    }.onFailure { e ->
-                        _ui.update { it.copy(isLoadingMore = false) }
-                        Log.e("MyPoolVM", "Paging load failed: ${e.message}", e)
+                        appended = true
+                        break
                     }
+
+                    // No allowed items on this page
+                    if (lastRawCount < pageSize) {
+                        // Truly no more pages from server
+                        page = curPage
+                        _ui.update { it.copy(isLoadingMore = false, endReached = true) }
+                        return@launch
+                    }
+
+                    // Try next page
+                    curPage++
+                    hops++
+                }
+
+                if (!appended) {
+                    // We skipped ahead PREFETCH_AHEAD_PAGES but found no allowed items yet.
+                    // Keep paging enabled so a further scroll can continue skipping.
+                    page = curPage
+                    _ui.update { it.copy(isLoadingMore = false, endReached = false) }
+                }
             }
     }
 

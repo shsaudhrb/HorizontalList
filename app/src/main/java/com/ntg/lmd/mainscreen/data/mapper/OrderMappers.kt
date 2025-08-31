@@ -9,23 +9,24 @@ fun OrderDto.toDomain(): OrderInfo =
         id = orderId,
         name = customerName.orEmpty(),
         orderNumber = orderNumber,
-        timeAgo = "now", // you can replace this with proper relative time later
-        itemsCount = 0, // not provided in DTO
+        timeAgo = "now",
+        itemsCount = 0,
         distanceKm = distanceKm ?: Double.NaN,
         lat = coordinates?.latitude ?: Double.NaN,
         lng = coordinates?.longitude ?: Double.NaN,
         status =
-            when (orderstatuses?.statusName?.lowercase()) {
-                "added" -> OrderStatus.ADDED
-                "confirmed" -> OrderStatus.CONFIRMED
-                "picked" -> OrderStatus.PICKUP
-                "reassigned" -> OrderStatus.REASSIGNED
-                "canceled" -> OrderStatus.CANCELED
-                "delivered" -> OrderStatus.DELIVERY_DONE
-                "deliver failed" -> OrderStatus.DELIVERY_FAILED
-                "start delivery" -> OrderStatus.START_DELIVERY
-                else -> OrderStatus.ADDED
-            },
+            OrderStatus.fromId(statusId)
+                ?: when (orderstatuses?.statusName?.trim()?.lowercase()) {
+                    "added" -> OrderStatus.ADDED
+                    "confirmed" -> OrderStatus.CONFIRMED
+                    "picked", "pickup" -> OrderStatus.PICKUP
+                    "reassigned" -> OrderStatus.REASSIGNED
+                    "canceled", "cancelled" -> OrderStatus.CANCELED
+                    "delivered", "delivery done" -> OrderStatus.DELIVERY_DONE
+                    "deliver failed", "delivery failed" -> OrderStatus.DELIVERY_FAILED
+                    "start delivery" -> OrderStatus.START_DELIVERY
+                    else -> OrderStatus.ADDED
+                },
         price = "---",
         customerPhone = null,
         details = null,

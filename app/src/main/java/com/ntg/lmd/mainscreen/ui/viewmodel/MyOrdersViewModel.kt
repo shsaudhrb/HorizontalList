@@ -1,11 +1,10 @@
 package com.ntg.lmd.mainscreen.ui.viewmodel
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
-import com.ntg.lmd.mainscreen.ui.screens.orders.model.MyOrdersUiState
+import com.ntg.lmd.mainscreen.ui.model.MyOrdersUiState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,12 +13,10 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.collections.take
-import kotlin.math.abs
 import kotlin.random.Random
 
 private const val PAGE_SIZE = 10
 private const val LOAD_DELAY_MS = 600L
-private const val TAG = "MyOrdersViewModel"
 
 class MyOrdersViewModel : ViewModel() {
     private val _state = MutableStateFlow(MyOrdersUiState(isLoading = true))
@@ -62,7 +59,6 @@ class MyOrdersViewModel : ViewModel() {
             List(25) { idx ->
                 val jitterLat = (rnd.nextDouble() - 0.5) * 0.12 // ~±0.06 deg
                 val jitterLng = (rnd.nextDouble() - 0.5) * 0.12
-                val km = abs(rnd.nextDouble() * 18.0) // 0–18 km
 
                 OrderInfo(
                     id = "order-${idx + 1}", // if your model is Int; change to Long if needed
@@ -84,7 +80,7 @@ class MyOrdersViewModel : ViewModel() {
         allOrdersSorted = allOrders.sortedWith(byNearest)
     }
 
-    fun loadOrders(context: Context) {
+    fun loadOrders() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, errorMessage = null, emptyMessage = null) }
             // replaced helper with mock data
@@ -186,7 +182,7 @@ class MyOrdersViewModel : ViewModel() {
         _state.update { it.copy(orders = updated) }
     }
 
-    fun refresh(context: Context) {
+    fun refresh() {
         val s = _state.value
         if (s.isRefreshing || s.isLoading) return
 
@@ -221,5 +217,5 @@ class MyOrdersViewModel : ViewModel() {
         }
     }
 
-    fun retry(context: Context) = loadOrders(context)
+    fun retry() = loadOrders()
 }

@@ -35,7 +35,7 @@
     <dimen name="hairline">0.5dp</dimen>
 
     <dimen name="myOrders_card_width">320dp</dimen>
-    <dimen name="orders_carousel_height">250dp</dimen>
+    <dimen name="orders_carousel_height">300dp</dimen>
 
     <dimen name="drawer_header_text_size">20sp</dimen>
     <dimen name="drawer_section_title_text_size">12sp</dimen>
