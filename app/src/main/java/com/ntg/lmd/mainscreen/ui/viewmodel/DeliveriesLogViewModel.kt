@@ -14,7 +14,7 @@ class DeliveriesLogViewModel : ViewModel() {
     val logs: StateFlow<List<DeliveryLog>> = _logs
 
     private var lastRequested: Pair<Int, String?>? = null
-    private var gen: Int = 0 // generation counter that increases every time we reset or refresh data
+    private var generationCounter: Int = 0 // increases every time we reset or refresh data
 
     // paging state
     private var page = 1
@@ -45,7 +45,7 @@ class DeliveriesLogViewModel : ViewModel() {
         page = 1
         hasNext = true
         lastRequested = null
-        gen += 1
+        generationCounter += 1
         _endReached.value = false
         _logs.value = emptyList()
     }
@@ -71,7 +71,7 @@ class DeliveriesLogViewModel : ViewModel() {
 
     private suspend fun fetchNext(context: Context) {
         if (!prepareNext()) return
-        val g = gen
+        val g = generationCounter
         _isLoadingMore.value = true
         try {
             delay(LOAD_MORE_DELAY_MS)
@@ -83,9 +83,9 @@ class DeliveriesLogViewModel : ViewModel() {
                     statusIds = STATUS_FILTERS,
                     search = currentQuery,
                 )
-            if (g == gen) applyPageResult(items, next)
+            if (g == generationCounter) applyPageResult(items, next)
         } catch (_: Throwable) {
-            if (g == gen) _endReached.value = true
+            if (g == generationCounter) _endReached.value = true
         } finally {
             _isLoadingMore.value = false
         }
