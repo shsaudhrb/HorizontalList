@@ -13,21 +13,19 @@ object LocaleHelper {
         langCode: String,
         recreateActivity: Boolean = true,
     ): Context {
-        val locale = java.util.Locale(langCode)
-        java.util.Locale.setDefault(locale)
+        val locale = Locale.Builder().setLanguage(langCode).build()
 
-        val config = android.content.res.Configuration(ctx.resources.configuration)
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
-            config.setLocales(android.os.LocaleList(locale))
+        val config =Configuration(ctx.resources.configuration)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            config.setLocales(LocaleList(locale))
         } else {
             @Suppress("DEPRECATION")
             config.locale = locale
         }
 
-        // return the wrapped context
         val localized = ctx.createConfigurationContext(config)
 
-        if (recreateActivity && ctx is android.app.Activity) ctx.recreate()
+        if (recreateActivity && ctx is Activity) ctx.recreate()
 
         return localized
     }

@@ -43,59 +43,78 @@ fun languageSettingsScreen(
     val ctx = LocalContext.current
     var selected by remember { mutableStateOf(ui.language) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.app_language_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
-                    }
-                },
-                colors =
-                    TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                        navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
-                    ),
-            )
-        },
-    ) { padding ->
-        Column(
-            modifier =
-                Modifier
-                    .padding(padding)
-                    .padding(dimensionResource(R.dimen.mediumSpace)),
-            verticalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.smallerSpace)),
-        ) {
-            radioLine(stringResource(R.string.app_language_english), selected == AppLanguage.EN) {
-                selected = AppLanguage.EN
+    Scaffold(topBar = { languageTopBar(onBack) }) { padding ->
+        languageBody(
+            modifier = Modifier
+                .padding(padding)
+                .padding(dimensionResource(R.dimen.mediumSpace)),
+            selected = selected,
+            onSelect = { selected = it },
+            onApply = {
+                vm.setLanguage(it)
+                LocaleHelper.applyLanguage(
+                    ctx, if (it == AppLanguage.AR) "ar" else "en",
+                    recreateActivity = true
+                )
+                onBack()
             }
-            radioLine(stringResource(R.string.app_language_arabic), selected == AppLanguage.AR) {
-                selected = AppLanguage.AR
-            }
+        )
+    }
+}
 
-            Spacer(Modifier.height(dimensionResource(R.dimen.mediumSpace)))
-
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.smallSpace)),
-            ) {
-                gradientPrimaryButton(
-                    modifier = Modifier.weight(1f),
-                    text = stringResource(R.string.apply),
-                    loading = false,
-                    onClick = {
-                        vm.setLanguage(selected,ctx)
-                        LocaleHelper.applyLanguage(
-                            ctx,
-                            if (selected == AppLanguage.AR) "ar" else "en",
-                            recreateActivity = true,
-                        )
-                        onBack()
-                    },
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun languageTopBar(onBack: () -> Unit) {
+    TopAppBar(
+        title = { Text(stringResource(R.string.app_language_title)) },
+        navigationIcon = {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(R.string.back)
                 )
             }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.primary,
+            titleContentColor = MaterialTheme.colorScheme.onPrimary,
+            navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+        ),
+    )
+}
+
+@Composable
+private fun languageBody(
+    modifier: Modifier,
+    selected: AppLanguage,
+    onSelect: (AppLanguage) -> Unit,
+    onApply: (AppLanguage) -> Unit,
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.smallerSpace)),
+    ) {
+        radioLine(
+            label = stringResource(R.string.app_language_english),
+            selected = selected == AppLanguage.EN,
+            onPick = { onSelect(AppLanguage.EN) },
+        )
+        radioLine(
+            label = stringResource(R.string.app_language_arabic),
+            selected = selected == AppLanguage.AR,
+            onPick = { onSelect(AppLanguage.AR) },
+        )
+        Spacer(Modifier.height(dimensionResource(R.dimen.mediumSpace)))
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.smallSpace)),
+        ) {
+            gradientPrimaryButton(
+                modifier = Modifier.weight(1f),
+                text = stringResource(R.string.apply),
+                loading = false,
+                onClick = { onApply(selected) },
+            )
         }
     }
 }

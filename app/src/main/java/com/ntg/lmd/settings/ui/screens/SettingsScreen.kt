@@ -1,5 +1,6 @@
 package com.ntg.lmd.settings.ui.screens
 
+import android.app.Application
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -44,7 +45,7 @@ fun settingsScreen(backStackEntry: NavBackStackEntry) {
     val settingsVm: SettingsViewModel =
         viewModel(
             viewModelStoreOwner = backStackEntry,
-            factory = SettingsViewModelFactory(ctx.applicationContext),
+            factory = SettingsViewModelFactory(ctx.applicationContext as Application),
         )
 
     settingsHost(

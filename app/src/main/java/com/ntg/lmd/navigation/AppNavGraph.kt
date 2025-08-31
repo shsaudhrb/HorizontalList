@@ -95,14 +95,31 @@ fun appNavGraph(
                 }
             val uri = deepLinkIntent?.data
             val deepOpen = (uri?.scheme == "myapp" && uri.host == "notifications")
+            val ctx = LocalContext.current
+            val settingsVm: com.ntg.lmd.settings.ui.viewmodel.SettingsViewModel =
+                viewModel(factory = com.ntg.lmd.settings.ui.viewmodel.SettingsViewModelFactory(
+                    ctx.applicationContext as Application
+                ))
 
-            drawerHost(
-                onLogout = {
-                    rootNavController.navigate(Screen.Login.route) {
-                        popUpTo(Screen.Drawer.route) { inclusive = true }
-                        launchSingleTop = true
+            val logoutState by settingsVm.logoutState.collectAsState()
+
+            LaunchedEffect(logoutState) {
+                when (logoutState) {
+                    is com.ntg.lmd.settings.data.LogoutUiState.Success -> {
+                        rootNavController.navigate(Screen.Login.route) {
+                            popUpTo(Screen.Drawer.route) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                        settingsVm.resetLogoutState()
                     }
-                },
+                    is com.ntg.lmd.settings.data.LogoutUiState.Error -> {
+                        settingsVm.resetLogoutState() // (show snackbar if you have one)
+                    }
+                    else -> Unit
+                }
+            }
+            drawerHost(
+                onLogout = { settingsVm.logout() },
                 openNotifications = argOpen || deepOpen,
             )
         }

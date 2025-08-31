@@ -13,16 +13,13 @@ import androidx.navigation.compose.rememberNavController
 import com.ntg.lmd.navigation.appNavGraph
 import com.ntg.lmd.notification.ui.viewmodel.DeepLinkViewModel
 import com.ntg.lmd.ui.theme.lmdTheme
+import com.ntg.lmd.utils.LocaleHelper.applyLanguage
 
 class MainActivity : ComponentActivity() {
     override fun attachBaseContext(newBase: Context) {
-        val sp = newBase.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
-        val langCode = sp.getString("lang_code", "en") ?: "en"
-        val localized = com.ntg.lmd.utils.LocaleHelper.applyLanguage(
-            newBase,
-            langCode,
-            recreateActivity = false
-        )
+        val sp = newBase.getSharedPreferences("settings_prefs", Context.MODE_PRIVATE)
+        val langCode = sp.getString("lang", "en") ?: "en"
+        val localized = applyLanguage(newBase, langCode, recreateActivity = false)
         super.attachBaseContext(localized)
     }
     private lateinit var navController: NavHostController
