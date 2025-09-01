@@ -24,6 +24,7 @@ class TokenAuthenticator(
     private val refreshApi: AuthApi,
 ) : Authenticator {
     private val mutex = Mutex()
+
     private inline fun <T> runBlockingNotMain(crossinline block: suspend () -> T): T {
         if (Looper.myLooper() != Looper.getMainLooper()) {
             return runBlocking(Dispatchers.IO) { block() }
@@ -46,41 +47,49 @@ class TokenAuthenticator(
         return out.get()
     }
 
-    override fun authenticate(route: Route?, response: Response): Request? {
+    override fun authenticate(
+        route: Route?,
+        response: Response,
+    ): Request? {
         val hadAuthHeader = response.request.header("Authorization") != null
         if (!hadAuthHeader || response.code != HTTP_UNAUTHORIZED || responseCount(response) > MAX_AUTH_RETRIES) {
             return null
         }
 
-        val failedAccess = response.request.header("Authorization")
-            ?.removePrefix("Bearer")?.trim()
+        val failedAccess =
+            response.request
+                .header("Authorization")
+                ?.removePrefix("Bearer")
+                ?.trim()
 
         val refreshToken = store.getRefreshToken() ?: return null
 
-        val payload: LoginData? = try {
-            runBlockingNotMain {
-                mutex.withLock {
-                    val currentAccess = store.getAccessToken()
-                    if (!currentAccess.isNullOrBlank() && currentAccess != failedAccess) {
-                        return@withLock LoginData(
-                            user = null,
-                            accessToken = currentAccess,
-                            refreshToken = store.getRefreshToken(),
-                            expiresAt = store.getAccessExpiryIso(),
-                            refreshExpiresAt = store.getRefreshExpiryIso(),
-                        )
-                    }
+        val payload: LoginData? =
+            try {
+                runBlockingNotMain {
+                    mutex.withLock {
+                        val currentAccess = store.getAccessToken()
+                        if (!currentAccess.isNullOrBlank() && currentAccess != failedAccess) {
+                            return@withLock LoginData(
+                                user = null,
+                                accessToken = currentAccess,
+                                refreshToken = store.getRefreshToken(),
+                                expiresAt = store.getAccessExpiryIso(),
+                                refreshExpiresAt = store.getRefreshExpiryIso(),
+                            )
+                        }
 
-                    val res = refreshApi.refreshToken(
-                        RefreshTokenRequest(refresh_token = refreshToken)
-                    )
-                    if (!res.success || res.data == null) return@withLock null
-                    res.data
+                        val res =
+                            refreshApi.refreshToken(
+                                RefreshTokenRequest(refresh_token = refreshToken),
+                            )
+                        if (!res.success || res.data == null) return@withLock null
+                        res.data
+                    }
                 }
+            } catch (t: Throwable) {
+                null
             }
-        } catch (t: Throwable) {
-            null
-        }
 
         if (payload?.accessToken.isNullOrBlank()) return null
 
@@ -91,11 +100,11 @@ class TokenAuthenticator(
             refreshExpiresAt = payload.refreshExpiresAt,
         )
 
-        return response.request.newBuilder()
+        return response.request
+            .newBuilder()
             .header("Authorization", "Bearer ${payload.accessToken}")
             .build()
     }
-
 
     private fun responseCount(r: Response): Int {
         var resp: Response? = r

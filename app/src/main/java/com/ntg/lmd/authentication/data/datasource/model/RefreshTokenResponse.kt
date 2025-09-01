@@ -10,7 +10,7 @@ data class RefreshTokenResponse(
 )
 
 data class LoginData(
-    @SerializedName("user") val user: LoginUser?=null,
+    @SerializedName("user") val user: LoginUser? = null,
     @SerializedName("access_token")
     val accessToken: String?,
     @SerializedName("refresh_token")

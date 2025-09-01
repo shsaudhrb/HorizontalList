@@ -18,13 +18,11 @@ class LoginViewModel(
     private val authRepo: AuthRepositoryImp,
     private val validationViewModel: ValidationViewModel = ValidationViewModel(),
 ) : ViewModel() {
-
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
     private val usernameState = ValidationViewModel.InputState()
     private val passwordState = ValidationViewModel.InputState()
-
 
     fun updateUsername(value: String) {
         _uiState.updateField(value, ValidationField.USERNAME)
@@ -60,30 +58,39 @@ class LoginViewModel(
         _uiState.updateErrorVisibility(usernameState, passwordState, ValidationField.PASSWORD)
     }
 
-    fun submit(onResult: (Boolean) -> Unit = {}) = viewModelScope.launch {
-        val username = _uiState.value.username.trim()
-        val password = _uiState.value.password
+    fun submit(onResult: (Boolean) -> Unit = {}) =
+        viewModelScope.launch {
+            val username = _uiState.value.username.trim()
+            val password = _uiState.value.password
 
-        _uiState.setLoading()
-        when (val result = authRepo.login(username, password)) {
-            is NetworkResult.Success -> {
-                // If you have a display name from repo, use it; else fallback to username
-                val displayName = try { authRepo.lastLoginName } catch (_: Throwable) { null } ?: username
-                _uiState.handleSuccess(displayName)
-                onResult(true)
+            _uiState.setLoading()
+            when (val result = authRepo.login(username, password)) {
+                is NetworkResult.Success -> {
+                    // If you have a display name from repo, use it; else fallback to username
+                    val displayName =
+                        try {
+                            authRepo.lastLoginName
+                        } catch (_: Throwable) {
+                            null
+                        } ?: username
+                    _uiState.handleSuccess(displayName)
+                    onResult(true)
+                }
+                is NetworkResult.Error -> {
+                    _uiState.handleError(result.error.message)
+                    onResult(false)
+                }
+                is NetworkResult.Loading -> _uiState.setLoading()
             }
-            is NetworkResult.Error -> {
-                _uiState.handleError(result.error.message)
-                onResult(false)
-            }
-            is NetworkResult.Loading -> _uiState.setLoading()
         }
-    }
 }
 
 // ---------- File-level private helpers (pure: only mutate the provided state flow) ----------
 
-private fun MutableStateFlow<LoginUiState>.updateField(input: String, field: ValidationField) {
+private fun MutableStateFlow<LoginUiState>.updateField(
+    input: String,
+    field: ValidationField,
+) {
     update {
         when (field) {
             ValidationField.USERNAME -> it.copy(username = input, usernameError = null, showUsernameError = false)
@@ -95,12 +102,13 @@ private fun MutableStateFlow<LoginUiState>.updateField(input: String, field: Val
 private fun MutableStateFlow<LoginUiState>.applyValidation(
     validator: ValidationViewModel,
     field: ValidationField,
-    input: String
+    input: String,
 ) {
-    val error = when (field) {
-        ValidationField.USERNAME -> validator.validateUsername(input)
-        ValidationField.PASSWORD -> validator.validatePassword(input)
-    }
+    val error =
+        when (field) {
+            ValidationField.USERNAME -> validator.validateUsername(input)
+            ValidationField.PASSWORD -> validator.validatePassword(input)
+        }
     update {
         when (field) {
             ValidationField.USERNAME -> it.copy(usernameError = error)
@@ -112,7 +120,7 @@ private fun MutableStateFlow<LoginUiState>.applyValidation(
 private fun MutableStateFlow<LoginUiState>.updateErrorVisibility(
     usernameState: ValidationViewModel.InputState,
     passwordState: ValidationViewModel.InputState,
-    field: ValidationField
+    field: ValidationField,
 ) {
     update {
         when (field) {
@@ -126,7 +134,8 @@ private fun MutableStateFlow<LoginUiState>.updateErrorVisibility(
 
 private fun MutableStateFlow<LoginUiState>.updateFormValidation() {
     val s = value
-    val isValid = s.usernameError == null &&
+    val isValid =
+        s.usernameError == null &&
             s.passwordError == null &&
             s.username.isNotBlank() &&
             s.password.isNotBlank()
@@ -144,7 +153,7 @@ private fun MutableStateFlow<LoginUiState>.handleSuccess(displayName: String?) {
             loginSuccess = true,
             message = R.string.msg_welcome,
             errorMessage = null,
-            displayName = displayName
+            displayName = displayName,
         )
     }
 }

@@ -39,11 +39,12 @@ class MyApp : Application() {
             socket.reconnectIfTokenChanged(access)
         }
 
-        authRepo = AuthRepositoryImp(
-            loginApi = RetrofitProvider.apiNoAuth,
-            store = RetrofitProvider.tokenStore,
-            userStore = RetrofitProvider.userStore
-        )
+        authRepo =
+            AuthRepositoryImp(
+                loginApi = RetrofitProvider.apiNoAuth,
+                store = RetrofitProvider.tokenStore,
+                userStore = RetrofitProvider.userStore,
+            )
         appScope.launch {
             networkMonitor.isOnline.collect { online ->
             }

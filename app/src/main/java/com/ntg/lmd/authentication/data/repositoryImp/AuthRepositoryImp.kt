@@ -15,23 +15,19 @@ class AuthRepositoryImp(
 ) {
     @Volatile var lastLoginName: String? = null
 
-        suspend fun login(
-            email: String,
-            password: String,
-        ): NetworkResult<Unit> =
-            try {
-                val response = loginApi.login(LoginRequest(email, password))
-
+    suspend fun login(
+        email: String, password: String
+    ): NetworkResult<Unit> =
+        try {
+            val response = loginApi.login(LoginRequest(email, password))
             if (!response.success) {
                 NetworkResult.Error(
-                    NetworkError.BadRequest(response.error ?: "Login failed"),
-                )
+                    NetworkError.BadRequest(response.error ?: "Login failed"),)
             } else {
                 val payload = response.data
                 if (payload == null) {
                     NetworkResult.Error(
-                        NetworkError.BadRequest(response.error ?: "Login failed: no data received"),
-                    )
+                        NetworkError.BadRequest(response.error ?: "Login failed: no data received"),)
                 } else {
                     store.saveFromPayload(
                         access = payload.accessToken,
@@ -43,7 +39,7 @@ class AuthRepositoryImp(
                     userStore.saveUser(
                         id = u?.id,
                         email = u?.email,
-                        fullName = u?.fullName
+                        fullName = u?.fullName,
                     )
                     lastLoginName = payload.user?.fullName
                     android.util.Log.d("AuthRepo", "Setting lastLoginName = ${payload.user?.fullName}  repo=${this.hashCode()}")

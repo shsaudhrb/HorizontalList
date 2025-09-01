@@ -7,6 +7,7 @@ import com.ntg.lmd.mainscreen.domain.usecase.GetActiveUsersUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import okio.IOException
 
 data class AgentsState(
     val isLoading: Boolean = false,
@@ -33,8 +34,8 @@ class ActiveAgentsViewModel(
                         agents = list,
                         currentUserId = currentId,
                     )
-            } catch (t: Throwable) {
-                _state.value = _state.value.copy(isLoading = false, error = t.message ?: "Failed")
+            } catch (e: IOException) {
+                _state.value = _state.value.copy(isLoading = false, error = e.message ?: "Failed")
             }
         }
     }

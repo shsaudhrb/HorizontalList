@@ -8,7 +8,6 @@ import com.ntg.lmd.mainscreen.domain.repository.MyOrdersRepository
 class MyOrdersRepositoryImpl(
     private val api: OrdersApi,
 ) : MyOrdersRepository {
-
     private var cachedPage: Int? = null
     private var cachedLimit: Int? = null
     private var cachedOrders: List<OrderInfo>? = null
@@ -28,10 +27,11 @@ class MyOrdersRepositoryImpl(
             error(env.error ?: "Unknown error from orders-list")
         }
 
-        val orders = env.data
-            ?.orders
-            .orEmpty()
-            .map { it.toDomain() }
+        val orders =
+            env.data
+                ?.orders
+                .orEmpty()
+                .map { it.toDomain() }
 
         updateCache(page, limit, orders)
         return orders
@@ -49,12 +49,11 @@ class MyOrdersRepositoryImpl(
         page: Int,
         limit: Int,
         bypassCache: Boolean,
-    ): Boolean {
-        return !bypassCache &&
-                cachedPage == page &&
-                cachedLimit == limit &&
-                cachedOrders != null
-    }
+    ): Boolean =
+        !bypassCache &&
+            cachedPage == page &&
+            cachedLimit == limit &&
+            cachedOrders != null
 
     private fun updateCache(
         page: Int,

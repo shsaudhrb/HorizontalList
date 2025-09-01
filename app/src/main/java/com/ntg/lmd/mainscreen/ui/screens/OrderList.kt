@@ -1,27 +1,34 @@
 package com.ntg.lmd.mainscreen.ui.screens
 
-// ==============================
-// OrderList composable + helpers
-// ==============================
-
-import android.content.Intent
-import android.net.Uri
 import android.util.Log
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.dimensionResource
 import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
+import com.ntg.lmd.mainscreen.ui.components.ActionDialog
+import com.ntg.lmd.mainscreen.ui.components.myOrderCard
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
-
-
 
 data class OrderListState(
     val orders: List<OrderInfo>,
@@ -37,6 +44,7 @@ data class OrderListCallbacks(
     val onAction: (String, ActionDialog) -> Unit,
     val onRefresh: () -> Unit,
 )
+
 @Composable
 fun orderList(
     state: OrderListState,
@@ -45,10 +53,10 @@ fun orderList(
 ) {
     val myUserId by updateVm.currentUserId.collectAsState()
     var hiddenIds by remember { mutableStateOf(emptySet<String>()) }
-
     LaunchedEffect(updateVm, myUserId) {
         updateVm.success.collect { serverOrder ->
-            val movedAway = myUserId != null &&
+            val movedAway =
+                myUserId != null &&
                     serverOrder.assignedAgentId != null &&
                     serverOrder.assignedAgentId != myUserId
 
@@ -60,7 +68,8 @@ fun orderList(
 
     val filteredOrders by remember(state.orders, myUserId, hiddenIds) {
         derivedStateOf {
-            state.orders.asSequence()
+            state.orders
+                .asSequence()
                 .filter { it.id !in hiddenIds }
                 .filter { order -> !order.status.isTerminal() && order.isMine(myUserId) }
                 .toList()
@@ -94,7 +103,7 @@ fun orderList(
             item {
                 Box(
                     Modifier.fillMaxWidth().padding(dimensionResource(R.dimen.mediumSpace)),
-                    contentAlignment = Alignment.Center
+                    contentAlignment = Alignment.Center,
                 ) { CircularProgressIndicator() }
             }
         }
@@ -102,10 +111,6 @@ fun orderList(
     }
 }
 
-private fun OrderStatus.isTerminal() =
-    this == OrderStatus.CANCELED || this == OrderStatus.DELIVERY_DONE
+private fun OrderStatus.isTerminal() = this == OrderStatus.CANCELED || this == OrderStatus.DELIVERY_DONE
 
-private fun OrderInfo.isMine(myUserId: String?) =
-    myUserId != null && assignedAgentId == myUserId
-
-
+private fun OrderInfo.isMine(myUserId: String?) = myUserId != null && assignedAgentId == myUserId

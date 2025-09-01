@@ -1,33 +1,37 @@
 package com.ntg.lmd.utils
 
-// UserPrefs.kt
 import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 
-class SecureUserStore(ctx: Context) {
-
+class SecureUserStore(
+    ctx: Context,
+) {
     private val masterKey =
         MasterKey.Builder(ctx).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build()
 
-    private val sp = EncryptedSharedPreferences.create(
-        ctx,
-        "secure_user_prefs",
-        masterKey,
-        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-    )
+    private val sp =
+        EncryptedSharedPreferences.create(
+            ctx,
+            "secure_user_prefs",
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+        )
 
     fun getUserId(): String? = sp.getString(KEY_USER_ID, null)
+
     fun getUserEmail(): String? = sp.getString(KEY_USER_EMAIL, null)
+
     fun getUserFullName(): String? = sp.getString(KEY_USER_NAME, null)
 
     fun saveUser(
         id: String?,
         email: String?,
-        fullName: String?
+        fullName: String?,
     ) {
-        sp.edit()
+        sp
+            .edit()
             .putString(KEY_USER_ID, id)
             .putString(KEY_USER_EMAIL, email)
             .putString(KEY_USER_NAME, fullName)

@@ -87,7 +87,7 @@ fun appScaffoldWithDrawer(
     onLogout: () -> Unit,
     userName: String?,
     showChrome: Boolean = true,
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
 ) {
     val navController = navConfig.navController
     val currentRoute = navConfig.currentRoute
@@ -291,7 +291,7 @@ fun drawerItemRow(
 
         if (entry.enabled && entry.route != Screen.Logout.route) {
             Icon(
-                imageVector =  Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
                 tint = CupertinoLabelSecondary,
             )

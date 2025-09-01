@@ -35,33 +35,34 @@ fun reassignBottomSheet(
     if (!open) return
     ModalBottomSheet(onDismissRequest = onDismiss) {
         when {
-            state.isLoading -> ReassignLoading()
-            state.error != null -> ReassignError(error = state.error, onRetry = onRetry)
-            else -> ReassignList(state = state, onSelect = onSelect)
+            state.isLoading -> reassignLoading()
+            state.error != null -> reassignError(error = state.error, onRetry = onRetry)
+            else -> reassignList(state = state, onSelect = onSelect)
         }
     }
 }
 
 @Composable
-private fun ReassignLoading() {
+private fun reassignLoading() {
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(24.dp),
-        contentAlignment = Alignment.Center
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
+        contentAlignment = Alignment.Center,
     ) {
         CircularProgressIndicator()
     }
 }
 
 @Composable
-private fun ReassignError(
+private fun reassignError(
     error: String,
     onRetry: () -> Unit,
 ) {
     Column(
         modifier = Modifier.padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(text = error, style = MaterialTheme.typography.bodyMedium)
         Button(onClick = onRetry) { Text("Retry") }
@@ -69,7 +70,7 @@ private fun ReassignError(
 }
 
 @Composable
-private fun ReassignList(
+private fun reassignList(
     state: AgentsState,
     onSelect: (ActiveUser) -> Unit,
 ) {
@@ -87,10 +88,10 @@ private fun ReassignList(
                 items = state.agents,
                 key = { it.id },
             ) { user ->
-                ReassignUserItem(
+                reassignUserItem(
                     user = user,
                     isCurrent = user.id == state.currentUserId,
-                    onSelect = onSelect
+                    onSelect = onSelect,
                 )
             }
         }
@@ -98,7 +99,7 @@ private fun ReassignList(
 }
 
 @Composable
-private fun ReassignUserItem(
+private fun reassignUserItem(
     user: ActiveUser,
     isCurrent: Boolean,
     onSelect: (ActiveUser) -> Unit,
@@ -119,8 +120,9 @@ private fun ReassignUserItem(
                 Text("(You)", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
-        modifier = Modifier
-            .fillMaxWidth()
-            .then(clickableMod),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .then(clickableMod),
     )
 }

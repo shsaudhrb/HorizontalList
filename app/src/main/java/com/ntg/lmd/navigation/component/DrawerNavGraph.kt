@@ -1,7 +1,6 @@
 package com.ntg.lmd.navigation.component
 
 import androidx.compose.runtime.Composable
-import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -61,10 +60,10 @@ fun drawerNavGraph(
         }
 
         composable(Screen.DeliveriesLog.route) { deliveriesLogScreen(navController) }
-        composable(Screen.Settings.route) {  entry ->
-            settingsScreen(entry)   }
+        composable(Screen.Settings.route) { entry ->
+            settingsScreen(entry)
+        }
         composable(Screen.MyPool.route) { myPoolScreen() }
         composable(Screen.Chat.route) { chatScreen() }
     }
 }
-

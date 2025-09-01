@@ -15,15 +15,13 @@ class SettingsPreferenceDataSource(
         const val DEFAULT_NOTIF_WINDOW_DAYS = 15
     }
 
-    fun getLanguage(): String =
-        sp.getString(KEY_LANG, DEFAULT_LANG) ?: DEFAULT_LANG
+    fun getLanguage(): String = sp.getString(KEY_LANG, DEFAULT_LANG) ?: DEFAULT_LANG
 
     fun setLanguage(code: String) {
         sp.edit().putString(KEY_LANG, code).apply()
     }
 
-    fun getNotificationWindowDays(): Int =
-        sp.getInt(KEY_NOTIF_WINDOW, DEFAULT_NOTIF_WINDOW_DAYS)
+    fun getNotificationWindowDays(): Int = sp.getInt(KEY_NOTIF_WINDOW, DEFAULT_NOTIF_WINDOW_DAYS)
 
     fun setNotificationWindowDays(days: Int) {
         sp.edit().putInt(KEY_NOTIF_WINDOW, days).apply()

@@ -94,21 +94,6 @@ fun Order.toUi(context: Context): OrderInfo {
         lat = lat,
         lng = lng,
         customerPhone = null,
-        details = null
+        details = null,
     )
 }
-// fun OrderDto.toDomain(): Order = Order(
-//    id = null,
-//    orderId = orderId,
-//    orderNumber = orderNumber,
-//    customerName = customerName,
-//    address = address,
-//    statusId = statusId,
-//    assignedAgentId = null,
-//    partnerId = null,
-//    dcId = null,
-//    orderDate = orderDate,
-//    deliveryTime = deliveryTime,
-//    lastUpdated = lastUpdated,
-//    coordinates = coordinates,
-// )

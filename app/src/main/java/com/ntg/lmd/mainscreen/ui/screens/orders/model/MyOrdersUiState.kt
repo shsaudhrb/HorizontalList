@@ -11,5 +11,5 @@ data class MyOrdersUiState(
     val query: String = "", // current query to search
     val emptyMessage: String? = null,
     val errorMessage: String? = null,
-    val page: Int?=0,
+    val page: Int? = 0,
 )

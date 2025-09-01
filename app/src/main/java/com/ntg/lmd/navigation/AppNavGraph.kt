@@ -102,9 +102,12 @@ fun appNavGraph(
             val deepOpen = (uri?.scheme == "myapp" && uri.host == "notifications")
             val ctx = LocalContext.current
             val settingsVm: com.ntg.lmd.settings.ui.viewmodel.SettingsViewModel =
-                viewModel(factory = com.ntg.lmd.settings.ui.viewmodel.SettingsViewModelFactory(
-                    ctx.applicationContext as Application
-                ))
+                viewModel(
+                    factory =
+                        com.ntg.lmd.settings.ui.viewmodel.SettingsViewModelFactory(
+                            ctx.applicationContext as Application,
+                        ),
+                )
 
             val logoutState by settingsVm.logoutState.collectAsState()
 
@@ -146,9 +149,10 @@ private fun drawerHost(
     val ctx = LocalContext.current
     val app = ctx.applicationContext as MyApp
 
-    val loginVm: LoginViewModel = viewModel(
-        factory = LoginViewModelFactory(ctx.applicationContext as Application)
-    )
+    val loginVm: LoginViewModel =
+        viewModel(
+            factory = LoginViewModelFactory(ctx.applicationContext as Application),
+        )
     val loginUi by loginVm.uiState.collectAsState()
     val effectiveUserName = loginUi.displayName ?: app.authRepo.lastLoginName
 
@@ -166,10 +170,11 @@ private fun drawerHost(
     val showChrome = !hideChrome
 
     appScaffoldWithDrawer(
-        navConfig = AppNavConfig(
-            navController = drawerNavController,
-            currentRoute = currentRoute,
-        ),
+        navConfig =
+            AppNavConfig(
+                navController = drawerNavController,
+                currentRoute = currentRoute,
+            ),
         topBar = topBar,
         appBar = AppBarConfig(title = spec.title),
         onLogout = onLogout,
@@ -229,7 +234,6 @@ private fun buildTopBar(
         searchActionIcon = if (spec.showSearchIcon) Icons.Filled.Search else null,
         onSearchIconClick = { search.onToggle(true) },
     )
-
 
 // ======================= Route UI Spec =======================
 
