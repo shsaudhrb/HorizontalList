@@ -88,7 +88,7 @@ class OrdersRepositoryImpl(
     }
 
     // expose live orders from socket as a flow
-    fun orders() = socket.orders
+    override fun orders() = socket.orders
 }
 
 private val PREFERRED_ARRAY_KEYS =
