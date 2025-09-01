@@ -51,6 +51,8 @@ import com.ntg.lmd.mainscreen.ui.components.ActionDialog
 import com.ntg.lmd.mainscreen.ui.components.OrdersUi.CARD_ELEVATION
 import com.ntg.lmd.mainscreen.ui.components.OrdersUi.DETAILS_BUTTON_WEIGHT
 import com.ntg.lmd.mainscreen.ui.components.OrdersUi.OUTLINE_STROKE
+import com.ntg.lmd.mainscreen.domain.model.OrderInfo
+import com.ntg.lmd.mainscreen.domain.model.OrderStatus
 import com.ntg.lmd.mainscreen.ui.components.bottomStickyButton
 import com.ntg.lmd.mainscreen.ui.components.callButton
 import com.ntg.lmd.mainscreen.ui.components.deliverDialog
@@ -65,6 +67,8 @@ import com.ntg.lmd.mainscreen.ui.components.simpleConfirmDialog
 import com.ntg.lmd.mainscreen.ui.screens.orders.model.LocalUiOnlyStatusBus
 import com.ntg.lmd.mainscreen.ui.viewmodel.ActiveAgentsViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.ActiveAgentsViewModelFactory
+import com.ntg.lmd.mainscreen.ui.model.LocalUiOnlyStatusBus
+import com.ntg.lmd.mainscreen.ui.model.MyOrdersUiState
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyOrdersViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyOrdersViewModelFactory
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel

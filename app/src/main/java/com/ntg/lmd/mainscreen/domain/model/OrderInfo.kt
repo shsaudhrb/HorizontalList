@@ -1,6 +1,14 @@
 package com.ntg.lmd.mainscreen.domain.model
 // / Renad
 
+import com.ntg.lmd.order.domain.model.OrderStatusCode
+
+const val STATUS_ADDED = 1
+const val STATUS_CONFIRMED = 2
+const val STATUS_REASSIGNED = 4
+const val STATUS_PICKUP = 5
+const val STATUS_START_DELIVERY = 6
+
 data class OrderInfo(
     val id: String = "",
     val name: String = "",
@@ -18,13 +26,20 @@ data class OrderInfo(
     val assignedAgentId: String? = "",
 )
 
-enum class OrderStatus {
-    ADDED,
-    CONFIRMED,
-    CANCELED,
-    REASSIGNED,
-    PICKUP,
-    START_DELIVERY,
-    DELIVERY_FAILED,
-    DELIVERY_DONE,
+enum class OrderStatus(
+    val id: Int,
+) {
+    ADDED(STATUS_ADDED),
+    CONFIRMED(STATUS_CONFIRMED),
+    CANCELED(OrderStatusCode.CANCELLED.code),
+    REASSIGNED(STATUS_REASSIGNED),
+    PICKUP(STATUS_PICKUP),
+    START_DELIVERY(STATUS_START_DELIVERY),
+    DELIVERY_FAILED(OrderStatusCode.FAILED.code),
+    DELIVERY_DONE(OrderStatusCode.DONE.code),
+    ;
+
+    companion object {
+        fun fromId(id: Int?): OrderStatus? = values().firstOrNull { it.id == id }
+    }
 }

@@ -3,8 +3,9 @@ package com.ntg.lmd.mainscreen.data.mapper
 import com.ntg.lmd.mainscreen.data.model.OrderDto
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.model.apiIdToOrderStatus
+import com.ntg.lmd.mainscreen.domain.model.OrderStatus
+import com.ntg.lmd.utils.AppDefaults
 
-// / Renad
 fun OrderDto.toDomain(): OrderInfo =
     OrderInfo(
         id = orderId,

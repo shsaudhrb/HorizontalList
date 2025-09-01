@@ -1,12 +1,12 @@
-// ==============================
-// MyOrdersViewModel.kt
-// ==============================
 package com.ntg.lmd.mainscreen.ui.viewmodel
 
-import android.content.Context
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ntg.lmd.mainscreen.domain.model.OrderInfo
+import com.ntg.lmd.mainscreen.domain.model.OrderStatus
+import com.ntg.lmd.mainscreen.ui.model.MyOrdersUiState
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
 import com.ntg.lmd.mainscreen.domain.usecase.GetMyOrdersUseCase
@@ -17,6 +17,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlin.collections.take
+import kotlin.random.Random
 import retrofit2.HttpException
 import java.io.IOException
 import java.net.SocketTimeoutException

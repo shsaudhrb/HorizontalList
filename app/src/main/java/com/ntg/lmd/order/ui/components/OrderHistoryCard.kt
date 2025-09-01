@@ -25,7 +25,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.ntg.lmd.R
 import com.ntg.lmd.order.domain.model.OrderHistoryUi
-import com.ntg.lmd.order.ui.screen.statusBadge
 import com.ntg.lmd.ui.theme.ErrorRed
 import com.ntg.lmd.ui.theme.PresentGreen
 import com.ntg.lmd.utils.timeHelper

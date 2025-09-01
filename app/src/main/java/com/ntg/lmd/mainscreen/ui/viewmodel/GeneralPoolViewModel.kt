@@ -11,8 +11,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.maps.model.LatLng
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
+import com.ntg.lmd.mainscreen.domain.repository.OrdersRepository
 import com.ntg.lmd.mainscreen.ui.mapper.toUi
 import com.ntg.lmd.mainscreen.ui.model.GeneralPoolUiState
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -44,6 +46,7 @@ class GeneralPoolViewModel : ViewModel() {
     private lateinit var ctx: Context
 
     private var realtimeStarted = false
+    private var realtimeJob: Job? = null
 
     // distance computation use case
     private val computeDistances by lazy { GeneralPoolProvider.computeDistancesUseCase() }
@@ -58,11 +61,11 @@ class GeneralPoolViewModel : ViewModel() {
         if (::ctx.isInitialized) return
         ctx = context.applicationContext
 
+        val repo = GeneralPoolProvider.ordersRepository(ctx)
         if (!realtimeStarted) {
             realtimeStarted = true
-            GeneralPoolProvider
-                .ordersRepository(ctx)
-                .connectToOrders("orders")
+            repo.connectToOrders("orders")
+            observeRealtimeOrders(repo)
         }
 
         loadOrdersFromApi()
@@ -73,8 +76,63 @@ class GeneralPoolViewModel : ViewModel() {
         if (::ctx.isInitialized) {
             GeneralPoolProvider.ordersRepository(ctx).disconnectFromOrders()
         }
+        realtimeJob?.cancel()
         realtimeStarted = false
         super.onCleared()
+    }
+
+    // collect live orders from socket and push to UI
+    private fun observeRealtimeOrders(repo: OrdersRepository) {
+        realtimeJob?.cancel()
+        realtimeJob = viewModelScope.launch {
+            repo.orders().collect { liveOrders ->
+                // map -> UI
+                val incoming = liveOrders.map { it.toUi(ctx) }
+
+                // merge with existing by orderNumber
+                val merged = mergeOrders(_ui.value.orders, incoming)
+
+                // keep selection policy
+                val currentSel = _ui.value.selected
+                val nextSel =
+                    when {
+                        userPinnedSelection -> currentSel
+                        currentSel == null -> merged.firstOrNull { it.lat != 0.0 && it.lng != 0.0 }
+                            ?: merged.firstOrNull()
+
+                        merged.none { it.orderNumber == currentSel.orderNumber } -> null
+                        else -> merged.firstOrNull { it.orderNumber == currentSel.orderNumber }
+                    }
+
+                _ui.update {
+                    it.copy(
+                        orders = merged,
+                        selected = nextSel ?: it.selected,
+                    )
+                }
+
+                if (merged.isNotEmpty()) lastNonEmptyOrders = merged
+
+                // if we already have location permission, re-apply distances so new orders get distance & filters
+                if (_ui.value.hasLocationPerm) {
+                    fetchAndApplyDistances(ctx)
+                }
+
+                ensureSelectedStillVisible()
+            }
+        }
+    }
+
+    private fun mergeOrders(
+        existing: List<OrderInfo>,
+        incoming: List<OrderInfo>,
+    ): List<OrderInfo> {
+        if (existing.isEmpty()) return incoming
+        if (incoming.isEmpty()) return existing
+
+        val map = existing.associateBy { it.orderNumber }.toMutableMap()
+        for (o in incoming) map[o.orderNumber] = o
+        return map.values.toList()
     }
 
     // toggle the search mode, for showing/hiding the search fields and results

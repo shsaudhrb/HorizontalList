@@ -2,7 +2,8 @@ package com.ntg.lmd.mainscreen.data.repository
 
 import com.ntg.lmd.mainscreen.data.datasource.remote.OrdersApi
 import com.ntg.lmd.mainscreen.data.mapper.toDomain
-import com.ntg.lmd.mainscreen.domain.model.OrderInfo
+import com.ntg.lmd.mainscreen.domain.model.OrderStatus
+import com.ntg.lmd.mainscreen.domain.model.OrdersPage
 import com.ntg.lmd.mainscreen.domain.repository.MyOrdersRepository
 
 class MyOrdersRepositoryImpl(
@@ -12,11 +13,30 @@ class MyOrdersRepositoryImpl(
     private var cachedLimit: Int? = null
     private var cachedOrders: List<OrderInfo>? = null
 
+    private val allowedIds =
+        setOf(
+            OrderStatus.ADDED.id,
+            OrderStatus.CONFIRMED.id,
+            OrderStatus.REASSIGNED.id,
+            OrderStatus.PICKUP.id,
+            OrderStatus.START_DELIVERY.id,
+        )
+
+    private val allowedNames =
+        setOf(
+            "added",
+            "confirmed",
+            "reassigned",
+            "pickup",
+            "picked",
+            "start delivery",
+        )
+
     override suspend fun getOrders(
         page: Int,
         limit: Int,
         bypassCache: Boolean,
-    ): List<OrderInfo> {
+    ): OrdersPage {
         if (isCacheValid(page, limit, bypassCache)) {
             return cachedOrders.orEmpty()
         }
@@ -26,7 +46,20 @@ class MyOrdersRepositoryImpl(
         if (!env.success) {
             error(env.error ?: "Unknown error from orders-list")
         }
+        val raw = env.data?.orders.orEmpty()
+        val filtered =
+            raw
+                .filter { dto ->
+                    dto.statusId?.let { it in allowedIds }
+                        ?: (
+                                dto.orderstatuses
+                                    ?.statusName
+                                    ?.trim()
+                                    ?.lowercase() in allowedNames
+                                )
+                }.map { it.toDomain() }
 
+        return OrdersPage(items = filtered, rawCount = raw.size)
         val orders =
             env.data
                 ?.orders

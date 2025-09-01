@@ -26,44 +26,73 @@ fun drawerNavGraph(
     externalQuery: String,
     onOpenOrderDetails: (String) -> Unit,
 ) {
-    NavHost(
-        navController = navController,
-        startDestination = startDestination,
-    ) {
-        composable(Screen.GeneralPool.route) { generalPoolScreen(navController) }
-
-        composable(Screen.MyOrders.route) {
-            myOrdersScreen(
-                onOpenOrderDetails = onOpenOrderDetails,
-            )
-        }
-
-        composable(
-            route = "order/{id}",
-            arguments = listOf(navArgument("id") { type = NavType.StringType }),
-        ) { backStackEntry ->
-            val idStr = backStackEntry.arguments?.getString("id")
-            val id = idStr
-            orderDetailsScreen(
-                orderId = id,
-                navController = navController,
-            )
-        }
-
-        composable(
-            route = Screen.Notifications.route,
-            deepLinks = listOf(navDeepLink { uriPattern = "myapp://notifications" }),
-        ) { notificationScreen() }
-
-        composable(Screen.OrdersHistory.route) {
-            ordersHistoryRoute(registerOpenMenu = registerOpenMenu)
-        }
-
-        composable(Screen.DeliveriesLog.route) { deliveriesLogScreen(navController) }
-        composable(Screen.Settings.route) { entry ->
-            settingsScreen(entry)
-        }
-        composable(Screen.MyPool.route) { myPoolScreen() }
-        composable(Screen.Chat.route) { chatScreen() }
+    NavHost(navController = navController, startDestination = startDestination) {
+        addGeneralPool(navController)
+        addMyOrders(navController, externalQuery, onOpenOrderDetails)
+        addOrderDetails(navController)
+        addNotifications()
+        addOrdersHistory(registerOpenMenu)
+        addDeliveriesLog(navController)
+        addSettings()
+        addMyPool(onOpenOrderDetails)
+        addChat()
     }
+}
+
+// ------------ Extracted routes (logic unchanged) ------------
+
+private fun NavGraphBuilder.addGeneralPool(navController: NavHostController) {
+    composable(Screen.GeneralPool.route) { generalPoolScreen(navController) }
+}
+
+private fun NavGraphBuilder.addMyOrders(
+    onOpenOrderDetails: (String) -> Unit,
+) {
+    composable(Screen.MyOrders.route) {
+        myOrdersScreen(
+            onOpenOrderDetails = onOpenOrderDetails,
+        )
+    }
+}
+
+private fun NavGraphBuilder.addOrderDetails(navController: NavHostController) {
+    composable(
+        route = "order/{id}",
+        arguments = listOf(navArgument("id") { type = NavType.StringType }),
+    ) { backStackEntry ->
+        val idStr = backStackEntry.arguments?.getString("id")
+        val id = idStr
+        orderDetailsScreen(orderId = id, navController = navController)
+    }
+}
+
+private fun NavGraphBuilder.addNotifications() {
+    composable(
+        route = Screen.Notifications.route,
+        deepLinks = listOf(navDeepLink { uriPattern = "myapp://notifications" }),
+    ) { notificationScreen() }
+}
+
+private fun NavGraphBuilder.addOrdersHistory(registerOpenMenu: (setter: (() -> Unit)?) -> Unit) {
+    composable(Screen.OrdersHistory.route) {
+        ordersHistoryRoute(registerOpenMenu = registerOpenMenu)
+    }
+}
+
+private fun NavGraphBuilder.addDeliveriesLog(navController: NavHostController) {
+    composable(Screen.DeliveriesLog.route) { deliveriesLogScreen(navController) }
+}
+
+private fun NavGraphBuilder.addSettings() {
+    composable(Screen.Settings.route) { entry -> settingsScreen(entry) }
+}
+
+private fun NavGraphBuilder.addMyPool(onOpenOrderDetails: (String) -> Unit) {
+    composable(Screen.MyPool.route) {
+        myPoolScreen(onOpenOrderDetails = onOpenOrderDetails)
+    }
+}
+
+private fun NavGraphBuilder.addChat() {
+    composable(Screen.Chat.route) { chatScreen() }
 }

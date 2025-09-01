@@ -149,6 +149,7 @@ private fun drawerHost(
     val ctx = LocalContext.current
     val app = ctx.applicationContext as MyApp
 
+    // VM for login state (may be a different instance than the one that set the name)
     val loginVm: LoginViewModel =
         viewModel(
             factory = LoginViewModelFactory(ctx.applicationContext as Application),

@@ -87,7 +87,7 @@ fun appScaffoldWithDrawer(
     onLogout: () -> Unit,
     userName: String?,
     showChrome: Boolean = true,
-    content: @Composable () -> Unit,
+    content: @Composable () -> Unit
 ) {
     val navController = navConfig.navController
     val currentRoute = navConfig.currentRoute
@@ -96,7 +96,7 @@ fun appScaffoldWithDrawer(
 
     val app = LocalContext.current.applicationContext as MyApp
     val online by app.networkMonitor.isOnline.collectAsState()
-    LaunchedEffect(online) { /* no-op */ }
+    LaunchedEffect(online) {  }
 
     ModalNavigationDrawer(
         drawerState = drawerState,

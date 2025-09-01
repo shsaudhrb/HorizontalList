@@ -38,6 +38,9 @@ import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel.OrderLogger
+import com.ntg.lmd.mainscreen.domain.model.OrderInfo
+import com.ntg.lmd.mainscreen.domain.model.OrderStatus
+import com.ntg.lmd.mainscreen.ui.screens.statusTint
 import java.util.Locale
 
 private const val KM_DIVISOR = 1000.0

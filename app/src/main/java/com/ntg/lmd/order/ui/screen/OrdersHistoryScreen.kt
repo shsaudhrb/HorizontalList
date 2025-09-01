@@ -4,14 +4,10 @@ import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -30,8 +26,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ntg.lmd.R
 import com.ntg.lmd.network.core.RetrofitProvider
@@ -42,7 +38,9 @@ import com.ntg.lmd.order.domain.model.OrdersHistoryUiState
 import com.ntg.lmd.order.domain.model.usecase.GetOrdersUseCase
 import com.ntg.lmd.order.ui.components.OrdersHistoryEffectsConfig
 import com.ntg.lmd.order.ui.components.OrdersHistoryUiConfig
+import com.ntg.lmd.order.ui.components.endFooter
 import com.ntg.lmd.order.ui.components.exportOrdersHistoryPdf
+import com.ntg.lmd.order.ui.components.loadingFooter
 import com.ntg.lmd.order.ui.components.orderHistoryCard
 import com.ntg.lmd.order.ui.components.ordersHistoryDialogs
 import com.ntg.lmd.order.ui.components.ordersHistoryMenu
@@ -215,58 +213,47 @@ fun ordersHistoryContent(
     onRefresh: () -> Unit,
 ) {
     PullToRefreshBox(isRefreshing = state.isRefreshing, onRefresh = onRefresh) {
-        LazyColumn(
-            state = listState,
-            contentPadding =
-                PaddingValues(
-                    start = dimensionResource(R.dimen.mediumSpace),
-                    end = dimensionResource(R.dimen.mediumSpace),
-                    bottom = dimensionResource(R.dimen.mediumSpace),
-                ),
-            verticalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.list_item_spacing)),
-            modifier = Modifier.fillMaxSize(),
-        ) {
-            items(state.orders, key = { it.number }) {
-                orderHistoryCard(ctx, order = it)
+        if (state.orders.isEmpty() && !state.isRefreshing) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = stringResource(id = R.string.no_data),
+                    style =
+                        MaterialTheme.typography.bodyLarge.copy(
+                            color = Color.Gray,
+                            fontWeight = FontWeight.Medium,
+                        ),
+                )
             }
-            if (state.isLoadingMore) item("loading_footer") { loadingFooter() }
-            if (state.endReached && state.orders.isNotEmpty()) item("end_footer") { endFooter() }
+        } else {
+            ordersList(state, listState, ctx)
         }
     }
 }
 
 @Composable
-fun loadingFooter() {
-    Row(
-        Modifier.fillMaxWidth().padding(dimensionResource(R.dimen.smallerSpace)),
-        horizontalArrangement = Arrangement.Center,
-    ) { CircularProgressIndicator() }
-}
-
-@Composable
-fun endFooter() {
-    Box(
-        Modifier.fillMaxWidth().padding(dimensionResource(R.dimen.smallSpace)),
-        contentAlignment = Alignment.Center,
-    ) { Text("• End of list •") }
-}
-
-@Composable
-fun statusBadge(
-    text: String,
-    color: Color,
+private fun ordersList(
+    state: OrdersHistoryUiState,
+    listState: LazyListState,
+    ctx: Context,
 ) {
-    Box(
-        modifier = Modifier.padding(start = 8.dp),
-        contentAlignment = Alignment.Center,
+    LazyColumn(
+        state = listState,
+        contentPadding =
+            PaddingValues(
+                start = dimensionResource(R.dimen.mediumSpace),
+                end = dimensionResource(R.dimen.mediumSpace),
+                bottom = dimensionResource(R.dimen.mediumSpace),
+            ),
+        verticalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.list_item_spacing)),
+        modifier = Modifier.fillMaxSize(),
     ) {
-        Text(
-            text = text,
-            style =
-                MaterialTheme.typography.bodySmall.copy(
-                    color = color,
-                    fontWeight = FontWeight.SemiBold,
-                ),
-        )
+        items(state.orders, key = { it.number }) {
+            orderHistoryCard(ctx, order = it)
+        }
+        if (state.isLoadingMore) item("loading_footer") { loadingFooter() }
+        if (state.endReached && state.orders.isNotEmpty()) item("end_footer") { endFooter() }
     }
 }
