@@ -43,7 +43,11 @@ fun exportOrdersHistoryPdf(
 
     doc.finishPage(currentPage)
     val outFile = writePdfToFile(context, doc)
-    return FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", outFile)
+    return FileProvider.getUriForFile(
+        context,
+        "${context.packageName}.fileprovider",
+        outFile,
+    )
 }
 
 private data class PdfStyle(
@@ -137,7 +141,9 @@ private fun drawHeaders(
 ): Int {
     var yPos = y
     c.drawText(
-        ctx.context.getString(R.string.pdf_header_no),
+        ctx.context.getString(
+            R.string.pdf_header_no,
+        ),
         ctx.config.margin.toFloat(),
         yPos.toFloat(),
         ctx.style.bold,

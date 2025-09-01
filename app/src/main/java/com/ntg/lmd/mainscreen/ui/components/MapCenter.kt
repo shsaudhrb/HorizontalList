@@ -13,6 +13,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.Circle
 import com.google.maps.android.compose.GoogleMap
@@ -38,6 +39,15 @@ fun mapCenter(
     val (cameraPositionState, markerState) = mapStates
     val (topOverlayHeight, bottomBarHeight) = overlayHeights()
     val canShowMyLocation = rememberCanShowMyLocation()
+
+/*    LaunchedEffect(deviceLatLng) {
+        if (deviceLatLng != null && !initialCentered) {
+            cameraPositionState.animate(
+                CameraUpdateFactory.newLatLngZoom(deviceLatLng, 8f)
+            )
+            initialCentered = true
+        }
+    }*/
 
     GoogleMap(
         modifier = modifier,
