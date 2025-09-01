@@ -3,6 +3,7 @@ package com.ntg.lmd.order.ui.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ntg.lmd.mainscreen.domain.paging.OrdersPaging
 import com.ntg.lmd.order.domain.model.OrderHistoryStatus
 import com.ntg.lmd.order.domain.model.OrderHistoryUi
 import com.ntg.lmd.order.domain.model.OrdersHistoryFilter
@@ -13,12 +14,11 @@ import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import java.io.IOException
 
-// // ViewModel for managing orders history state (loading, filtering, sorting, pagination)
+// ViewModel for managing orders history state (loading, filtering, sorting, pagination)
 class OrderHistoryViewModel(
     private val getOrdersUseCase: GetOrdersUseCase,
 ) : ViewModel() {
     companion object {
-        private const val PAGE_SIZE = 20
         private const val PREFETCH_THRESHOLD = 3
     }
 
@@ -45,7 +45,7 @@ class OrderHistoryViewModel(
             try {
                 currentPage = 1
                 val result =
-                    getOrdersUseCase(token, currentPage, PAGE_SIZE)
+                    getOrdersUseCase(token, currentPage, OrdersPaging.PAGE_SIZE)
                         .filterByStatus(_filter.value.allowed)
                         .applySorting(_filter.value.ageAscending)
 
@@ -65,7 +65,7 @@ class OrderHistoryViewModel(
             try {
                 currentPage++
                 val more =
-                    getOrdersUseCase(token, currentPage, PAGE_SIZE)
+                    getOrdersUseCase(token, currentPage, OrdersPaging.PAGE_SIZE)
                         .filterByStatus(_filter.value.allowed)
 
                 if (more.isEmpty()) {
@@ -105,8 +105,9 @@ class OrderHistoryViewModel(
             _isRefreshing.value = true
             try {
                 val result =
-                    getOrdersUseCase(token, page = 1, limit = PAGE_SIZE)
+                    getOrdersUseCase(token, page = 1, limit = OrdersPaging.PAGE_SIZE)
                         .filterByStatus(_filter.value.allowed)
+                        .applySorting(_filter.value.ageAscending)
 
                 if (result.isNotEmpty()) {
                     currentPage = 1
@@ -145,5 +146,11 @@ class OrderHistoryViewModel(
     ) {
         _filter.value = _filter.value.copy(ageAscending = ascending)
         loadOrders(token)
+    }
+
+    fun resetFilters() {
+        _filter.value = OrdersHistoryFilter()
+        currentPage = 1
+        _endReached.value = false
     }
 }

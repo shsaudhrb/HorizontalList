@@ -6,6 +6,7 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
+import com.ntg.lmd.mainscreen.domain.paging.OrdersPaging
 import com.ntg.lmd.notification.data.dataSource.paging.NotificationsPagingSource
 import com.ntg.lmd.notification.data.dataSource.remote.ServiceLocator
 import com.ntg.lmd.notification.domain.model.AgentNotification
@@ -25,8 +26,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 import java.util.Date
-
-private const val PAGE_SIZE = 12
 
 class NotificationsViewModel(
     private val observeNotifications: ObserveNotificationsUseCase,
@@ -79,17 +78,15 @@ class NotificationsViewModel(
         combine(_filter, repoChanges) { currentFilter, _ -> currentFilter }
             .flatMapLatest { current ->
                 Pager(
-                    config =
-                        PagingConfig(
-                            pageSize = PAGE_SIZE,
-                            initialLoadSize = PAGE_SIZE * 2,
-                            enablePlaceholders = false,
-                        ),
+                    config = PagingConfig(
+                        pageSize = OrdersPaging.PAGE_SIZE,
+                        initialLoadSize = OrdersPaging.PAGE_SIZE,
+                        enablePlaceholders = false,
+                    ),
                     pagingSourceFactory = {
                         NotificationsPagingSource(
                             repo = repo,
                             filter = current,
-                            pageSize = PAGE_SIZE,
                         )
                     },
                 ).flow

@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.ntg.lmd.mainscreen.domain.model.DeliveryLog
 import com.ntg.lmd.mainscreen.domain.paging.OrdersPaging
 import com.ntg.lmd.mainscreen.domain.usecase.DeliveryStatusIds
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -32,13 +31,16 @@ class DeliveriesLogViewModel : ViewModel() {
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing
 
-    companion object {
-        private const val LOAD_MORE_DELAY_MS = 250L
-    }
-
     fun load(context: Context) {
         reset()
-        viewModelScope.launch { fetchNext(context) }
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            try {
+                fetchNext(context)
+            } finally {
+                _isRefreshing.value = false
+            }
+        }
     }
 
     private fun reset() {
@@ -61,7 +63,6 @@ class DeliveriesLogViewModel : ViewModel() {
             _isRefreshing.value = true
             try {
                 reset()
-                delay(LOAD_MORE_DELAY_MS)
                 fetchNext(context)
             } finally {
                 _isRefreshing.value = false
@@ -74,7 +75,6 @@ class DeliveriesLogViewModel : ViewModel() {
         val g = generationCounter
         _isLoadingMore.value = true
         try {
-            delay(LOAD_MORE_DELAY_MS)
             val useCase = DeliveriesLogProvider.getLogsUseCase(context)
             val (items, next) =
                 useCase(

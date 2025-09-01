@@ -18,6 +18,7 @@ data class OrdersHistoryUiConfig(
     val onExportPdf: () -> Unit,
     val onDismissFilter: () -> Unit,
     val onDismissSort: () -> Unit,
+    val onLoadMore: () -> Unit,
 )
 
 data class OrdersHistoryEffectsConfig(

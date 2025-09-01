@@ -12,7 +12,6 @@ import kotlin.coroutines.cancellation.CancellationException
 class NotificationsPagingSource(
     private val repo: NotificationRepository,
     private val filter: NotificationFilter,
-    private val pageSize: Int,
 ) : PagingSource<Int, NotificationUi>() {
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, NotificationUi> =
         try {
@@ -31,7 +30,7 @@ class NotificationsPagingSource(
                 }
 
             val nextKey = if (items.size < limit) null else offset + items.size
-            val prevKey = if (offset == 0) null else (offset - pageSize).coerceAtLeast(0)
+            val prevKey = if (offset == 0) null else (offset - limit).coerceAtLeast(0)
 
             LoadResult.Page(
                 data = items,
@@ -51,6 +50,6 @@ class NotificationsPagingSource(
     override fun getRefreshKey(state: PagingState<Int, NotificationUi>): Int? {
         val anchor = state.anchorPosition ?: return null
         val anchorPage = state.closestPageToPosition(anchor)
-        return anchorPage?.prevKey?.plus(pageSize) ?: anchorPage?.nextKey?.minus(pageSize)
+        return anchorPage?.prevKey?.plus(state.config.pageSize) ?: anchorPage?.nextKey?.minus(state.config.pageSize)
     }
 }
