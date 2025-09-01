@@ -71,7 +71,7 @@ class TokenAuthenticator(
                                 refreshToken = store.getRefreshToken(),
                                 expiresAt = null,
                                 refreshExpiresAt = null,
-                                user = null
+                                user = null,
                             )
                         }
                         val body = refreshApi.refreshToken(RefreshTokenRequest(refresh))

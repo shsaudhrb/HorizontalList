@@ -9,7 +9,6 @@ import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
-import android.util.Log
 import androidx.annotation.RequiresPermission
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -18,30 +17,22 @@ import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.ntg.lmd.MainActivity
 import com.ntg.lmd.R
-import com.ntg.lmd.notification.data.repository.NotificationRepositoryImpl
+import com.ntg.lmd.notification.data.model.FCMServiceLocator
 import com.ntg.lmd.notification.domain.model.AgentNotification
-import com.ntg.lmd.notification.domain.repository.NotificationRepository
-import com.ntg.lmd.notification.domain.usecase.ObserveNotificationsUseCase
-import com.ntg.lmd.notification.domain.usecase.RefreshNotificationsUseCase
-import com.ntg.lmd.notification.domain.usecase.SaveIncomingNotificationUseCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.random.Random
+import com.ntg.lmd.notification.data.model.NotificationPayload as Payload
 
 class FcmService : FirebaseMessagingService() {
     companion object {
         private const val CHANNEL_ID = "agent_updates"
         private const val CHANNEL_NAME = "Agent Updates"
         private const val CHANNEL_DESC = "Notifications about agent updates and orders"
-        private const val TAG = "FCM"
 
         private const val REQUEST_CODE_CONTENT = 2001
         private const val DEFAULT_DEEPLINK = "myapp://notifications"
-    }
-
-    override fun onNewToken(token: String) {
-        Log.d(TAG, "onNewToken = $token")
     }
 
     override fun onMessageReceived(msg: RemoteMessage) {
@@ -69,15 +60,6 @@ class FcmService : FirebaseMessagingService() {
         }
     }
 
-    // ------- Parsing / persistence helpers (cuts down cyclomatic complexity) -------
-
-    private data class Payload(
-        val title: String,
-        val body: String,
-        val deepLink: String,
-        val type: AgentNotification.Type,
-    )
-
     private fun parsePayload(
         notif: RemoteMessage.Notification?,
         data: Map<String, String>?,
@@ -104,7 +86,7 @@ class FcmService : FirebaseMessagingService() {
         body: String,
     ) {
         CoroutineScope(Dispatchers.IO).launch {
-            ServiceLocator.saveIncomingNotificationUseCase(
+            FCMServiceLocator.saveIncomingNotificationUseCase(
                 AgentNotification(
                     id = 0L,
                     message = body,
@@ -115,8 +97,6 @@ class FcmService : FirebaseMessagingService() {
         }
     }
 
-    // ---------------- Local notification ----------------
-
     @RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
     private fun showLocalNotification(
         title: String,
@@ -124,7 +104,12 @@ class FcmService : FirebaseMessagingService() {
         deepLink: String,
     ) {
         ensureChannel()
+        val contentIntent = buildContentIntent(deepLink)
+        val notification = buildNotification(title, body, contentIntent)
+        NotificationManagerCompat.from(this).notify(Random.nextInt(), notification)
+    }
 
+    private fun buildContentIntent(deepLink: String): PendingIntent {
         val clickIntent =
             Intent(
                 Intent.ACTION_VIEW,
@@ -134,35 +119,41 @@ class FcmService : FirebaseMessagingService() {
             ).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             }
+        return PendingIntent.getActivity(
+            this,
+            REQUEST_CODE_CONTENT,
+            clickIntent,
+            pendingIntentFlags(),
+        )
+    }
 
-        val flags =
-            PendingIntent.FLAG_UPDATE_CURRENT or
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0
+    private fun buildNotification(
+        title: String,
+        body: String,
+        contentIntent: PendingIntent,
+    ): android.app.Notification {
+        val largeIcon = BitmapFactory.decodeResource(resources, R.drawable.ic_notification)
+        return NotificationCompat
+            .Builder(this, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setLargeIcon(largeIcon)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setAutoCancel(true)
+            .setContentIntent(contentIntent)
+            .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .build()
+    }
 
-        val contentIntent =
-            PendingIntent.getActivity(
-                this,
-                REQUEST_CODE_CONTENT,
-                clickIntent,
-                flags,
-            )
-
-        val builder =
-            NotificationCompat
-                .Builder(this, CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle(title)
-                .setContentText(body)
-                .setStyle(NotificationCompat.BigTextStyle().bigText(body))
-                .setAutoCancel(true)
-                .setContentIntent(contentIntent)
-                .setCategory(NotificationCompat.CATEGORY_MESSAGE)
-                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-
-        val large = BitmapFactory.decodeResource(resources, R.drawable.ic_notification)
-        builder.setLargeIcon(large)
-
-        NotificationManagerCompat.from(this).notify(Random.nextInt(), builder.build())
+    private fun pendingIntentFlags(): Int {
+        val base = PendingIntent.FLAG_UPDATE_CURRENT
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            base or PendingIntent.FLAG_IMMUTABLE
+        } else {
+            base
+        }
     }
 
     private fun canPostNotifications(): Boolean {
@@ -195,14 +186,4 @@ class FcmService : FirebaseMessagingService() {
             nm.createNotificationChannel(channel)
         }
     }
-}
-
-object ServiceLocator {
-    private val repo: NotificationRepository by lazy { NotificationRepositoryImpl() }
-
-    val observeNotificationsUseCase by lazy { ObserveNotificationsUseCase(repo) }
-    val refreshNotificationsUseCase by lazy { RefreshNotificationsUseCase(repo) }
-    val saveIncomingNotificationUseCase by lazy { SaveIncomingNotificationUseCase(repo) }
-
-    fun notificationsRepo(): NotificationRepository = repo
 }

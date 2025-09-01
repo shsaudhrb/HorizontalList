@@ -25,7 +25,7 @@ fun drawerNavGraph(
     startDestination: String,
     registerOpenMenu: (setter: (() -> Unit)?) -> Unit,
     externalQuery: String,
-    onOpenOrderDetails: (Long) -> Unit,
+    onOpenOrderDetails: (String) -> Unit,
 ) {
     NavHost(navController = navController, startDestination = startDestination) {
         addGeneralPool(navController)
@@ -35,12 +35,12 @@ fun drawerNavGraph(
         addOrdersHistory(registerOpenMenu)
         addDeliveriesLog(navController)
         addSettings()
-        addMyPool()
+        addMyPool(onOpenOrderDetails)
         addChat()
     }
 }
 
-/* ------------ Extracted routes (logic unchanged) ------------ */
+// ------------ Extracted routes (logic unchanged) ------------
 
 private fun NavGraphBuilder.addGeneralPool(navController: NavHostController) {
     composable(Screen.GeneralPool.route) { generalPoolScreen(navController) }
@@ -49,7 +49,7 @@ private fun NavGraphBuilder.addGeneralPool(navController: NavHostController) {
 private fun NavGraphBuilder.addMyOrders(
     navController: NavHostController,
     externalQuery: String,
-    onOpenOrderDetails: (Long) -> Unit,
+    onOpenOrderDetails: (String) -> Unit,
 ) {
     composable(Screen.MyOrders.route) {
         myOrdersScreen(
@@ -66,7 +66,7 @@ private fun NavGraphBuilder.addOrderDetails(navController: NavHostController) {
         arguments = listOf(navArgument("id") { type = NavType.StringType }),
     ) { backStackEntry ->
         val idStr = backStackEntry.arguments?.getString("id")
-        val id = idStr?.toLongOrNull()
+        val id = idStr
         orderDetailsScreen(orderId = id, navController = navController)
     }
 }
@@ -78,9 +78,7 @@ private fun NavGraphBuilder.addNotifications() {
     ) { notificationScreen() }
 }
 
-private fun NavGraphBuilder.addOrdersHistory(
-    registerOpenMenu: (setter: (() -> Unit)?) -> Unit,
-) {
+private fun NavGraphBuilder.addOrdersHistory(registerOpenMenu: (setter: (() -> Unit)?) -> Unit) {
     composable(Screen.OrdersHistory.route) {
         ordersHistoryRoute(registerOpenMenu = registerOpenMenu)
     }
@@ -94,8 +92,10 @@ private fun NavGraphBuilder.addSettings() {
     composable(Screen.Settings.route) { entry -> settingsScreen(entry) }
 }
 
-private fun NavGraphBuilder.addMyPool() {
-    composable(Screen.MyPool.route) { myPoolScreen() }
+private fun NavGraphBuilder.addMyPool(onOpenOrderDetails: (String) -> Unit) {
+    composable(Screen.MyPool.route) {
+        myPoolScreen(onOpenOrderDetails = onOpenOrderDetails)
+    }
 }
 
 private fun NavGraphBuilder.addChat() {

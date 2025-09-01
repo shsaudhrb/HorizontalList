@@ -24,20 +24,21 @@ class SettingsViewModel(
     private val prefs: SettingsPreferenceDataSource,
     private val logoutManager: LogoutManager,
 ) : ViewModel() {
-
     private val _logoutState = MutableStateFlow<LogoutUiState>(LogoutUiState.Idle)
     val logoutState: StateFlow<LogoutUiState> = _logoutState
 
-    private val _ui = MutableStateFlow(
-        SettingsUiState(
-            language = if (prefs.getLanguage() == LANGUAGE_AR) AppLanguage.AR else AppLanguage.EN,
-            window = when (prefs.getNotificationWindowDays()) {
-                DAYS_30 -> NotificationWindow.D30
-                DAYS_90 -> NotificationWindow.D90
-                else -> NotificationWindow.D15
-            },
+    private val _ui =
+        MutableStateFlow(
+            SettingsUiState(
+                language = if (prefs.getLanguage() == LANGUAGE_AR) AppLanguage.AR else AppLanguage.EN,
+                window =
+                    when (prefs.getNotificationWindowDays()) {
+                        DAYS_30 -> NotificationWindow.D30
+                        DAYS_90 -> NotificationWindow.D90
+                        else -> NotificationWindow.D15
+                    },
+            ),
         )
-    )
     val ui: StateFlow<SettingsUiState> = _ui
 
     fun setLanguage(lang: AppLanguage) {
@@ -50,7 +51,6 @@ class SettingsViewModel(
         _ui.update { it.copy(window = win) }
         prefs.setNotificationWindowDays(win.days)
     }
-
 
     fun logout() {
         if (_logoutState.value is LogoutUiState.Loading) return
@@ -75,4 +75,11 @@ class SettingsViewModel(
 }
 
 enum class AppLanguage { EN, AR }
-enum class NotificationWindow(val days: Int) { D15(DAYS_15), D30(DAYS_30), D90(DAYS_90) }
+
+enum class NotificationWindow(
+    val days: Int,
+) {
+    D15(DAYS_15),
+    D30(DAYS_30),
+    D90(DAYS_90),
+}

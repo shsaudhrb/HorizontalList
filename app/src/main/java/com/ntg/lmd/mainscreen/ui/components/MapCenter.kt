@@ -13,6 +13,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -36,6 +37,7 @@ fun mapCenter(
     mapStates: MapStates,
     deviceLatLng: LatLng?,
     modifier: Modifier = Modifier,
+    bottomOverlayPadding: Dp? = null, // NEW: allow caller to push controls up
 ) {
     val (cameraPositionState, markerState) = mapStates
     var initialCentered by remember { mutableStateOf(false) }
@@ -43,7 +45,9 @@ fun mapCenter(
     val cfg = LocalConfiguration.current
     val screenH = cfg.screenHeightDp.dp
     val topOverlayHeight = (screenH * TOP_OVERLAY_RATIO).coerceIn(48.dp, 96.dp)
-    val bottomBarHeight = (screenH * BOTTOM_BAR_RATIO).coerceIn(128.dp, 280.dp)
+    val defaultBottomBarHeight = (screenH * BOTTOM_BAR_RATIO).coerceIn(128.dp, 280.dp)
+
+    val bottomPadding = bottomOverlayPadding ?: defaultBottomBarHeight
 
     val context = LocalContext.current
     val hasFine =
@@ -67,8 +71,16 @@ fun mapCenter(
         modifier = modifier,
         cameraPositionState = cameraPositionState,
         properties = MapProperties(isMyLocationEnabled = canShowMyLocation),
-        uiSettings = MapUiSettings(zoomControlsEnabled = true, myLocationButtonEnabled = true),
-        contentPadding = PaddingValues(top = topOverlayHeight, bottom = bottomBarHeight),
+        uiSettings =
+            MapUiSettings(
+                zoomControlsEnabled = true, // keep default controls
+                myLocationButtonEnabled = true,
+            ),
+        contentPadding =
+            PaddingValues(
+                top = topOverlayHeight,
+                bottom = bottomPadding, // ← this lifts the default controls
+            ),
     ) {
         if (deviceLatLng != null && ui.distanceThresholdKm > 0.0) {
             Circle(
