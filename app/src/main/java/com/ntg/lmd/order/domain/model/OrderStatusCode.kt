@@ -1,11 +1,15 @@
 package com.ntg.lmd.order.domain.model
 
+const val CANCELLED_CODE = 3
+const val FAILED_CODE = 7
+const val DONE_CODE = 8
+
 enum class OrderStatusCode(
     val code: Int,
 ) {
-    CANCELLED(3),
-    FAILED(7),
-    DONE(8),
+    CANCELLED(CANCELLED_CODE),
+    FAILED(FAILED_CODE),
+    DONE(DONE_CODE),
     ;
 
     companion object {
