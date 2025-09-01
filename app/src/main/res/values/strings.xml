@@ -151,5 +151,6 @@
     <string name="notif_every_15_days">Every 15 days</string>
     <string name="notif_every_30_days">Every 30 days</string>
     <string name="notif_every_90_days">Every 90 days</string>
+    <string name="no_data">No data Available</string>
 
 </resources>
