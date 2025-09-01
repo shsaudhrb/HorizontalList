@@ -1,4 +1,5 @@
 package com.ntg.lmd.mainscreen.domain.model
+// / Renad
 
 import com.ntg.lmd.order.domain.model.OrderStatusCode
 
@@ -19,8 +20,10 @@ data class OrderInfo(
     val lng: Double = 0.0,
     val status: OrderStatus = OrderStatus.ADDED,
     val price: String = "---",
-    val customerPhone: String?,
+    val customerPhone: String? = "",
     val details: String?,
+    val customerId: String? = "",
+    val assignedAgentId: String? = "",
 )
 
 enum class OrderStatus(

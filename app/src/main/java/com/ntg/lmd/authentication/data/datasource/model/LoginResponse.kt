@@ -6,7 +6,7 @@ data class LoginResponse(
     @SerializedName("success")
     val success: Boolean,
     @SerializedName("data")
-    val data: LoginRefreshToken?,
+    val data: LoginData?,
     @SerializedName("error")
     val error: String?,
 )

@@ -1,6 +1,7 @@
 package com.ntg.lmd
 
 import android.app.Application
+import android.content.Context
 import com.ntg.lmd.authentication.data.repositoryImp.AuthRepositoryImp
 import com.ntg.lmd.network.connectivity.NetworkMonitor
 import com.ntg.lmd.network.core.RetrofitProvider
@@ -17,13 +18,14 @@ class MyApp : Application() {
         private set
     lateinit var networkMonitor: NetworkMonitor
         private set
-
+    lateinit var appContext: Context
+        private set
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override fun onCreate() {
         super.onCreate()
         networkMonitor = NetworkMonitor(applicationContext)
-
+        appContext = applicationContext
         RetrofitProvider.init(this)
 
         socket =
@@ -41,6 +43,7 @@ class MyApp : Application() {
             AuthRepositoryImp(
                 loginApi = RetrofitProvider.apiNoAuth,
                 store = RetrofitProvider.tokenStore,
+                userStore = RetrofitProvider.userStore,
             )
         appScope.launch {
             networkMonitor.isOnline.collect { online ->

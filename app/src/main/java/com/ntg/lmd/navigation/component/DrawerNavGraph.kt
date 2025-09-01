@@ -29,7 +29,7 @@ fun drawerNavGraph(
 ) {
     NavHost(navController = navController, startDestination = startDestination) {
         addGeneralPool(navController)
-        addMyOrders(navController, externalQuery, onOpenOrderDetails)
+        addMyOrders( onOpenOrderDetails)
         addOrderDetails(navController)
         addNotifications()
         addOrdersHistory(registerOpenMenu)
@@ -47,14 +47,10 @@ private fun NavGraphBuilder.addGeneralPool(navController: NavHostController) {
 }
 
 private fun NavGraphBuilder.addMyOrders(
-    navController: NavHostController,
-    externalQuery: String,
     onOpenOrderDetails: (String) -> Unit,
 ) {
     composable(Screen.MyOrders.route) {
         myOrdersScreen(
-            navController = navController,
-            externalQuery = externalQuery,
             onOpenOrderDetails = onOpenOrderDetails,
         )
     }
