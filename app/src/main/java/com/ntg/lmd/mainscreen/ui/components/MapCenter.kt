@@ -6,12 +6,16 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.Circle
 import com.google.maps.android.compose.GoogleMap
@@ -34,6 +38,7 @@ fun mapCenter(
     modifier: Modifier = Modifier,
 ) {
     val (cameraPositionState, markerState) = mapStates
+    var initialCentered by remember { mutableStateOf(false) }
 
     val cfg = LocalConfiguration.current
     val screenH = cfg.screenHeightDp.dp
@@ -43,11 +48,20 @@ fun mapCenter(
     val context = LocalContext.current
     val hasFine =
         ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
-            PackageManager.PERMISSION_GRANTED
+                PackageManager.PERMISSION_GRANTED
     val hasCoarse =
         ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) ==
-            PackageManager.PERMISSION_GRANTED
+                PackageManager.PERMISSION_GRANTED
     val canShowMyLocation = hasFine || hasCoarse
+
+    LaunchedEffect(deviceLatLng) {
+        if (deviceLatLng != null && !initialCentered) {
+            cameraPositionState.animate(
+                CameraUpdateFactory.newLatLngZoom(deviceLatLng, 8f)
+            )
+            initialCentered = true
+        }
+    }
 
     GoogleMap(
         modifier = modifier,
@@ -70,18 +84,14 @@ fun mapCenter(
         val selectedOrderNumber = ui.selected?.orderNumber
         ui.mapOrders.forEach { order ->
             if (order.orderNumber != selectedOrderNumber) {
-                val position = remember(order.lat, order.lng) { LatLng(order.lat, order.lng) }
+                val position = LatLng(order.lat, order.lng)
                 Marker(
-                    state = remember { MarkerState(position) },
+                    state = MarkerState(position = position),
                     title = order.name,
                     snippet = order.orderNumber,
                     zIndex = 0f,
                 )
             }
-        }
-
-        LaunchedEffect(ui.selected?.lat, ui.selected?.lng) {
-            ui.selected?.let { markerState.position = LatLng(it.lat, it.lng) }
         }
 
         // render the single marker only if we have a selection (special/high zIndex)
@@ -90,6 +100,8 @@ fun mapCenter(
                 !ui.hasLocationPerm || (sel.distanceKm.isFinite() && sel.distanceKm <= ui.distanceThresholdKm)
 
             if (withinRange) {
+                val pos = LatLng(sel.lat, sel.lng)
+                markerState.position = pos
                 Marker(
                     state = markerState,
                     title = sel.name,
