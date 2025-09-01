@@ -7,7 +7,6 @@ import com.ntg.lmd.network.queue.NetworkError
 import com.ntg.lmd.network.queue.NetworkResult
 import retrofit2.HttpException
 
-// AuthRepositoryImp.kt
 class AuthRepositoryImp(
     private val loginApi: AuthApi,
     private val store: SecureTokenStore,
@@ -17,33 +16,63 @@ class AuthRepositoryImp(
     suspend fun login(
         email: String,
         password: String,
-    ): NetworkResult<Unit> =
-        try {
+    ): NetworkResult<Unit> {
+        return try {
             val response = loginApi.login(LoginRequest(email, password))
 
-            if (!response.success) {
-                NetworkResult.Error(NetworkError.BadRequest(response.error ?: "Login failed"))
-            } else {
-                val payload = response.data
-                if (payload == null) {
-                    NetworkResult.Error(
-                        NetworkError.BadRequest(response.error ?: "Login failed: no data received"),
-                    )
-                } else {
-                    store.saveFromPayload(
-                        access = payload.accessToken,
-                        refresh = payload.refreshToken,
-                        expiresAt = payload.expiresAt,
-                        refreshExpiresAt = payload.refreshExpiresAt,
-                    )
-
-                    lastLoginName = payload.user?.fullName
-                    android.util.Log.d("AuthRepo", "Setting lastLoginName = ${payload.user?.fullName}  repo=${this.hashCode()}")
-
-                    NetworkResult.Success(Unit)
-                }
+            // Guard: response or success flag is null/false
+            if (response?.success != true) {
+                val msg = response?.error?.takeIf { it.isNullOrBlank().not() } ?: "Login failed"
+                return NetworkResult.Error(NetworkError.BadRequest(msg))
             }
-        } catch (e: HttpException) {
+
+            // Guard: payload present
+            val payload =
+                response.data
+                    ?: return NetworkResult.Error(
+                        NetworkError.BadRequest(
+                            response.error ?: "Login failed: no data received",
+                        ),
+                    )
+
+            // Guard: required fields present
+            val access =
+                payload.accessToken
+                    ?: return NetworkResult.Error(NetworkError.BadRequest("Login failed: missing access token"))
+            val refresh =
+                payload.refreshToken
+                    ?: return NetworkResult.Error(NetworkError.BadRequest("Login failed: missing refresh token"))
+            val expiresAt =
+                payload.expiresAt
+                    ?: return NetworkResult.Error(NetworkError.BadRequest("Login failed: missing access token expiry"))
+            val refreshExpiresAt =
+                payload.refreshExpiresAt
+                    ?: return NetworkResult.Error(NetworkError.BadRequest("Login failed: missing refresh token expiry"))
+
+            // Persist tokens safely
+            store.saveFromPayload(
+                access = access,
+                refresh = refresh,
+                expiresAt = expiresAt,
+                refreshExpiresAt = refreshExpiresAt,
+            )
+
+            // Null-safe user name capture
+            lastLoginName = payload.user?.fullName?.takeIf { it.isNullOrBlank().not() }
+
+            // Optional: debug log without risking NPEs
+            android.util.Log.d(
+                "AuthRepo",
+                "Setting lastLoginName = ${lastLoginName ?: "<none>"} repo=${this.hashCode()}",
+            )
+
+            NetworkResult.Success(Unit)
+        } catch (ce: kotlin.coroutines.cancellation.CancellationException) {
+            throw ce
+        } catch (e: retrofit2.HttpException) {
+            NetworkResult.Error(NetworkError.fromException(e))
+        } catch (e: java.io.IOException) {
             NetworkResult.Error(NetworkError.fromException(e))
         }
+    }
 }

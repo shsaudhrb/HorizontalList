@@ -3,6 +3,7 @@ package com.ntg.lmd.mainscreen.data.mapper
 import com.ntg.lmd.mainscreen.data.model.OrderDto
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
+import com.ntg.lmd.utils.AppDefaults
 
 fun OrderDto.toDomain(): OrderInfo =
     OrderInfo(
@@ -10,10 +11,10 @@ fun OrderDto.toDomain(): OrderInfo =
         name = customerName.orEmpty(),
         orderNumber = orderNumber,
         timeAgo = "now",
-        itemsCount = 0,
-        distanceKm = distanceKm ?: Double.NaN,
-        lat = coordinates?.latitude ?: Double.NaN,
-        lng = coordinates?.longitude ?: Double.NaN,
+        itemsCount = 0, // not provided in API
+        distanceKm = distanceKm ?: AppDefaults.DEFAULT_DISTANCE_KM,
+        lat = coordinates?.latitude ?: AppDefaults.DEFAULT_LAT,
+        lng = coordinates?.longitude ?: AppDefaults.DEFAULT_LNG,
         status =
             OrderStatus.fromId(statusId)
                 ?: when (orderstatuses?.statusName?.trim()?.lowercase()) {

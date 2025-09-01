@@ -38,7 +38,6 @@ import com.ntg.lmd.mainscreen.ui.model.MyOrdersPoolUiState
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyPoolVMFactory
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyPoolViewModel
 
-private val PAGING_SPINNER_BOTTOM_PADDING = 12.dp
 private val ZERO_LATLNG = LatLng(0.0, 0.0)
 
 private data class MapOverlayState(
@@ -166,7 +165,7 @@ private fun BoxScope.bottomOverlay(
                 modifier =
                     Modifier
                         .align(Alignment.CenterHorizontally)
-                        .padding(bottom = PAGING_SPINNER_BOTTOM_PADDING),
+                        .padding(bottom = dimensionResource(R.dimen.smallSpace)),
             )
         }
         myPoolBottom(

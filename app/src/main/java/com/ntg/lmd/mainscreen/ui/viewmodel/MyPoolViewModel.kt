@@ -52,6 +52,12 @@ class MyPoolViewModel(
         loadingJob = viewModelScope.launch { fillFirstChunk() }
     }
 
+    override fun onCleared() {
+        loadingJob?.cancel(CancellationException("ViewModel cleared"))
+        loadingJob = null
+        super.onCleared()
+    }
+
     private suspend fun fillFirstChunk() {
         _ui.update { it.copy(isLoading = true, isLoadingMore = false, endReached = false, orders = emptyList()) }
 
