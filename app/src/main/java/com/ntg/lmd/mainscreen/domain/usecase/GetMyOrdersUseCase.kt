@@ -9,5 +9,6 @@ class GetMyOrdersUseCase(
     suspend operator fun invoke(
         page: Int,
         limit: Int,
-    ): OrdersPage = repo.getOrders(page, limit)
+        bypassCache: Boolean = false
+    ): OrdersPage = repo.getOrders(page, limit,bypassCache)
 }

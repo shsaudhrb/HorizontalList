@@ -103,7 +103,6 @@ class RequestRepository(
             Log.d(TAG_REQ, "drainAll done")
         }
 
-    // (4) Use timeout + NetworkResult mapping (comments #2 & #6)
     private suspend fun executeAsync(item: QueuedRequest): NetworkResult<Unit> =
         withContext(Dispatchers.IO) {
             try {
