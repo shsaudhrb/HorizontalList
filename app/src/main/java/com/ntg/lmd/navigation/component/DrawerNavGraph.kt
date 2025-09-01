@@ -40,7 +40,7 @@ fun drawerNavGraph(
     }
 }
 
-/* ------------ Extracted routes (logic unchanged) ------------ */
+// ------------ Extracted routes (logic unchanged) ------------
 
 private fun NavGraphBuilder.addGeneralPool(navController: NavHostController) {
     composable(Screen.GeneralPool.route) { generalPoolScreen(navController) }
@@ -78,9 +78,7 @@ private fun NavGraphBuilder.addNotifications() {
     ) { notificationScreen() }
 }
 
-private fun NavGraphBuilder.addOrdersHistory(
-    registerOpenMenu: (setter: (() -> Unit)?) -> Unit,
-) {
+private fun NavGraphBuilder.addOrdersHistory(registerOpenMenu: (setter: (() -> Unit)?) -> Unit) {
     composable(Screen.OrdersHistory.route) {
         ordersHistoryRoute(registerOpenMenu = registerOpenMenu)
     }

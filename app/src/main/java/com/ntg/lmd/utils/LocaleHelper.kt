@@ -15,7 +15,7 @@ object LocaleHelper {
     ): Context {
         val locale = Locale.Builder().setLanguage(langCode).build()
 
-        val config =Configuration(ctx.resources.configuration)
+        val config = Configuration(ctx.resources.configuration)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             config.setLocales(LocaleList(locale))
         } else {
@@ -30,4 +30,3 @@ object LocaleHelper {
         return localized
     }
 }
-
