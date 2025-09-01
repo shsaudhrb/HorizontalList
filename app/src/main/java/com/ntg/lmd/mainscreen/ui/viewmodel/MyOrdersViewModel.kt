@@ -1,25 +1,18 @@
 package com.ntg.lmd.mainscreen.ui.viewmodel
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
-import com.ntg.lmd.mainscreen.ui.model.MyOrdersUiState
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import com.ntg.lmd.mainscreen.domain.model.OrderInfo
-import com.ntg.lmd.mainscreen.domain.model.OrderStatus
 import com.ntg.lmd.mainscreen.domain.usecase.GetMyOrdersUseCase
-import com.ntg.lmd.mainscreen.ui.screens.orders.model.LocalUiOnlyStatusBus
+import com.ntg.lmd.mainscreen.ui.model.LocalUiOnlyStatusBus
 import com.ntg.lmd.mainscreen.ui.screens.orders.model.MyOrdersUiState
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlin.collections.take
-import kotlin.random.Random
 import retrofit2.HttpException
 import java.io.IOException
 import java.net.SocketTimeoutException
@@ -49,20 +42,18 @@ class MyOrdersViewModel(
             try {
                 page = 1
                 endReached = false
-                val first = getMyOrders(page = 1, limit = PAGE_SIZE, bypassCache = true)
-                allOrders.clear(); allOrders.addAll(first)
-                endReached = first.size < PAGE_SIZE
+
+                val page1 = getMyOrders(page = 1, limit = PAGE_SIZE, bypassCache = true)
+                val first: List<OrderInfo> = page1.items
+                endReached = page1.rawCount < PAGE_SIZE
+
+                allOrders.clear()
+                allOrders.addAll(first)
+
                 val base = currentFilteredFor(state.value.query, allOrders)
                 _state.publishFirstPageFrom(base, PAGE_SIZE, state.value.query)
-            } catch (ce: CancellationException) {
-                throw ce
-            } catch (e: HttpException) {
-                _state.update { it.copy(isLoading = false, isLoadingMore = false, errorMessage = messageFor(e)) }
-            } catch (e: UnknownHostException) {
-                _state.update { it.copy(isLoading = false, isLoadingMore = false, errorMessage = messageFor(e)) }
-            } catch (e: SocketTimeoutException) {
-                _state.update { it.copy(isLoading = false, isLoadingMore = false, errorMessage = messageFor(e)) }
-            } catch (e: IOException) {
+            } catch (ce: CancellationException) { throw ce }
+            catch (e: Exception) {
                 _state.update { it.copy(isLoading = false, isLoadingMore = false, errorMessage = messageFor(e)) }
             }
         }
@@ -79,22 +70,18 @@ class MyOrdersViewModel(
             try {
                 page = 1
                 endReached = false
-                val first = getMyOrders(page = 1, limit = PAGE_SIZE, bypassCache = true)
-                allOrders.clear(); allOrders.addAll(first)
-                endReached = first.size < PAGE_SIZE
+
+                val page1 = getMyOrders(page = 1, limit = PAGE_SIZE, bypassCache = true)
+                val first = page1.items
+                endReached = page1.rawCount < PAGE_SIZE
+
+                allOrders.clear()
+                allOrders.addAll(first)
+
                 val base = currentFilteredFor(state.value.query, allOrders)
                 _state.publishFirstPageFrom(base, PAGE_SIZE, state.value.query)
-            } catch (ce: CancellationException) {
-                throw ce
-            } catch (e: HttpException) {
-                handleInitialLoadError(e, alreadyHasData, context, _state, ::loadOrders)
-            } catch (e: UnknownHostException) {
-                handleInitialLoadError(e, alreadyHasData, context, _state, ::loadOrders)
-            } catch (e: SocketTimeoutException) {
-                handleInitialLoadError(e, alreadyHasData, context, _state, ::loadOrders)
-            } catch (e: IOException) {
-                handleInitialLoadError(e, alreadyHasData, context, _state, ::loadOrders)
-            }
+            } catch (ce: CancellationException) { throw ce }
+            catch (e: Exception) { handleInitialLoadError(e, alreadyHasData, context, _state, ::loadOrders) }
         }
     }
 
@@ -106,21 +93,17 @@ class MyOrdersViewModel(
 
         viewModelScope.launch {
             try {
-                val fresh = getMyOrders(page = 1, limit = PAGE_SIZE, bypassCache = true)
-                page = 1
-                endReached = fresh.size < PAGE_SIZE
-                allOrders.clear(); allOrders.addAll(fresh)
+                val page1 = getMyOrders(page = 1, limit = PAGE_SIZE, bypassCache = true)
+                val fresh = page1.items
+                endReached = page1.rawCount < PAGE_SIZE
+
+                allOrders.clear()
+                allOrders.addAll(fresh)
+
                 val base = currentFilteredFor(state.value.query, allOrders)
                 _state.publishFirstPageFrom(base, PAGE_SIZE, state.value.query)
-            } catch (ce: CancellationException) {
-                throw ce
-            } catch (e: HttpException) {
-                LocalUiOnlyStatusBus.errorEvents.tryEmit(messageFor(e) to { refresh(context) })
-            } catch (e: UnknownHostException) {
-                LocalUiOnlyStatusBus.errorEvents.tryEmit(messageFor(e) to { refresh(context) })
-            } catch (e: SocketTimeoutException) {
-                LocalUiOnlyStatusBus.errorEvents.tryEmit(messageFor(e) to { refresh(context) })
-            } catch (e: IOException) {
+            } catch (ce: CancellationException) { throw ce }
+            catch (e: Exception) {
                 LocalUiOnlyStatusBus.errorEvents.tryEmit(messageFor(e) to { refresh(context) })
             } finally {
                 _state.update { it.copy(isRefreshing = false) }
@@ -136,26 +119,17 @@ class MyOrdersViewModel(
         viewModelScope.launch {
             _state.update { it.copy(isLoadingMore = true) }
             try {
-                val nextPage = page + 1
-                val next = getMyOrders(page = nextPage, limit = PAGE_SIZE, bypassCache = true)
-                if (next.isEmpty() || next.size < PAGE_SIZE) endReached = true
-                page = nextPage
-                allOrders.addAll(next)
+                val nextPageNum = page + 1
+                val pageRes = getMyOrders(page = nextPageNum, limit = PAGE_SIZE, bypassCache = true)
+                val next = pageRes.items
+                endReached = pageRes.rawCount < PAGE_SIZE || next.isEmpty()
+                page = nextPageNum
 
+                allOrders.addAll(next)
                 val base = currentFilteredFor(state.value.query, allOrders)
                 _state.publishAppendFrom(base, page, PAGE_SIZE)
-            } catch (ce: CancellationException) {
-                throw ce
-            } catch (e: HttpException) {
-                LocalUiOnlyStatusBus.errorEvents.tryEmit(messageFor(e) to { loadNextPage(context) })
-                _state.update { it.copy(isLoadingMore = false) }
-            } catch (e: UnknownHostException) {
-                LocalUiOnlyStatusBus.errorEvents.tryEmit(messageFor(e) to { loadNextPage(context) })
-                _state.update { it.copy(isLoadingMore = false) }
-            } catch (e: SocketTimeoutException) {
-                LocalUiOnlyStatusBus.errorEvents.tryEmit(messageFor(e) to { loadNextPage(context) })
-                _state.update { it.copy(isLoadingMore = false) }
-            } catch (e: IOException) {
+            } catch (ce: CancellationException) { throw ce }
+            catch (e: Exception) {
                 LocalUiOnlyStatusBus.errorEvents.tryEmit(messageFor(e) to { loadNextPage(context) })
                 _state.update { it.copy(isLoadingMore = false) }
             }
@@ -164,19 +138,13 @@ class MyOrdersViewModel(
 
     fun retry(context: Context) = loadOrders(context)
 
-    fun onQueryChange(newQuery: String) {
-        _state.update { it.copy(query = newQuery) }
-        val base = currentFilteredFor(newQuery, allOrders)
-        _state.publishFirstPageFrom(base, PAGE_SIZE, newQuery)
-    }
-
-    /** Local-only status change (for UI). Keep if useful. */
+    /** Local-only status change (for UI). */
     fun updateStatusLocally(id: String, newStatus: OrderStatus) {
         val updated = state.value.orders.map { o -> if (o.id == id) o.copy(status = newStatus) else o }
         _state.update { it.copy(orders = updated) }
     }
 
-    /** Apply server patch into lists (when you want to keep an updated item visible) */
+    /** Apply server patch into lists (keep item visible when needed). */
     fun applyServerPatch(updated: OrderInfo) {
         // visible list
         val visible = _state.value.orders.toMutableList()
@@ -199,7 +167,7 @@ class MyOrdersViewModel(
     }
 }
 
-// -------- file-level helpers (not counted toward class function limit) --------
+/* ---- File-level helpers ---- */
 
 private fun currentFilteredFor(queryRaw: String, all: List<OrderInfo>): List<OrderInfo> {
     val q = queryRaw.trim()

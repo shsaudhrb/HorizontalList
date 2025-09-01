@@ -30,7 +30,7 @@ import com.ntg.lmd.mainscreen.domain.model.OrderStatus
 import com.ntg.lmd.mainscreen.ui.components.OrdersUi.CARD_ELEVATION
 import com.ntg.lmd.mainscreen.ui.components.OrdersUi.DETAILS_BUTTON_WEIGHT
 import com.ntg.lmd.mainscreen.ui.components.OrdersUi.OUTLINE_STROKE
-import com.ntg.lmd.mainscreen.ui.screens.orders.model.LocalUiOnlyStatusBus
+import com.ntg.lmd.mainscreen.ui.model.LocalUiOnlyStatusBus
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
 
 @Composable

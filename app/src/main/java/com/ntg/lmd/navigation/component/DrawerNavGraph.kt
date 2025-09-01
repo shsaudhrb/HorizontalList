@@ -1,6 +1,7 @@
 package com.ntg.lmd.navigation.component
 
 import androidx.compose.runtime.Composable
+import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -28,7 +29,7 @@ fun drawerNavGraph(
 ) {
     NavHost(navController = navController, startDestination = startDestination) {
         addGeneralPool(navController)
-        addMyOrders(navController, externalQuery, onOpenOrderDetails)
+        addMyOrders( onOpenOrderDetails)
         addOrderDetails(navController)
         addNotifications()
         addOrdersHistory(registerOpenMenu)

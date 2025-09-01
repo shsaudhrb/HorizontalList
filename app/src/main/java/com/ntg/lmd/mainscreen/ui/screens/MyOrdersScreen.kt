@@ -1,28 +1,14 @@
 package com.ntg.lmd.mainscreen.ui.screens
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+import android.app.Application
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
@@ -34,41 +20,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.data.repository.MyOrdersRepositoryImpl
 import com.ntg.lmd.mainscreen.data.repository.UpdateOrdersStatusRepository
 import com.ntg.lmd.mainscreen.data.repository.UsersRepositoryImpl
-import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
 import com.ntg.lmd.mainscreen.domain.usecase.GetActiveUsersUseCase
 import com.ntg.lmd.mainscreen.domain.usecase.GetMyOrdersUseCase
 import com.ntg.lmd.mainscreen.domain.usecase.UpdateOrderStatusUseCase
-import com.ntg.lmd.mainscreen.ui.components.ActionDialog
-import com.ntg.lmd.mainscreen.ui.components.OrdersUi.CARD_ELEVATION
-import com.ntg.lmd.mainscreen.ui.components.OrdersUi.DETAILS_BUTTON_WEIGHT
-import com.ntg.lmd.mainscreen.ui.components.OrdersUi.OUTLINE_STROKE
-import com.ntg.lmd.mainscreen.domain.model.OrderInfo
-import com.ntg.lmd.mainscreen.domain.model.OrderStatus
 import com.ntg.lmd.mainscreen.ui.components.bottomStickyButton
-import com.ntg.lmd.mainscreen.ui.components.callButton
-import com.ntg.lmd.mainscreen.ui.components.deliverDialog
-import com.ntg.lmd.mainscreen.ui.components.orderHeaderWithMenu
 import com.ntg.lmd.mainscreen.ui.components.ordersContent
 import com.ntg.lmd.mainscreen.ui.components.ordersEffects
-import com.ntg.lmd.mainscreen.ui.components.primaryActionButton
-import com.ntg.lmd.mainscreen.ui.components.reasonDialog
 import com.ntg.lmd.mainscreen.ui.components.reassignBottomSheet
-import com.ntg.lmd.mainscreen.ui.components.reassignDialog
-import com.ntg.lmd.mainscreen.ui.components.simpleConfirmDialog
-import com.ntg.lmd.mainscreen.ui.screens.orders.model.LocalUiOnlyStatusBus
 import com.ntg.lmd.mainscreen.ui.viewmodel.ActiveAgentsViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.ActiveAgentsViewModelFactory
-import com.ntg.lmd.mainscreen.ui.model.LocalUiOnlyStatusBus
-import com.ntg.lmd.mainscreen.ui.model.MyOrdersUiState
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyOrdersViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyOrdersViewModelFactory
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
@@ -82,23 +49,14 @@ import com.ntg.lmd.utils.SecureUserStore
 @Composable
 fun myOrdersScreen(onOpenOrderDetails: (String) -> Unit) {
     val repo = remember { MyOrdersRepositoryImpl(RetrofitProvider.ordersApi) }
-    val updaterepo = remember { UpdateOrdersStatusRepository(RetrofitProvider.updateStatusApi) }
 
     val getUsecase = remember { GetMyOrdersUseCase(repo) }
-    val updateUsecase = remember { UpdateOrderStatusUseCase(updaterepo) }
 
     val ordersVm: MyOrdersViewModel = viewModel(factory = MyOrdersViewModelFactory(getUsecase))
-    val context = LocalContext.current
+    val updateVm: UpdateOrderStatusViewModel = viewModel(
+        factory = UpdateOrderStatusViewModelFactory(LocalContext.current.applicationContext as Application)
+    )
 
-    val userStore = remember { SecureUserStore(context) }
-    val updateVm: UpdateOrderStatusViewModel =
-        viewModel(
-            factory =
-                UpdateOrderStatusViewModelFactory(
-                    updateUsecase,
-                    userStore,
-                ),
-        )
     val repoUsers = remember { UsersRepositoryImpl(RetrofitProvider.usersApi) }
     val getUsers = remember { GetActiveUsersUseCase(repoUsers) }
     val agentsVm: ActiveAgentsViewModel = viewModel(factory = ActiveAgentsViewModelFactory(getUsers))
