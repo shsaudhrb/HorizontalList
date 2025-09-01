@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.CameraPositionState
 import com.google.maps.android.compose.Circle
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
@@ -32,54 +33,93 @@ import com.ntg.lmd.mainscreen.ui.model.MapUiState
 private const val TOP_OVERLAY_RATIO = 0.09f // 9% of screen height
 private const val BOTTOM_BAR_RATIO = 0.22f // 22% of screen height
 
+private data class MapChrome(
+    val top: Dp,
+    val bottom: Dp,
+)
+
+private data class MapConfig(
+    val ui: MapUiState,
+    val mapStates: MapStates,
+    val deviceLatLng: LatLng?,
+    val canShowMyLocation: Boolean,
+)
+
 @Composable
 fun mapCenter(
     ui: MapUiState,
     mapStates: MapStates,
     deviceLatLng: LatLng?,
     modifier: Modifier = Modifier,
-    bottomOverlayPadding: Dp? = null, // NEW: allow caller to push controls up
+    bottomOverlayPadding: Dp? = null,
 ) {
-    val (cameraPositionState, markerState) = mapStates
-    val (topOverlayHeight, bottomBarHeight) = overlayHeights()
+    val (cameraPositionState, _) = mapStates
+    val (topDefault, bottomDefault) = overlayHeights()
+    val chrome =
+        remember(topDefault, bottomDefault, bottomOverlayPadding) {
+            MapChrome(top = topDefault, bottom = bottomOverlayPadding ?: bottomDefault)
+        }
     val canShowMyLocation = rememberCanShowMyLocation()
 
-/*    LaunchedEffect(deviceLatLng) {
-        if (deviceLatLng != null && !initialCentered) {
-            cameraPositionState.animate(
-                CameraUpdateFactory.newLatLngZoom(deviceLatLng, 8f)
-            )
-            initialCentered = true
-        }
-    }*/
+    var initialCentered by remember { mutableStateOf(false) }
+    initialCenterEffect(deviceLatLng, cameraPositionState, initialCentered) { initialCentered = it }
 
+    val config =
+        remember(ui, mapStates, deviceLatLng, canShowMyLocation) {
+            MapConfig(ui, mapStates, deviceLatLng, canShowMyLocation)
+        }
+
+    googleMapContent(config = config, chrome = chrome, modifier = modifier)
+}
+
+// ---------- helpers (all ≤5 params) ----------
+
+@Composable
+private fun initialCenterEffect(
+    deviceLatLng: LatLng?,
+    camera: CameraPositionState,
+    alreadyCentered: Boolean,
+    setCentered: (Boolean) -> Unit,
+) {
+    LaunchedEffect(deviceLatLng, alreadyCentered) {
+        if (deviceLatLng != null && !alreadyCentered) {
+            camera.animate(CameraUpdateFactory.newLatLngZoom(deviceLatLng, 8f))
+            setCentered(true)
+        }
+    }
+}
+
+@Composable
+private fun googleMapContent(
+    config: MapConfig,
+    chrome: MapChrome,
+    modifier: Modifier = Modifier,
+) {
+    val (cameraPositionState, markerState) = config.mapStates
     GoogleMap(
         modifier = modifier,
         cameraPositionState = cameraPositionState,
-        properties = MapProperties(isMyLocationEnabled = canShowMyLocation),
+        properties = MapProperties(isMyLocationEnabled = config.canShowMyLocation),
         uiSettings = MapUiSettings(zoomControlsEnabled = true, myLocationButtonEnabled = true),
-        contentPadding = PaddingValues(top = topOverlayHeight, bottom = bottomBarHeight),
+        contentPadding = PaddingValues(top = chrome.top, bottom = chrome.bottom),
     ) {
-        distanceCircle(deviceLatLng = deviceLatLng, distanceKm = ui.distanceThresholdKm)
-
-        otherMarkers(
-            orders = ui.mapOrders,
-            selectedOrderNumber = ui.selected?.orderNumber,
+        distanceCircle(
+            deviceLatLng = config.deviceLatLng,
+            distanceKm = config.ui.distanceThresholdKm,
         )
-
-        selectedMarkerPositionEffect(selected = ui.selected, markerState = markerState)
-
+        otherMarkers(
+            orders = config.ui.mapOrders,
+            selectedOrderNumber = config.ui.selected?.orderNumber,
+        )
+        selectedMarkerPositionEffect(selected = config.ui.selected, markerState = markerState)
         selectedMarker(
-            selected = ui.selected,
-            hasLocationPerm = ui.hasLocationPerm,
-            thresholdKm = ui.distanceThresholdKm,
+            selected = config.ui.selected,
+            hasLocationPerm = config.ui.hasLocationPerm,
+            thresholdKm = config.ui.distanceThresholdKm,
             markerState = markerState,
         )
     }
 }
-
-
-// --------------------------- Small helpers ---------------------------
 
 @Composable
 private fun overlayHeights(): Pair<Dp, Dp> {
@@ -104,8 +144,6 @@ private fun rememberCanShowMyLocation(): Boolean {
         ) == PackageManager.PERMISSION_GRANTED
     return hasFine || hasCoarse
 }
-
-// --------------------------- Map content pieces ---------------------------
 
 @Composable
 private fun distanceCircle(

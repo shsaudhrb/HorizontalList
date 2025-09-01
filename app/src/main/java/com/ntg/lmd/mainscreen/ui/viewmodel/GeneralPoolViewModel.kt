@@ -86,43 +86,45 @@ class GeneralPoolViewModel : ViewModel() {
     // collect live orders from socket and push to UI
     private fun observeRealtimeOrders(repo: OrdersRepository) {
         realtimeJob?.cancel()
-        realtimeJob = viewModelScope.launch {
-            repo.orders().collect { liveOrders ->
-                // map -> UI
-                val incoming = liveOrders.map { it.toUi(ctx) }
+        realtimeJob =
+            viewModelScope.launch {
+                repo.orders().collect { liveOrders ->
+                    // map -> UI
+                    val incoming = liveOrders.map { it.toUi(ctx) }
 
-                // merge with existing by orderNumber
-                val merged = mergeOrders(_ui.value.orders, incoming)
+                    // merge with existing by orderNumber
+                    val merged = mergeOrders(_ui.value.orders, incoming)
 
-                // keep selection policy
-                val currentSel = _ui.value.selected
-                val nextSel =
-                    when {
-                        userPinnedSelection -> currentSel
-                        currentSel == null -> merged.firstOrNull { it.lat != 0.0 && it.lng != 0.0 }
-                            ?: merged.firstOrNull()
+                    // keep selection policy
+                    val currentSel = _ui.value.selected
+                    val nextSel =
+                        when {
+                            userPinnedSelection -> currentSel
+                            currentSel == null ->
+                                merged.firstOrNull { it.lat != 0.0 && it.lng != 0.0 }
+                                    ?: merged.firstOrNull()
 
-                        merged.none { it.orderNumber == currentSel.orderNumber } -> null
-                        else -> merged.firstOrNull { it.orderNumber == currentSel.orderNumber }
+                            merged.none { it.orderNumber == currentSel.orderNumber } -> null
+                            else -> merged.firstOrNull { it.orderNumber == currentSel.orderNumber }
+                        }
+
+                    _ui.update {
+                        it.copy(
+                            orders = merged,
+                            selected = nextSel ?: it.selected,
+                        )
                     }
 
-                _ui.update {
-                    it.copy(
-                        orders = merged,
-                        selected = nextSel ?: it.selected,
-                    )
+                    if (merged.isNotEmpty()) lastNonEmptyOrders = merged
+
+                    // if we already have location permission, re-apply distances so new orders get distance & filters
+                    if (_ui.value.hasLocationPerm) {
+                        fetchAndApplyDistances(ctx)
+                    }
+
+                    ui.ensureSelectedStillVisible { _ui.update(it) }
                 }
-
-                if (merged.isNotEmpty()) lastNonEmptyOrders = merged
-
-                // if we already have location permission, re-apply distances so new orders get distance & filters
-                if (_ui.value.hasLocationPerm) {
-                    fetchAndApplyDistances(ctx)
-                }
-
-                ensureSelectedStillVisible()
             }
-        }
     }
 
     private fun mergeOrders(
@@ -227,7 +229,6 @@ class GeneralPoolViewModel : ViewModel() {
         }
     }
 
-    // ----------------- Helpers (short, focused) -----------------
     private fun handleOrdersLoaded(allOrders: List<Order>) {
         val initial = allOrders.map { it.toUi(ctx) }
         val defaultSelection = pickDefaultSelection(_ui.value.selected, initial)

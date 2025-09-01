@@ -24,11 +24,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
@@ -96,13 +94,6 @@ fun makeCallOrError(
             context.getString(R.string.phone_missing) to null,
         )
     }
-}
-
-@Composable
-fun rememberSidePadding(): Dp {
-    val cardWidth = dimensionResource(R.dimen.myOrders_card_width)
-    val screen = LocalConfiguration.current.screenWidthDp.dp
-    return ((screen - cardWidth) / 2).coerceAtLeast(0.dp)
 }
 
 @Composable

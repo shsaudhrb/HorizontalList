@@ -9,16 +9,6 @@ data class RefreshTokenResponse(
     val data: LoginRefreshToken?,
 )
 
-// data class LoginRefreshToken(
-//    @SerializedName("access_token")
-//    val accessToken: String?,
-//    @SerializedName("refresh_token")
-//    val refreshToken: String?,
-//    @SerializedName("expires_at")
-//    val expiresAt: String?,
-//    @SerializedName("refresh_expires_at")
-//    val refreshExpiresAt: String?,
-// )
 data class LoginUser(
     @SerializedName("id") val id: String,
     @SerializedName("email") val email: String?,

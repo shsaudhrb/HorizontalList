@@ -40,6 +40,7 @@ class SocketIntegration(
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
 
     private var hbJob: Job? = null
+
     @Volatile
     private var refCounter = 1
 
@@ -194,14 +195,15 @@ class SocketIntegration(
     // keep the WebSocket connection alive
     private fun startHeartbeat() {
         hbJob?.cancel()
-        hbJob = scope.launch {
-            while (true) {
-                val json =
-                    """{"topic":"phoenix","event":"heartbeat","payload":{},"ref":"${refCounter++}"}"""
-                ws?.send(json)
-                delay(28_000) // every ~28s (before Phoenix’s 30s timeout)
+        hbJob =
+            scope.launch {
+                while (true) {
+                    val json =
+                        """{"topic":"phoenix","event":"heartbeat","payload":{},"ref":"${refCounter++}"}"""
+                    ws?.send(json)
+                    delay(28_000) // every ~28s (before Phoenix’s 30s timeout)
+                }
             }
-        }
     }
 
     private fun stopHeartbeat() {
