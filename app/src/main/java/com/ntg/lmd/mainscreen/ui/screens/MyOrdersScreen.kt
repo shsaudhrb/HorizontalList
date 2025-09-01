@@ -46,6 +46,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.ntg.lmd.R
+import com.ntg.lmd.mainscreen.domain.model.OrderInfo
+import com.ntg.lmd.mainscreen.domain.model.OrderStatus
 import com.ntg.lmd.mainscreen.ui.components.bottomStickyButton
 import com.ntg.lmd.mainscreen.ui.components.callButton
 import com.ntg.lmd.mainscreen.ui.components.deliverDialog
@@ -58,10 +60,8 @@ import com.ntg.lmd.mainscreen.ui.components.primaryActionButton
 import com.ntg.lmd.mainscreen.ui.components.reasonDialog
 import com.ntg.lmd.mainscreen.ui.components.reassignDialog
 import com.ntg.lmd.mainscreen.ui.components.simpleConfirmDialog
-import com.ntg.lmd.mainscreen.ui.screens.orders.model.LocalUiOnlyStatusBus
-import com.ntg.lmd.mainscreen.ui.screens.orders.model.OrderStatus
-import com.ntg.lmd.mainscreen.ui.screens.orders.model.OrderUI
-import com.ntg.lmd.mainscreen.ui.screens.orders.model.statusEnum
+import com.ntg.lmd.mainscreen.ui.model.LocalUiOnlyStatusBus
+import com.ntg.lmd.mainscreen.ui.model.MyOrdersUiState
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyOrdersViewModel
 import com.ntg.lmd.ui.theme.SuccessGreen
 import kotlinx.coroutines.flow.collectLatest
@@ -76,7 +76,7 @@ fun myOrdersScreen(
     // Root screen: wires VM, effects, Scaffold, and pull-to-refresh around the list
     navController: NavController,
     externalQuery: String,
-    onOpenOrderDetails: (Long) -> Unit,
+    onOpenOrderDetails: (String) -> Unit,
 ) {
     val vm: MyOrdersViewModel = viewModel()
     val state by vm.state.collectAsState()
@@ -101,7 +101,7 @@ fun myOrdersScreen(
     ) { innerPadding ->
         PullToRefreshBox(
             isRefreshing = state.isRefreshing,
-            onRefresh = { vm.refresh(context) },
+            onRefresh = { vm.refresh() },
             modifier =
                 Modifier
                     .fillMaxSize()
@@ -121,12 +121,12 @@ fun myOrdersScreen(
 private fun ordersEffects(
     // Side effects: initial load, listen to status/error events, and trigger infinite scroll
     vm: MyOrdersViewModel,
-    state: com.ntg.lmd.mainscreen.ui.screens.orders.model.MyOrdersUiState,
+    state: MyOrdersUiState,
     listState: androidx.compose.foundation.lazy.LazyListState,
     snackbarHostState: SnackbarHostState,
     context: android.content.Context,
 ) {
-    LaunchedEffect(Unit) { vm.loadOrders(context) }
+    LaunchedEffect(Unit) { vm.loadOrders() }
 
     LaunchedEffect(Unit) {
         LocalUiOnlyStatusBus.statusEvents.collectLatest { (id, newStatus) ->
@@ -163,9 +163,9 @@ private fun ordersEffects(
 @Composable
 private fun ordersContent(
     // Chooses what to render (banner/loading/error/empty/list) and hooks up item actions
-    state: com.ntg.lmd.mainscreen.ui.screens.orders.model.MyOrdersUiState,
+    state: MyOrdersUiState,
     listState: androidx.compose.foundation.lazy.LazyListState,
-    onOpenOrderDetails: (Long) -> Unit,
+    onOpenOrderDetails: (String) -> Unit,
     context: android.content.Context,
 ) {
     val vm: MyOrdersViewModel = viewModel()
@@ -180,7 +180,7 @@ private fun ordersContent(
             state.isLoading && state.orders.isEmpty() -> loadingView()
             state.errorMessage != null ->
                 errorView(state.errorMessage!!) {
-                    vm.retry(context)
+                    vm.retry()
                 }
 
             state.emptyMessage != null -> emptyView(state.emptyMessage!!)
@@ -218,7 +218,7 @@ private fun ordersContent(
 @Composable
 fun orderList(
     // Lazy list of orders with a paging spinner item when loading more
-    orders: List<OrderUI>,
+    orders: List<OrderInfo>,
     listState: androidx.compose.foundation.lazy.LazyListState,
     actions: OrderActions,
     isLoadingMore: Boolean,
@@ -229,7 +229,7 @@ fun orderList(
         verticalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.mediumSpace)),
     ) {
         items(items = orders, key = { it.id }) { order ->
-            myOrderorderCard(
+            myOrderCard(
                 order = order,
                 onDetails = { actions.onDetails(order.id) },
                 onConfirmOrPick = { actions.onConfirmOrPick(order.id) },
@@ -252,10 +252,10 @@ fun orderList(
 
 @Suppress("UnusedParameter")
 @Composable
-fun myOrderorderCard(
+fun myOrderCard(
     // Single order card
     modifier: Modifier = Modifier,
-    order: OrderUI,
+    order: OrderInfo,
     onDetails: () -> Unit,
     onConfirmOrPick: () -> Unit,
     onCall: () -> Unit,
@@ -276,7 +276,9 @@ fun myOrderorderCard(
             orderHeaderWithMenu(
                 order = order,
                 onPickUp = {
-                    LocalUiOnlyStatusBus.statusEvents.tryEmit(order.id to OrderStatus.DISPATCHED)
+                    LocalUiOnlyStatusBus.statusEvents.tryEmit(
+                        order.id to OrderStatus.PICKUP,
+                    )
                 },
                 onCancel = {
                     LocalUiOnlyStatusBus.statusEvents.tryEmit(order.id to OrderStatus.CANCELED)
@@ -294,7 +296,6 @@ fun myOrderorderCard(
                 onDetails = onDetails,
             )
 
-            Spacer(modifier = Modifier.height(dimensionResource(R.dimen.smallSpace)))
             callButton(onCall)
         }
     }
@@ -312,7 +313,7 @@ fun myOrderorderCard(
     }
 }
 
-private sealed class ActionDialog {
+sealed class ActionDialog {
     data object Confirm : ActionDialog()
 
     data object PickUp : ActionDialog()
@@ -325,21 +326,21 @@ private sealed class ActionDialog {
 }
 
 @Composable
-private fun orderActionsRow(
+fun orderActionsRow(
     // keeps which dialog is open in local state
-    order: OrderUI,
+    order: OrderInfo,
     onDetails: () -> Unit,
 ) {
     var dialog by remember { mutableStateOf<ActionDialog?>(null) }
 
     actionPrimaryRow(
-        status = order.statusEnum,
+        status = order.status,
         onDetails = onDetails,
         onAction = { dialog = it },
     )
 
     secondaryFailRow(
-        status = order.statusEnum,
+        status = order.status,
         onFailClick = { dialog = ActionDialog.Fail },
     )
 
@@ -351,7 +352,7 @@ private fun orderActionsRow(
 }
 
 @Composable
-private fun actionPrimaryRow(
+fun actionPrimaryRow(
     // First action row: details button + primary action based on current order status
     status: OrderStatus,
     onDetails: () -> Unit,
@@ -360,7 +361,7 @@ private fun actionPrimaryRow(
     Row(horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.smallerSpace))) {
         OutlinedButton(
             onClick = onDetails,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(0.8f),
             colors =
                 ButtonDefaults.outlinedButtonColors(
                     contentColor = MaterialTheme.colorScheme.primary,
@@ -369,7 +370,11 @@ private fun actionPrimaryRow(
             shape = RoundedCornerShape(dimensionResource(R.dimen.mediumSpace)),
         ) {
             Spacer(modifier = Modifier.width(dimensionResource(R.dimen.smallerSpace)))
-            Text(text = stringResource(id = R.string.order_details))
+            Text(
+                text = stringResource(id = R.string.order_details),
+                style = MaterialTheme.typography.titleSmall,
+                maxLines = 1,
+            )
         }
 
         when (status) {
@@ -387,14 +392,14 @@ private fun actionPrimaryRow(
                     onClick = { onAction(ActionDialog.PickUp) },
                 )
 
-            OrderStatus.DISPATCHED ->
+            OrderStatus.PICKUP ->
                 primaryActionButton(
                     text = stringResource(R.string.start_delivery),
                     modifier = Modifier.weight(1f),
                     onClick = { onAction(ActionDialog.Start) },
                 )
 
-            OrderStatus.DELIVERING ->
+            OrderStatus.START_DELIVERY ->
                 primaryActionButton(
                     text = stringResource(R.string.deliver_order),
                     modifier = Modifier.weight(1f),
@@ -407,13 +412,13 @@ private fun actionPrimaryRow(
 }
 
 @Composable
-private fun secondaryFailRow(
+fun secondaryFailRow(
     // Optional second row: shows “Delivery failed” button for dispatched/delivering states.
     status: OrderStatus,
     onFailClick: () -> Unit,
 ) {
     Spacer(Modifier.height(dimensionResource(R.dimen.smallerSpace)))
-    if (status == OrderStatus.DISPATCHED || status == OrderStatus.DELIVERING) {
+    if (status == OrderStatus.PICKUP || status == OrderStatus.START_DELIVERY) {
         Row(horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.smallerSpace))) {
             OutlinedButton(
                 onClick = onFailClick,
@@ -425,10 +430,10 @@ private fun secondaryFailRow(
 }
 
 @Composable
-private fun actionDialogs(
+fun actionDialogs(
     // Shows the appropriate confirm/reason dialogs
     dialog: ActionDialog?,
-    orderId: Long,
+    orderId: String,
     onDismiss: () -> Unit,
 ) {
     when (dialog) {
@@ -447,7 +452,7 @@ private fun actionDialogs(
                 title = stringResource(R.string.pick_order),
                 onDismiss = onDismiss,
                 onConfirm = {
-                    LocalUiOnlyStatusBus.statusEvents.tryEmit(orderId to OrderStatus.DISPATCHED)
+                    LocalUiOnlyStatusBus.statusEvents.tryEmit(orderId to OrderStatus.PICKUP)
                     onDismiss()
                 },
             )
@@ -457,7 +462,7 @@ private fun actionDialogs(
                 title = stringResource(R.string.start_delivery),
                 onDismiss = onDismiss,
                 onConfirm = {
-                    LocalUiOnlyStatusBus.statusEvents.tryEmit(orderId to OrderStatus.DELIVERING)
+                    LocalUiOnlyStatusBus.statusEvents.tryEmit(orderId to OrderStatus.START_DELIVERY)
                     onDismiss()
                 },
             )
@@ -466,7 +471,7 @@ private fun actionDialogs(
             deliverDialog(
                 onDismiss = onDismiss,
                 onConfirm = {
-                    LocalUiOnlyStatusBus.statusEvents.tryEmit(orderId to OrderStatus.DELIVERED)
+                    LocalUiOnlyStatusBus.statusEvents.tryEmit(orderId to OrderStatus.DELIVERY_DONE)
                     onDismiss()
                 },
             )
@@ -476,7 +481,7 @@ private fun actionDialogs(
                 title = stringResource(R.string.delivery_failed),
                 onDismiss = onDismiss,
                 onConfirm = {
-                    LocalUiOnlyStatusBus.statusEvents.tryEmit(orderId to OrderStatus.FAILED)
+                    LocalUiOnlyStatusBus.statusEvents.tryEmit(orderId to OrderStatus.DELIVERY_FAILED)
                     onDismiss()
                 },
             )
@@ -486,9 +491,9 @@ private fun actionDialogs(
 }
 
 data class OrderActions(
-    val onDetails: (Long) -> Unit,
-    val onConfirmOrPick: (Long) -> Unit,
-    val onCall: (Long) -> Unit,
+    val onDetails: (String) -> Unit,
+    val onConfirmOrPick: (String) -> Unit,
+    val onCall: (String) -> Unit,
 )
 
 @Composable

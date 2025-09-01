@@ -1,117 +1,117 @@
 package com.ntg.lmd.mainscreen.ui.viewmodel
 
-import android.content.Context
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.ntg.lmd.mainscreen.ui.screens.orders.model.MyOrdersUiState
-import com.ntg.lmd.mainscreen.ui.screens.orders.model.OrderStatus
-import com.ntg.lmd.mainscreen.ui.screens.orders.model.OrderUI
-import com.ntg.lmd.utils.OrdersLoaderHelper
+import com.ntg.lmd.mainscreen.domain.model.OrderInfo
+import com.ntg.lmd.mainscreen.domain.model.OrderStatus
+import com.ntg.lmd.mainscreen.ui.model.MyOrdersUiState
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.json.JSONException
-import java.io.IOException
+import kotlin.collections.take
+import kotlin.random.Random
 
 private const val PAGE_SIZE = 10
 private const val LOAD_DELAY_MS = 600L
-private const val TAG = "MyOrdersViewModel"
 
 class MyOrdersViewModel : ViewModel() {
     private val _state = MutableStateFlow(MyOrdersUiState(isLoading = true))
     val state: StateFlow<MyOrdersUiState> = _state
 
-    private var allOrders: List<OrderUI> = emptyList()
-
-    // cache a pre-sorted list (by nearest distance, nulls last)
-    private var allOrdersSorted: List<OrderUI> = emptyList()
+    private var allOrders: List<OrderInfo> = emptyList()
+    private var allOrdersSorted: List<OrderInfo> = emptyList()
 
     private var page = 0
     private var endReached = false
 
-    // One reusable comparator
+    // One reusable comparator (nearest distance first, nulls last)
     private val byNearest =
-        compareBy<OrderUI> { it.distanceMeters == null }
-            .thenBy { it.distanceMeters ?: Double.MAX_VALUE }
+        compareBy<OrderInfo> { it.distanceKm == null }
+            .thenBy { it.distanceKm ?: Double.MAX_VALUE }
 
-    private suspend fun readAll(context: Context): List<OrderUI> =
-        // Reads all orders from assets
-        withContext(Dispatchers.IO) { OrdersLoaderHelper.loadFromAssets(context) }
+    // ---------- MOCK DATA (replace with real repo when ready) ----------
+    private suspend fun loadMockOrders(): List<OrderInfo> =
+        withContext(Dispatchers.Default) {
+            delay(250) // simulate I/O a bit
+            // seed for stable results during a single app run
+            val rnd = Random(42)
 
-    private fun rebuildSortCache() { // Rebuilds the cached list sorted by nearest distance
+            fun pickStatus(i: Int): OrderStatus =
+                when (i % 8) {
+                    0 -> OrderStatus.ADDED
+                    1 -> OrderStatus.CONFIRMED
+                    2 -> OrderStatus.CANCELED
+                    3 -> OrderStatus.REASSIGNED
+                    4 -> OrderStatus.PICKUP
+                    5 -> OrderStatus.START_DELIVERY
+                    6 -> OrderStatus.DELIVERY_FAILED
+                    else -> OrderStatus.DELIVERY_DONE
+                }
+
+            // ~Riyadh center coords for mock
+            val baseLat = 24.7136
+            val baseLng = 46.6753
+
+            List(25) { idx ->
+                val jitterLat = (rnd.nextDouble() - 0.5) * 0.12 // ~±0.06 deg
+                val jitterLng = (rnd.nextDouble() - 0.5) * 0.12
+
+                OrderInfo(
+                    id = "order-${idx + 1}", // if your model is Int; change to Long if needed
+                    orderNumber = "ORD-${1000 + idx}",
+                    status = pickStatus(idx),
+                    name = "Customer ${idx + 1}",
+                    price = "---",
+                    distanceKm = 0.0,
+                    details = if (idx % 3 == 0) "Leave at the door." else "Call on arrival.",
+                    lat = baseLat + jitterLat,
+                    lng = baseLng + jitterLng,
+                    customerPhone = null,
+                )
+            }
+        }
+    // ------------------------------------------------------------------
+
+    private fun rebuildSortCache() {
         allOrdersSorted = allOrders.sortedWith(byNearest)
     }
 
-    fun loadOrders(context: Context) { // loads orders, rebuilds cache, resets paging, and publishes the first page
+    fun loadOrders() {
         viewModelScope.launch {
+            _state.update { it.copy(isLoading = true, errorMessage = null, emptyMessage = null) }
+            // replaced helper with mock data
+            allOrders = loadMockOrders()
+            rebuildSortCache()
+
+            // reset paging
+            page = 0
+            endReached = false
+
+            val first = currentFilteredFromCache().take(PAGE_SIZE)
             _state.update {
                 it.copy(
-                    isLoading = true,
-                    errorMessage = null,
+                    isLoading = false,
+                    orders = first,
                     emptyMessage = null,
+                    errorMessage = null,
                 )
             }
-            try {
-                allOrders = readAll(context)
-                rebuildSortCache() // sort once
-
-                // reset paging
-                page = 0
-                endReached = false
-
-                val first = currentFilteredFromCache().take(PAGE_SIZE)
-                _state.update {
-                    it.copy(
-                        isLoading = false,
-                        orders = first,
-                        emptyMessage = null,
-                        errorMessage = null,
-                    )
-                }
-                if (first.size < PAGE_SIZE) endReached = true
-            } catch (e: IOException) {
-                Log.e(TAG, "Unable to read orders file.", e)
-                val msg = "Unable to read orders file: ${e.message ?: "IO error"}"
-                _state.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = msg,
-                    )
-                }
-            } catch (e: JSONException) {
-                Log.e(TAG, "Orders file format is invalid.", e)
-                val msg = "Orders file format is invalid: ${e.message ?: "JSON error"}"
-                _state.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = msg,
-                    )
-                }
-            } catch (e: SecurityException) {
-                Log.e(TAG, "Access to orders file denied.", e)
-                _state.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = "Access to orders file denied.",
-                    )
-                }
-            }
+            if (first.size < PAGE_SIZE) endReached = true
         }
     }
 
-    fun onQueryChange(newQuery: String) { // Updates the search query
+    fun onQueryChange(newQuery: String) {
         _state.update { it.copy(query = newQuery) }
         page = 0
         endReached = false
         applyFilter(resetPaging = true)
     }
 
-    // returns the cached (already sorted) orders filtered by the current query
-    private fun currentFilteredFromCache(): List<OrderUI> {
+    private fun currentFilteredFromCache(): List<OrderInfo> {
         val q = state.value.query.trim()
         val source = allOrdersSorted
         return if (q.isBlank()) {
@@ -119,17 +119,15 @@ class MyOrdersViewModel : ViewModel() {
         } else {
             source.filter { o ->
                 o.orderNumber.contains(q, true) ||
-                    o.customerName.contains(q, true) ||
+                    o.name.contains(q, true) ||
                     (o.details?.contains(q, true) == true)
             }
         }
     }
 
-    // Applies the query filter to the cache and updates the visible page
     private fun applyFilter(resetPaging: Boolean = false) {
-        val base = currentFilteredFromCache() // already sorted
-        val firstPage =
-            if (resetPaging) base.take(PAGE_SIZE) else _state.value.orders
+        val base = currentFilteredFromCache()
+        val firstPage = if (resetPaging) base.take(PAGE_SIZE) else _state.value.orders
 
         endReached = base.size <= PAGE_SIZE
 
@@ -149,25 +147,18 @@ class MyOrdersViewModel : ViewModel() {
         }
     }
 
-    fun loadNextPage() { //  Appends the next page from the filtered cache
+    fun loadNextPage() {
         val s = state.value
         if (s.isLoading || s.isLoadingMore || endReached) return
 
         viewModelScope.launch {
             _state.value = s.copy(isLoadingMore = true)
+            delay(LOAD_DELAY_MS) // simulate latency
 
-            // simulate network latency
-            kotlinx.coroutines.delay(LOAD_DELAY_MS)
-
-            val base = currentFilteredFromCache() // already sorted
+            val base = currentFilteredFromCache()
             page += 1
             val from = page * PAGE_SIZE
-            val next =
-                if (from >= base.size) {
-                    emptyList()
-                } else {
-                    base.drop(from).take(PAGE_SIZE)
-                }
+            val next = if (from >= base.size) emptyList() else base.drop(from).take(PAGE_SIZE)
 
             if (next.isEmpty()) endReached = true
 
@@ -180,44 +171,27 @@ class MyOrdersViewModel : ViewModel() {
         }
     }
 
-    fun updateStatusLocally( // Updates a single order’s status locally in the U
-        id: Long,
+    fun updateStatusLocally(
+        id: String,
         newStatus: OrderStatus,
     ) {
         val updated =
             state.value.orders.map { o ->
-                if (o.id == id) {
-                    o.copy(
-                        status =
-                            when (newStatus) {
-                                OrderStatus.ADDED -> "added"
-                                OrderStatus.CONFIRMED -> "confirmed"
-                                OrderStatus.DISPATCHED -> "dispatched"
-                                OrderStatus.DELIVERING -> "delivering"
-                                OrderStatus.DELIVERED -> "delivered"
-                                OrderStatus.FAILED -> "failed"
-                                OrderStatus.CANCELED -> "canceled"
-                            },
-                    )
-                } else {
-                    o
-                }
+                if (o.id == id) o.copy(status = newStatus) else o
             }
         _state.update { it.copy(orders = updated) }
-        // If distance can change dynamically in your app, call rebuildSortCache() when it does.
     }
 
-    fun refresh(context: Context) { // Pull-to-refresh
+    fun refresh() {
         val s = _state.value
         if (s.isRefreshing || s.isLoading) return
 
         viewModelScope.launch {
             _state.update { it.copy(isRefreshing = true, errorMessage = null) }
             try {
-                allOrders = readAll(context)
-                rebuildSortCache() // refresh also updates cache
+                allOrders = loadMockOrders() // re-seed (or keep same list if you prefer)
+                rebuildSortCache()
 
-                // inline former applyFirstPageFrom(base)
                 val base = currentFilteredFromCache()
                 page = 0
                 endReached = false
@@ -237,20 +211,11 @@ class MyOrdersViewModel : ViewModel() {
                         errorMessage = null,
                     )
                 }
-            } catch (e: IOException) {
-                Log.e(TAG, "Refresh IO error.", e)
-                _state.update { it.copy(errorMessage = e.message ?: "Refresh failed (IO)") }
-            } catch (e: JSONException) {
-                Log.e(TAG, "Refresh JSON parse error.", e)
-                _state.update { it.copy(errorMessage = e.message ?: "Refresh failed (JSON)") }
-            } catch (e: SecurityException) {
-                Log.e(TAG, "Refresh security error.", e)
-                _state.update { it.copy(errorMessage = "Access denied during refresh") }
             } finally {
                 _state.update { it.copy(isRefreshing = false) }
             }
         }
     }
 
-    fun retry(context: Context) = loadOrders(context)
+    fun retry() = loadOrders()
 }
