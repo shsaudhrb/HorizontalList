@@ -6,6 +6,6 @@ interface UpdateOrdersStatus {
     suspend fun updateOrderStatus(
         orderId: String,
         statusId: Int,
-        assignedAgentId: String?
+        assignedAgentId: String?,
     ): OrderInfo
 }

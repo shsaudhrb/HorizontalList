@@ -13,7 +13,7 @@ data class UpdateOrderStatusEnvelope(
     val success: Boolean,
     val message: String?,
     val data: UpdatedOrderData?,
-    @SerializedName("updated_by") val updatedBy: UpdatedByDto?
+    @SerializedName("updated_by") val updatedBy: UpdatedByDto?,
 )
 
 data class UpdatedOrderData(
@@ -27,17 +27,17 @@ data class UpdatedOrderData(
     @SerializedName("orderstatuses") val orderStatuses: OrderStatusDto?,
     @SerializedName("assigned_agent") val assignedAgent: AssignedAgentDto?,
     @SerializedName("previous_status_id") val previousStatusId: Int?,
-    @SerializedName("status_changed") val statusChanged: Boolean?
+    @SerializedName("status_changed") val statusChanged: Boolean?,
 )
 
 data class AssignedAgentDto(
-    val id: String?,
-    @SerializedName("full_name") val fullName: String?,
-    val email: String?
+    @SerializedName("id") val id: String?,
+    @SerializedName("email") val email: String? = null,
+    @SerializedName("full_name") val fullName: String? = null,
 )
 
 data class UpdatedByDto(
     @SerializedName("user_id") val userId: String?,
     val email: String?,
-    @SerializedName("full_name") val fullName: String?
+    @SerializedName("full_name") val fullName: String?,
 )

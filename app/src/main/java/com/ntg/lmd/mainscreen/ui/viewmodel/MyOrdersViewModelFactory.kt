@@ -6,7 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import com.ntg.lmd.mainscreen.domain.usecase.GetMyOrdersUseCase
 
 class MyOrdersViewModelFactory(
-    private val getMyOrders: GetMyOrdersUseCase
+    private val getMyOrders: GetMyOrdersUseCase,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {

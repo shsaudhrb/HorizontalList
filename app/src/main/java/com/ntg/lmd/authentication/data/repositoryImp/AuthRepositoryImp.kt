@@ -5,11 +5,17 @@ import com.ntg.lmd.authentication.data.datasource.remote.api.AuthApi
 import com.ntg.lmd.network.authheader.SecureTokenStore
 import com.ntg.lmd.network.queue.NetworkError
 import com.ntg.lmd.network.queue.NetworkResult
+import com.ntg.lmd.utils.SecureUserStore
 import retrofit2.HttpException
+
+// package com.ntg.lmd.authentication.data.repositoryImp
+
+// File: com/ntg/lmd/authentication/data/repositoryImp/AuthRepositoryImp.kt
 
 class AuthRepositoryImp(
     private val loginApi: AuthApi,
     private val store: SecureTokenStore,
+    private val userStore: SecureUserStore,
 ) {
     suspend fun login(
         email: String,
@@ -34,6 +40,13 @@ class AuthRepositoryImp(
                         refresh = payload.refreshToken,
                         expiresAt = payload.expiresAt,
                         refreshExpiresAt = payload.refreshExpiresAt,
+                    )
+
+                    val u = payload.user
+                    userStore.saveUser(
+                        id = u?.id,
+                        email = u?.email,
+                        fullName = u?.fullName
                     )
                     NetworkResult.Success(Unit)
                 }

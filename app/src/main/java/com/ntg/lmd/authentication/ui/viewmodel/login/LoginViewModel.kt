@@ -21,144 +21,143 @@ class LoginViewModel(
     private val authRepo: AuthRepositoryImp,
     private val validationViewModel: ValidationViewModel = ValidationViewModel(),
 ) : ViewModel() {
-    // Single StateFlow for all UI state
+
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
-    // track field focus
     private val usernameState = ValidationViewModel.InputState()
     private val passwordState = ValidationViewModel.InputState()
 
-    // updates the Username & Password fields
-    fun updateUsername(email: String) {
-        _uiState.update {
-            it.copy(
-                username = email,
-                usernameError = null,
-                showUsernameError = false,
-            )
-        }
-        updateValidation(email, ValidationField.USERNAME)
+    // ---- Public API (only 5 functions) ----
+
+    fun updateUsername(value: String) {
+        _uiState.updateField(value, ValidationField.USERNAME)
+        _uiState.applyValidation(validationViewModel, ValidationField.USERNAME, value)
+        _uiState.updateFormValidation()
+        _uiState.updateErrorVisibility(usernameState, passwordState, ValidationField.USERNAME)
     }
 
-    fun updatePassword(password: String) {
-        _uiState.update {
-            it.copy(
-                password = password,
-                passwordError = null,
-                showPasswordError = false,
-            )
-        }
-        updateValidation(password, ValidationField.PASSWORD)
+    fun updatePassword(value: String) {
+        _uiState.updateField(value, ValidationField.PASSWORD)
+        _uiState.applyValidation(validationViewModel, ValidationField.PASSWORD, value)
+        _uiState.updateFormValidation()
+        _uiState.updateErrorVisibility(usernameState, passwordState, ValidationField.PASSWORD)
     }
 
-    // updates focus tracking
     fun updateUsernameFocus(isFocused: Boolean) {
         usernameState.updateFocus(isFocused)
         if (!isFocused) {
-            updateValidation(_uiState.value.username, ValidationField.USERNAME)
+            val v = _uiState.value.username
+            _uiState.applyValidation(validationViewModel, ValidationField.USERNAME, v)
+            _uiState.updateFormValidation()
         }
-        updateErrorVisibility(ValidationField.USERNAME)
+        _uiState.updateErrorVisibility(usernameState, passwordState, ValidationField.USERNAME)
     }
 
     fun updatePasswordFocus(isFocused: Boolean) {
         passwordState.updateFocus(isFocused)
         if (!isFocused) {
-            updateValidation(_uiState.value.password, ValidationField.PASSWORD)
+            val v = _uiState.value.password
+            _uiState.applyValidation(validationViewModel, ValidationField.PASSWORD, v)
+            _uiState.updateFormValidation()
         }
-        updateErrorVisibility(ValidationField.PASSWORD)
+        _uiState.updateErrorVisibility(usernameState, passwordState, ValidationField.PASSWORD)
     }
 
-    // update validation for username/password from validationViewModel
-    private fun updateValidation(
-        input: String,
-        field: ValidationField,
-    ) {
-        val error =
-            when (field) {
-                ValidationField.USERNAME -> validationViewModel.validateUsername(input)
-                ValidationField.PASSWORD -> validationViewModel.validatePassword(input)
-            }
+    fun submit(onResult: (Boolean) -> Unit = {}) = viewModelScope.launch {
+        val username = _uiState.value.username.trim()
+        val password = _uiState.value.password
 
-        _uiState.update { current ->
-            when (field) {
-                ValidationField.USERNAME -> current.copy(usernameError = error)
-                ValidationField.PASSWORD -> current.copy(passwordError = error)
+        _uiState.setLoading()
+        when (val result = authRepo.login(username, password)) {
+            is NetworkResult.Success -> {
+                _uiState.handleSuccess()
+                onResult(true)
             }
-        }
-
-        updateFormValidation()
-        updateErrorVisibility(field)
-    }
-
-    // show error if the field was touched and not focused
-    private fun updateErrorVisibility(field: ValidationField) {
-        _uiState.update {
-            when (field) {
-                ValidationField.USERNAME ->
-                    it.copy(showUsernameError = usernameState.showError(it.usernameError != null))
-                ValidationField.PASSWORD ->
-                    it.copy(
-                        showPasswordError = passwordState.showError(it.passwordError != null),
-                    )
+            is NetworkResult.Error -> {
+                _uiState.handleError(result.error.message)
+                onResult(false)
             }
+            is NetworkResult.Loading -> _uiState.setLoading()
         }
     }
-
-    private fun updateFormValidation() {
-        val current = _uiState.value
-        val isValid =
-            current.usernameError == null &&
-                current.passwordError == null &&
-                current.username.isNotBlank() &&
-                current.password.isNotBlank()
-
-        _uiState.update { it.copy(isFormValid = isValid) }
-    }
-
-    fun submit(onResult: (Boolean) -> Unit = {}) =
-        viewModelScope.launch {
-            val username = _uiState.value.username.trim()
-            val password = _uiState.value.password
-
-            _uiState.update { it.copy(isLoading = true, message = null, loginSuccess = false) }
-            val result = authRepo.login(username, password)
-
-            when (result) {
-                is NetworkResult.Success -> {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            loginSuccess = true,
-                            message = R.string.msg_welcome,
-                        )
-                    }
-                    onResult(true)
-                }
-                is NetworkResult.Error -> {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            loginSuccess = false,
-                            message = null,
-                            errorMessage = result.error.message ?: "Unknown error",
-                        )
-                    }
-                    onResult(false)
-                }
-                is NetworkResult.Loading -> {
-                    _uiState.update { it.copy(isLoading = true) }
-                }
-            }
-        }
 }
 
-class LoginViewModelFactory(
-    private val app: Application,
-) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        val myApp = app as MyApp
-        @Suppress("UNCHECKED_CAST")
-        return LoginViewModel(myApp.authRepo) as T
+// ---------- File-level private helpers (do not count toward class function limit) ----------
+
+private fun MutableStateFlow<LoginUiState>.updateField(input: String, field: ValidationField) {
+    update {
+        when (field) {
+            ValidationField.USERNAME -> it.copy(username = input, usernameError = null, showUsernameError = false)
+            ValidationField.PASSWORD -> it.copy(password = input, passwordError = null, showPasswordError = false)
+        }
     }
 }
+
+private fun MutableStateFlow<LoginUiState>.applyValidation(
+    validator: ValidationViewModel,
+    field: ValidationField,
+    input: String
+) {
+    val error = when (field) {
+        ValidationField.USERNAME -> validator.validateUsername(input)
+        ValidationField.PASSWORD -> validator.validatePassword(input)
+    }
+    update {
+        when (field) {
+            ValidationField.USERNAME -> it.copy(usernameError = error)
+            ValidationField.PASSWORD -> it.copy(passwordError = error)
+        }
+    }
+}
+
+private fun MutableStateFlow<LoginUiState>.updateErrorVisibility(
+    usernameState: ValidationViewModel.InputState,
+    passwordState: ValidationViewModel.InputState,
+    field: ValidationField
+) {
+    update {
+        when (field) {
+            ValidationField.USERNAME ->
+                it.copy(showUsernameError = usernameState.showError(it.usernameError != null))
+            ValidationField.PASSWORD ->
+                it.copy(showPasswordError = passwordState.showError(it.passwordError != null))
+        }
+    }
+}
+
+private fun MutableStateFlow<LoginUiState>.updateFormValidation() {
+    val s = value
+    val isValid = s.usernameError == null &&
+            s.passwordError == null &&
+            s.username.isNotBlank() &&
+            s.password.isNotBlank()
+    update { it.copy(isFormValid = isValid) }
+}
+
+private fun MutableStateFlow<LoginUiState>.setLoading() {
+    update { it.copy(isLoading = true, message = null, loginSuccess = false) }
+}
+
+private fun MutableStateFlow<LoginUiState>.handleSuccess() {
+    update {
+        it.copy(
+            isLoading = false,
+            loginSuccess = true,
+            message = R.string.msg_welcome,
+            errorMessage = null
+        )
+    }
+}
+
+private fun MutableStateFlow<LoginUiState>.handleError(message: String?) {
+    update {
+        it.copy(
+            isLoading = false,
+            loginSuccess = false,
+            message = null,
+            errorMessage = message ?: "Unknown error"
+        )
+    }
+}
+

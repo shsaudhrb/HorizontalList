@@ -6,7 +6,7 @@ import com.ntg.lmd.mainscreen.domain.model.toDomain
 import com.ntg.lmd.mainscreen.domain.repository.UsersRepository
 
 class UsersRepositoryImpl(
-    private val api: GetUsersApi
+    private val api: GetUsersApi,
 ) : UsersRepository {
     override suspend fun getActiveUsers(): Pair<List<ActiveUser>, String?> {
         val env = api.getActiveUsers()

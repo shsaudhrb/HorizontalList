@@ -229,8 +229,6 @@ private fun drawerNavGraph(
 
         composable(Screen.MyOrders.route) {
             myOrdersScreen(
-                navController = navController,
-                externalQuery = externalQuery,
                 onOpenOrderDetails = onOpenOrderDetails,
             )
         }

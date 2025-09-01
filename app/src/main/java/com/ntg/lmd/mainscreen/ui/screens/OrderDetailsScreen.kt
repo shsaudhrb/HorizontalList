@@ -27,7 +27,7 @@ fun orderDetailsScreen(
         ) {
             Text("Order Details", style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(12.dp))
-            Text("Order ID: ${orderId}", style = MaterialTheme.typography.bodyLarge)
+            Text("Order ID: $orderId", style = MaterialTheme.typography.bodyLarge)
             Spacer(Modifier.height(24.dp))
 
             // Back to previous screen

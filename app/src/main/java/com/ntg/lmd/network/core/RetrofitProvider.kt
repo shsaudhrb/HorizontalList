@@ -10,19 +10,22 @@ import com.ntg.lmd.mainscreen.data.datasource.remote.UpdatetOrdersStatusApi
 import com.ntg.lmd.network.authheader.AuthInterceptor
 import com.ntg.lmd.network.authheader.SecureTokenStore
 import com.ntg.lmd.network.authheader.TokenAuthenticator
+import com.ntg.lmd.utils.SecureUserStore
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-
+import com.ntg.lmd.MyApp
 object RetrofitProvider {
     lateinit var tokenStore: SecureTokenStore
+        private set
+    lateinit var userStore: SecureUserStore
         private set
 
     fun init(appCtx: Context) {
         tokenStore = SecureTokenStore(appCtx)
+        userStore  = SecureUserStore(appCtx)
     }
-
     private val noAuthOkHttp by lazy {
         OkHttpClient
             .Builder()
@@ -96,7 +99,8 @@ object RetrofitProvider {
             .create(UpdatetOrdersStatusApi::class.java)
     }
     val usersApi: GetUsersApi by lazy {
-        Retrofit.Builder()
+        Retrofit
+            .Builder()
             .baseUrl(BuildConfig.BASE_URL)
             .client(authedOkHttp)
             .addConverterFactory(GsonConverterFactory.create())

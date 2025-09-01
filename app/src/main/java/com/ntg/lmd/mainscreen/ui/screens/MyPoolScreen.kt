@@ -56,7 +56,7 @@ private val ZERO_LATLNG = LatLng(0.0, 0.0)
 private fun OrderInfo.hasValidLatLng(): Boolean = lat.isFinite() && lng.isFinite() && !(lat == 0.0 && lng == 0.0)
 
 // --- OrderInfo -> OrderUI mapper (adapt field names if yours differ) ---
-//private fun OrderInfo.toOrderUI(): OrderUI =
+// private fun OrderInfo.toOrderUI(): OrderUI =
 //    OrderUI(
 //        id = id,
 //        status = status.name.lowercase(), // matches your statusEnum mapping
@@ -251,7 +251,7 @@ fun myPoolBottom(
         ) {
             itemsIndexed(orders, key = { _, order -> order.orderNumber }) { index, info ->
                 // Map once per item and remember
-              //  val uiOrder = remember(key1 = info) { info.toOrderUI() }
+                //  val uiOrder = remember(key1 = info) { info.toOrderUI() }
 
 //                myOrderCard(
 //                    order = uiOrder,

@@ -8,6 +8,6 @@ import retrofit2.http.POST
 interface UpdatetOrdersStatusApi {
     @POST("update-order-status")
     suspend fun updateOrderStatus(
-        @Body body: UpdateOrderStatusRequest
+        @Body body: UpdateOrderStatusRequest,
     ): UpdateOrderStatusEnvelope
 }

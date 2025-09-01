@@ -1,3 +1,6 @@
+// ==============================
+// MyOrdersViewModel.kt
+// ==============================
 package com.ntg.lmd.mainscreen.ui.viewmodel
 
 import android.content.Context
@@ -6,8 +9,8 @@ import androidx.lifecycle.viewModelScope
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
 import com.ntg.lmd.mainscreen.domain.usecase.GetMyOrdersUseCase
-import com.ntg.lmd.mainscreen.ui.screens.orders.model.MyOrdersUiState
 import com.ntg.lmd.mainscreen.ui.screens.orders.model.LocalUiOnlyStatusBus
+import com.ntg.lmd.mainscreen.ui.screens.orders.model.MyOrdersUiState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,15 +28,34 @@ class MyOrdersViewModel(
     private val _state = MutableStateFlow(MyOrdersUiState(isLoading = false))
     val state: StateFlow<MyOrdersUiState> = _state
 
-    /** Full dataset accumulated so far (concatenated pages) */
     private val allOrders: MutableList<OrderInfo> = mutableListOf()
-    /** API is 1-based */
     private var page = 1
     private var endReached = false
 
-    // ---------- PUBLIC API ----------
+    init {
+        refreshOrders()
+    }
 
-    /** Initial load. Shows big loader only if there’s no data yet. */
+    /** Simple refresh (pull first page fresh) */
+    fun refreshOrders() {
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true, errorMessage = null) }
+            try {
+                page = 1
+                endReached = false
+                val first = getMyOrders(page = 1, limit = PAGE_SIZE, bypassCache = true)
+                allOrders.clear()
+                allOrders.addAll(first)
+                endReached = first.size < PAGE_SIZE
+                publishFilteredFirstPage()
+            } catch (t: Throwable) {
+                _state.update { it.copy(isLoading = false, isLoadingMore = false) }
+                // optional: surface error
+            }
+        }
+    }
+
+    /** Initial page (with banners & retry) */
     fun loadOrders(context: Context) {
         val alreadyHasData = _state.value.orders.isNotEmpty()
         if (_state.value.isLoading) return
@@ -50,12 +72,10 @@ class MyOrdersViewModel(
             try {
                 page = 1
                 endReached = false
-
-                val first = fetchPage(page, bypassCache = true)
+                val first = getMyOrders(page = 1, limit = PAGE_SIZE, bypassCache = true)
                 allOrders.clear()
                 allOrders.addAll(first)
                 endReached = first.size < PAGE_SIZE
-
                 publishFilteredFirstPage()
             } catch (t: Throwable) {
                 _state.update {
@@ -73,10 +93,7 @@ class MyOrdersViewModel(
         }
     }
 
-    private suspend fun fetchPage(page: Int, bypassCache: Boolean = false): List<OrderInfo> {
-        return getMyOrders(page = page, limit = PAGE_SIZE, bypassCache = bypassCache)
-    }
-
+    /** Pull-to-refresh with banner */
     fun refresh(context: Context) {
         val s = _state.value
         if (s.isRefreshing) return
@@ -84,7 +101,7 @@ class MyOrdersViewModel(
 
         viewModelScope.launch {
             try {
-                val fresh = fetchPage(page = 1, bypassCache = true) // <- force network
+                val fresh = getMyOrders(page = 1, limit = PAGE_SIZE, bypassCache = true)
                 page = 1
                 endReached = fresh.size < PAGE_SIZE
                 allOrders.clear()
@@ -110,7 +127,7 @@ class MyOrdersViewModel(
             try {
                 delay(LOAD_DELAY_MS) // optional, for spinner feel
                 val nextPage = page + 1
-                val next = fetchPage(nextPage)
+                val next = getMyOrders(page = nextPage, limit = PAGE_SIZE, bypassCache = true)
 
                 if (next.isEmpty() || next.size < PAGE_SIZE) endReached = true
                 page = nextPage
@@ -138,12 +155,29 @@ class MyOrdersViewModel(
         _state.update { it.copy(orders = updated) }
     }
 
-    // ---------- INTERNALS ----------
-
-    private suspend fun fetchPage(page: Int): List<OrderInfo> {
-        // Use case returns List<OrderInfo>; the use case should call repository/retrofit
-        return getMyOrders(page = page, limit = PAGE_SIZE)
+    /** Apply server patch into lists (when you want to keep an updated item visible) */
+    fun applyServerPatch(updated: OrderInfo) {
+        // visible list
+        val visible = _state.value.orders.toMutableList()
+        val i = visible.indexOfFirst { it.id == updated.id }
+        if (i != -1) {
+            visible[i] = visible[i].copy(
+                status = updated.status,
+                details = updated.details ?: visible[i].details
+            )
+            _state.update { it.copy(orders = visible) }
+        }
+        // backing list
+        val j = allOrders.indexOfFirst { it.id == updated.id }
+        if (j != -1) {
+            allOrders[j] = allOrders[j].copy(
+                status = updated.status,
+                details = updated.details ?: allOrders[j].details
+            )
+        }
     }
+
+    // ---------- INTERNALS ----------
 
     private fun currentFiltered(): List<OrderInfo> {
         val q = state.value.query.trim()
@@ -171,28 +205,8 @@ class MyOrdersViewModel(
                 isLoadingMore = false,
                 orders = first,
                 emptyMessage = emptyMsg,
-                errorMessage = null
-            )
-        }
-    }
-    fun applyServerPatch(updated: OrderInfo) {
-        // replace in visible list
-        val visible = _state.value.orders.toMutableList()
-        val i = visible.indexOfFirst { it.id == updated.id }
-        if (i != -1) {
-            visible[i] = visible[i].copy(
-                status = updated.status,
-                details = updated.details ?: visible[i].details
-                // copy more fields if you want (name, orderNumber, etc.)
-            )
-            _state.update { it.copy(orders = visible) }
-        }
-        // replace in allOrders too (so paging/filtering remains consistent)
-        val j = allOrders.indexOfFirst { it.id == updated.id }
-        if (j != -1) {
-            allOrders[j] = allOrders[j].copy(
-                status = updated.status,
-                details = updated.details ?: allOrders[j].details
+                errorMessage = null,
+                page = 1
             )
         }
     }

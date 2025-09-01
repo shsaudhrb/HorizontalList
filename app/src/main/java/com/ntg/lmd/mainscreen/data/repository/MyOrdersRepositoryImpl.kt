@@ -16,19 +16,25 @@ class MyOrdersRepositoryImpl(
     override suspend fun getOrders(
         page: Int,
         limit: Int,
-        bypassCache: Boolean
+        bypassCache: Boolean,
     ): List<OrderInfo> {
-        if (!bypassCache && cachedPage == page && cachedLimit == limit && cachedOrders != null) {
-            return cachedOrders!!
+        if (isCacheValid(page, limit, bypassCache)) {
+            return cachedOrders.orEmpty()
         }
-        val env = api.getOrders(page = page, limit = limit)
-        if (!env.success) error(env.error ?: "Unknown error from orders-list")
-        val list = env.data?.orders.orEmpty().map { it.toDomain() }
 
-        cachedPage = page
-        cachedLimit = limit
-        cachedOrders = list
-        return list
+        val env = api.getOrders(page = page, limit = limit)
+
+        if (!env.success) {
+            error(env.error ?: "Unknown error from orders-list")
+        }
+
+        val orders = env.data
+            ?.orders
+            .orEmpty()
+            .map { it.toDomain() }
+
+        updateCache(page, limit, orders)
+        return orders
     }
 
     fun clearCache() {
@@ -36,5 +42,27 @@ class MyOrdersRepositoryImpl(
         cachedLimit = null
         cachedOrders = null
     }
-}
 
+    // ---- Helpers ----
+
+    private fun isCacheValid(
+        page: Int,
+        limit: Int,
+        bypassCache: Boolean,
+    ): Boolean {
+        return !bypassCache &&
+                cachedPage == page &&
+                cachedLimit == limit &&
+                cachedOrders != null
+    }
+
+    private fun updateCache(
+        page: Int,
+        limit: Int,
+        orders: List<OrderInfo>,
+    ) {
+        cachedPage = page
+        cachedLimit = limit
+        cachedOrders = orders
+    }
+}

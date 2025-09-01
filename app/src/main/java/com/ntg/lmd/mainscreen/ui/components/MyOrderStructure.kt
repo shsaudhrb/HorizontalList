@@ -38,7 +38,7 @@ import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
 import com.ntg.lmd.mainscreen.ui.screens.statusTint
-import com.ntg.lmd.mainscreen.ui.viewmodel.OrderLogger
+import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel.OrderLogger
 import java.util.Locale
 
 private const val KM_DIVISOR = 1000.0
@@ -84,12 +84,13 @@ fun primaryActionButton(
         onClick = onClick,
         modifier = modifier,
         enabled = enabled,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
-            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-        ),
+        colors =
+            ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            ),
         shape = RoundedCornerShape(dimensionResource(R.dimen.mediumSpace)),
     ) {
         Text(text = text, style = MaterialTheme.typography.titleSmall)
@@ -169,20 +170,20 @@ fun orderHeaderWithMenu(
     }
 }
 
-
 @Composable
 fun orderHeaderLeft(
-    order: OrderInfo, onPickUp: () -> Unit,
+    order: OrderInfo,
+    onPickUp: () -> Unit,
     onCancel: () -> Unit,
     onReassign: () -> Unit,
-    enabled: Boolean = true
+    enabled: Boolean = true,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     val statusEnum = order.status
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -200,7 +201,7 @@ fun orderHeaderLeft(
                     "#${order.orderNumber}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                    maxLines = 1
+                    maxLines = 1,
                 )
                 Text(
                     text = order.status.toString(),
@@ -231,7 +232,7 @@ fun orderHeaderLeft(
                         enabled = enabled && order.status == OrderStatus.CONFIRMED,
                         onClick = {
                             menuExpanded = false
-                            OrderLogger.uiTap(order.id, order.orderNumber, "Menu:PickUp")  // ← log
+                            OrderLogger.uiTap(order.id, order.orderNumber, "Menu:PickUp") // ← log
                             onPickUp()
                         },
                     )
@@ -241,7 +242,7 @@ fun orderHeaderLeft(
                         enabled = enabled && order.status in listOf(OrderStatus.ADDED, OrderStatus.CONFIRMED),
                         onClick = {
                             menuExpanded = false
-                            OrderLogger.uiTap(order.id, order.orderNumber, "Menu:Cancel")  // ← log
+                            OrderLogger.uiTap(order.id, order.orderNumber, "Menu:Cancel") // ← log
                             onCancel()
                         },
                     )

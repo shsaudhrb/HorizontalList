@@ -1,7 +1,8 @@
+// TokenAuthenticator.kt
 package com.ntg.lmd.network.authheader
 
 import android.os.Looper
-import com.ntg.lmd.authentication.data.datasource.model.LoginRefreshToken
+import com.ntg.lmd.authentication.data.datasource.model.LoginData
 import com.ntg.lmd.authentication.data.datasource.model.RefreshTokenRequest
 import com.ntg.lmd.authentication.data.datasource.remote.api.AuthApi
 import kotlinx.coroutines.Dispatchers
@@ -23,9 +24,10 @@ class TokenAuthenticator(
     private val store: SecureTokenStore,
     private val refreshApi: AuthApi,
 ) : Authenticator {
+
     private val mutex = Mutex()
 
-    // --- helper to avoid calling runBlocking on the main thread ---------------
+    // Avoid runBlocking on main
     private inline fun <T> runBlockingNotMain(crossinline block: suspend () -> T): T {
         if (Looper.myLooper() != Looper.getMainLooper()) {
             return runBlocking(Dispatchers.IO) { block() }
@@ -48,64 +50,64 @@ class TokenAuthenticator(
         return out.get()
     }
 
-    override fun authenticate(
-        route: Route?,
-        response: Response,
-    ): Request? {
-        var result: Request? = null
-
-        val hadAuth = response.request.header("Authorization") != null
-        val prior = count(response)
-        if (!hadAuth || response.code != HTTP_UNAUTHORIZED || prior > MAX_AUTH_RETRIES) {
+    override fun authenticate(route: Route?, response: Response): Request? {
+        val hadAuthHeader = response.request.header("Authorization") != null
+        if (!hadAuthHeader || response.code != HTTP_UNAUTHORIZED || responseCount(response) > MAX_AUTH_RETRIES) {
             return null
         }
 
-        val refresh = store.getRefreshToken()
-        if (refresh != null) {
-            val payload: LoginRefreshToken =
-                runBlockingNotMain {
-                    mutex.withLock {
-                        store.getAccessToken()?.let { existing ->
-                            return@withLock LoginRefreshToken(
-                                existing,
-                                store.getRefreshToken(),
-                                null,
-                                null,
-                            )
-                        }
-                        val body = refreshApi.refreshToken(RefreshTokenRequest(refresh))
-                        check(body.success) { "Refresh success=false" }
-                        body.data ?: error("Refresh data=null")
+        val failedAccess = response.request.header("Authorization")
+            ?.removePrefix("Bearer")?.trim()
+
+        val refreshToken = store.getRefreshToken() ?: return null
+
+        val payload: LoginData? = try {
+            runBlockingNotMain {
+                mutex.withLock {
+                    val currentAccess = store.getAccessToken()
+                    if (!currentAccess.isNullOrBlank() && currentAccess != failedAccess) {
+                        return@withLock LoginData(
+                            user = null,
+                            accessToken = currentAccess,
+                            refreshToken = store.getRefreshToken(),
+                            expiresAt = store.getAccessExpiryIso(),
+                            refreshExpiresAt = store.getRefreshExpiryIso(),
+                        )
                     }
+
+                    val res = refreshApi.refreshToken(
+                        RefreshTokenRequest(refresh_token = refreshToken)
+                    )
+                    if (!res.success || res.data == null) return@withLock null
+                    res.data
                 }
-
-            store.saveFromPayload(
-                access = payload.accessToken,
-                refresh = payload.refreshToken,
-                expiresAt = payload.expiresAt,
-                refreshExpiresAt = payload.refreshExpiresAt,
-            )
-
-            val newAccess = payload.accessToken
-            if (newAccess != null) {
-                result =
-                    response.request
-                        .newBuilder()
-                        .header("Authorization", "Bearer $newAccess")
-                        .build()
             }
+        } catch (t: Throwable) {
+            null
         }
 
-        return result
+        if (payload?.accessToken.isNullOrBlank()) return null
+
+        store.saveFromPayload(
+            access = payload!!.accessToken,
+            refresh = payload.refreshToken,
+            expiresAt = payload.expiresAt,
+            refreshExpiresAt = payload.refreshExpiresAt,
+        )
+
+        return response.request.newBuilder()
+            .header("Authorization", "Bearer ${payload.accessToken}")
+            .build()
     }
 
-    private fun count(resp: Response): Int {
-        var r: Response? = resp
-        var c = 0
-        while (r != null) {
-            c++
-            r = r.priorResponse
+
+    private fun responseCount(r: Response): Int {
+        var resp: Response? = r
+        var count = 0
+        while (resp != null) {
+            count++
+            resp = resp.priorResponse
         }
-        return c
+        return count
     }
 }

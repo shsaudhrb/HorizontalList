@@ -6,10 +6,10 @@ data class ActiveUsersEnvelope(
     val success: Boolean,
     val data: List<ActiveUserDto>?,
     @SerializedName("total_count") val totalCount: Int?,
-    @SerializedName("current_user_id") val currentUserId: String?
+    @SerializedName("current_user_id") val currentUserId: String?,
 )
 
 data class ActiveUserDto(
     val id: String,
-    val name: String
+    val name: String,
 )
