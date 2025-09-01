@@ -78,15 +78,15 @@ data class AppBarConfig(
     val onSearchChange: (String) -> Unit = {},
 )
 
-@Suppress("UnusedParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun appScaffoldWithDrawer(
-    navConfig: AppNavConfig, // holds navController + currentRoute
-    topBar: TopBarConfigWithTitle, // UI config for top bar
-    appBar: AppBarConfig, // simple title/search config
+    navConfig: AppNavConfig,
+    topBar: TopBarConfigWithTitle,
+    appBar: AppBarConfig,
     onLogout: () -> Unit,
     userName: String?,
+    showChrome: Boolean = true,
     content: @Composable () -> Unit
 ) {
     val navController = navConfig.navController
@@ -96,12 +96,10 @@ fun appScaffoldWithDrawer(
 
     val app = LocalContext.current.applicationContext as MyApp
     val online by app.networkMonitor.isOnline.collectAsState()
-    LaunchedEffect(online) {
-    }
-    // Modal drawer wraps the entire screen with a navigation drawer
+    LaunchedEffect(online) { /* no-op */ }
+
     ModalNavigationDrawer(
         drawerState = drawerState,
-        // Disable gestures on GeneralPool to avoid conflicts with the map
         gesturesEnabled = currentRoute?.startsWith(Screen.GeneralPool.route) != true,
         drawerContent = {
             ModalDrawerSheet(drawerContainerColor = CupertinoSystemBackground) {
@@ -111,11 +109,7 @@ fun appScaffoldWithDrawer(
                     onLogout = onLogout,
                     onNavigate = { route ->
                         scope.launch { drawerState.close() }
-                        if (route == Screen.Logout.route) {
-                            onLogout()
-                        } else {
-                            navController.navigateSingleTop(route)
-                        }
+                        if (route == Screen.Logout.route) onLogout() else navController.navigateSingleTop(route)
                     },
                 )
             }
@@ -123,10 +117,12 @@ fun appScaffoldWithDrawer(
     ) {
         Scaffold(
             topBar = {
-                appTopBar(
-                    config = topBar,
-                    onOpenDrawer = { scope.launch { drawerState.open() } },
-                )
+                if (showChrome) {
+                    appTopBar(
+                        config = topBar,
+                        onOpenDrawer = { scope.launch { drawerState.open() } },
+                    )
+                }
             },
         ) { inner -> Box(Modifier.padding(inner)) { content() } }
     }

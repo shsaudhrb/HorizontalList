@@ -16,6 +16,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -26,22 +27,16 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
 import com.ntg.lmd.MyApp
+import com.ntg.lmd.R
 import com.ntg.lmd.authentication.ui.viewmodel.login.LoginViewModel
 import com.ntg.lmd.authentication.ui.viewmodel.login.LoginViewModelFactory
 import com.ntg.lmd.mainscreen.domain.model.SearchController
-import com.ntg.lmd.mainscreen.ui.screens.chatScreen
-import com.ntg.lmd.mainscreen.ui.screens.deliveriesLogScreen
-import com.ntg.lmd.mainscreen.ui.screens.generalPoolScreen
-import com.ntg.lmd.mainscreen.ui.screens.myOrdersScreen
-import com.ntg.lmd.mainscreen.ui.screens.myPoolScreen
-import com.ntg.lmd.mainscreen.ui.screens.orderDetailsScreen
 import com.ntg.lmd.navigation.component.AppBarConfig
 import com.ntg.lmd.navigation.component.appScaffoldWithDrawer
+import com.ntg.lmd.navigation.component.drawerNavGraph
 import com.ntg.lmd.navigation.component.navigateSingleTop
-import com.ntg.lmd.notification.ui.screens.notificationScreen
 import com.ntg.lmd.notification.ui.viewmodel.DeepLinkViewModel
-import com.ntg.lmd.order.ui.screen.ordersHistoryRoute
-import com.ntg.lmd.settings.ui.screens.settingsOptions
+import kotlinx.coroutines.flow.MutableStateFlow
 import com.ntg.lmd.authentication.ui.screens.login.loginScreen as LoginScreen
 import com.ntg.lmd.authentication.ui.screens.register.registerScreen as RegisterScreen
 import com.ntg.lmd.authentication.ui.screens.splash.splashScreen as SplashScreen
@@ -123,7 +118,7 @@ fun appNavGraph(
                         settingsVm.resetLogoutState()
                     }
                     is com.ntg.lmd.settings.data.LogoutUiState.Error -> {
-                        settingsVm.resetLogoutState() // (show snackbar if you have one)
+                        settingsVm.resetLogoutState()
                     }
                     else -> Unit
                 }
@@ -151,27 +146,25 @@ private fun drawerHost(
     val ctx = LocalContext.current
     val app = ctx.applicationContext as MyApp
 
-    // VM for login state (may be a different instance than the one that set the name)
     val loginVm: LoginViewModel = viewModel(
         factory = LoginViewModelFactory(ctx.applicationContext as Application)
     )
     val loginUi by loginVm.uiState.collectAsState()
-
     val effectiveUserName = loginUi.displayName ?: app.authRepo.lastLoginName
 
-    // Shared hook for Orders History overflow menu
     var openOrdersHistoryMenu by remember { mutableStateOf<(() -> Unit)?>(null) }
-
-    // Route-specific UI
     val spec = buildRouteUiSpec(currentRoute, drawerNavController, openOrdersHistoryMenu)
-
-    // Shared search controller
     val search = rememberSearchController(drawerNavController)
-
-    // Top bar config
     val topBar = buildTopBar(spec, search)
 
-    // Scaffold + inner nav
+    val inSettingsSub by remember(backStack) {
+        backStack?.savedStateHandle?.getStateFlow("settings_in_sub", false)
+            ?: MutableStateFlow(false)
+    }.collectAsState()
+
+    val hideChrome = currentRoute.startsWith(Screen.Settings.route) && inSettingsSub
+    val showChrome = !hideChrome
+
     appScaffoldWithDrawer(
         navConfig = AppNavConfig(
             navController = drawerNavController,
@@ -181,16 +174,16 @@ private fun drawerHost(
         appBar = AppBarConfig(title = spec.title),
         onLogout = onLogout,
         userName = effectiveUserName,
-        content = {
-            drawerNavGraph(
-                navController = drawerNavController,
-                startDestination = startDest,
-                registerOpenMenu = { setter -> openOrdersHistoryMenu = setter },
-                externalQuery = search.text.value,
-                onOpenOrderDetails = { id -> drawerNavController.navigate("order/$id") },
-            )
-        }
-    )
+        showChrome = showChrome,
+    ) {
+        drawerNavGraph(
+            navController = drawerNavController,
+            startDestination = startDest,
+            registerOpenMenu = { setter -> openOrdersHistoryMenu = setter },
+            externalQuery = search.text.value,
+            onOpenOrderDetails = { id -> drawerNavController.navigate("order/$id") },
+        )
+    }
 }
 
 // ======================= Helpers =======================
@@ -237,53 +230,6 @@ private fun buildTopBar(
         onSearchIconClick = { search.onToggle(true) },
     )
 
-@Composable
-private fun drawerNavGraph(
-    navController: NavHostController,
-    startDestination: String,
-    registerOpenMenu: (setter: (() -> Unit)?) -> Unit,
-    externalQuery: String,
-    onOpenOrderDetails: (String) -> Unit,
-) {
-    NavHost(
-        navController = navController,
-        startDestination = startDestination,
-    ) {
-        composable(Screen.GeneralPool.route) { generalPoolScreen(navController) }
-
-        composable(Screen.MyOrders.route) {
-            myOrdersScreen(
-                onOpenOrderDetails = onOpenOrderDetails,
-            )
-        }
-
-        composable(
-            route = "order/{id}",
-            arguments = listOf(navArgument("id") { type = NavType.StringType }),
-        ) { backStackEntry ->
-            val idStr = backStackEntry.arguments?.getString("id")
-            val id = idStr
-            orderDetailsScreen(
-                orderId = id, // nullable is OK
-                navController = navController,
-            )
-        }
-
-        composable(
-            route = Screen.Notifications.route,
-            deepLinks = listOf(navDeepLink { uriPattern = "myapp://notifications" }),
-        ) { notificationScreen() }
-
-        composable(Screen.OrdersHistory.route) {
-            ordersHistoryRoute(registerOpenMenu = registerOpenMenu)
-        }
-
-        composable(Screen.DeliveriesLog.route) { deliveriesLogScreen(navController) }
-        composable(Screen.Settings.route) { settingsOptions(navController) }
-        composable(Screen.MyPool.route) { myPoolScreen() }
-        composable(Screen.Chat.route) { chatScreen() }
-    }
-}
 
 // ======================= Route UI Spec =======================
 
