@@ -11,6 +11,7 @@ import com.ntg.lmd.network.authheader.AuthInterceptor
 import com.ntg.lmd.network.authheader.SecureTokenStore
 import com.ntg.lmd.network.authheader.TokenAuthenticator
 import com.ntg.lmd.utils.SecureUserStore
+import com.ntg.lmd.order.data.remote.OrdersHistoryApi
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -75,7 +76,7 @@ object RetrofitProvider {
             .client(authedOkHttp)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
-            .create(liveOrderApi::class.java)
+            .create(LiveOrdersApiService::class.java)
     }
 
     val okHttpForWs: OkHttpClient get() = authedOkHttp
@@ -88,6 +89,17 @@ object RetrofitProvider {
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(OrdersApi::class.java)
+    }
+
+// initialize Retrofit API client
+    val ordersHistoryApi: OrdersHistoryApi by lazy {
+        Retrofit
+            .Builder()
+            .baseUrl(BuildConfig.BASE_URL)
+            .client(authedOkHttp)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(OrdersHistoryApi::class.java)
     }
     val updateStatusApi: UpdatetOrdersStatusApi by lazy {
         Retrofit

@@ -11,6 +11,16 @@ data class OrdersEnvelope(
 
 data class OrdersData(
     val orders: List<OrderDto> = emptyList(),
+    val pagination: PaginationDto? = null,
+)
+
+data class PaginationDto(
+    @SerializedName("current_page") val currentPage: Int? = null,
+    @SerializedName("total_pages") val totalPages: Int? = null,
+    @SerializedName("total_count") val totalCount: Int? = null,
+    val limit: Int? = null,
+    @SerializedName("has_next_page") val hasNextPage: Boolean? = null,
+    @SerializedName("has_prev_page") val hasPrevPage: Boolean? = null,
 )
 
 data class OrderDto(

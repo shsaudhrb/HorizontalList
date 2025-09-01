@@ -8,21 +8,19 @@ import com.ntg.lmd.network.queue.NetworkResult
 import com.ntg.lmd.utils.SecureUserStore
 import retrofit2.HttpException
 
-// package com.ntg.lmd.authentication.data.repositoryImp
-
-// File: com/ntg/lmd/authentication/data/repositoryImp/AuthRepositoryImp.kt
-
 class AuthRepositoryImp(
     private val loginApi: AuthApi,
     private val store: SecureTokenStore,
     private val userStore: SecureUserStore,
 ) {
-    suspend fun login(
-        email: String,
-        password: String,
-    ): NetworkResult<Unit> =
-        try {
-            val response = loginApi.login(LoginRequest(email, password))
+    @Volatile var lastLoginName: String? = null
+
+        suspend fun login(
+            email: String,
+            password: String,
+        ): NetworkResult<Unit> =
+            try {
+                val response = loginApi.login(LoginRequest(email, password))
 
             if (!response.success) {
                 NetworkResult.Error(
@@ -41,13 +39,14 @@ class AuthRepositoryImp(
                         expiresAt = payload.expiresAt,
                         refreshExpiresAt = payload.refreshExpiresAt,
                     )
-
                     val u = payload.user
                     userStore.saveUser(
                         id = u?.id,
                         email = u?.email,
                         fullName = u?.fullName
                     )
+                    lastLoginName = payload.user?.fullName
+                    android.util.Log.d("AuthRepo", "Setting lastLoginName = ${payload.user?.fullName}  repo=${this.hashCode()}")
                     NetworkResult.Success(Unit)
                 }
             }

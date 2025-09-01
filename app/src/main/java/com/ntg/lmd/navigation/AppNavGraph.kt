@@ -2,6 +2,7 @@
 
 package com.ntg.lmd.navigation
 
+import android.app.Application
 import android.content.Intent
 import android.os.Build
 import androidx.compose.material.icons.Icons
@@ -9,11 +10,13 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -22,7 +25,9 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
-import com.ntg.lmd.R
+import com.ntg.lmd.MyApp
+import com.ntg.lmd.authentication.ui.viewmodel.login.LoginViewModel
+import com.ntg.lmd.authentication.ui.viewmodel.login.LoginViewModelFactory
 import com.ntg.lmd.mainscreen.domain.model.SearchController
 import com.ntg.lmd.mainscreen.ui.screens.chatScreen
 import com.ntg.lmd.mainscreen.ui.screens.deliveriesLogScreen
@@ -100,14 +105,31 @@ fun appNavGraph(
                 }
             val uri = deepLinkIntent?.data
             val deepOpen = (uri?.scheme == "myapp" && uri.host == "notifications")
+            val ctx = LocalContext.current
+            val settingsVm: com.ntg.lmd.settings.ui.viewmodel.SettingsViewModel =
+                viewModel(factory = com.ntg.lmd.settings.ui.viewmodel.SettingsViewModelFactory(
+                    ctx.applicationContext as Application
+                ))
 
-            drawerHost(
-                onLogout = {
-                    rootNavController.navigate(Screen.Login.route) {
-                        popUpTo(Screen.Drawer.route) { inclusive = true }
-                        launchSingleTop = true
+            val logoutState by settingsVm.logoutState.collectAsState()
+
+            LaunchedEffect(logoutState) {
+                when (logoutState) {
+                    is com.ntg.lmd.settings.data.LogoutUiState.Success -> {
+                        rootNavController.navigate(Screen.Login.route) {
+                            popUpTo(Screen.Drawer.route) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                        settingsVm.resetLogoutState()
                     }
-                },
+                    is com.ntg.lmd.settings.data.LogoutUiState.Error -> {
+                        settingsVm.resetLogoutState() // (show snackbar if you have one)
+                    }
+                    else -> Unit
+                }
+            }
+            drawerHost(
+                onLogout = { settingsVm.logout() },
                 openNotifications = argOpen || deepOpen,
             )
         }
@@ -126,12 +148,16 @@ private fun drawerHost(
     val currentRoute = backStack?.destination?.route ?: Screen.GeneralPool.route
     val startDest = if (openNotifications) Screen.Notifications.route else Screen.GeneralPool.route
 
-    // Jump to notifications if requested
-    LaunchedEffect(openNotifications) {
-        if (openNotifications) {
-            drawerNavController.navigate(Screen.Notifications.route) { launchSingleTop = true }
-        }
-    }
+    val ctx = LocalContext.current
+    val app = ctx.applicationContext as MyApp
+
+    // VM for login state (may be a different instance than the one that set the name)
+    val loginVm: LoginViewModel = viewModel(
+        factory = LoginViewModelFactory(ctx.applicationContext as Application)
+    )
+    val loginUi by loginVm.uiState.collectAsState()
+
+    val effectiveUserName = loginUi.displayName ?: app.authRepo.lastLoginName
 
     // Shared hook for Orders History overflow menu
     var openOrdersHistoryMenu by remember { mutableStateOf<(() -> Unit)?>(null) }
@@ -147,26 +173,24 @@ private fun drawerHost(
 
     // Scaffold + inner nav
     appScaffoldWithDrawer(
-        navConfig =
-            AppNavConfig(
-                navController = drawerNavController,
-                currentRoute = currentRoute,
-            ),
-        topBar = topBar,
-        onLogout = onLogout,
-        appBar =
-            AppBarConfig( // required by your scaffold
-                title = spec.title,
-            ),
-    ) {
-        drawerNavGraph(
+        navConfig = AppNavConfig(
             navController = drawerNavController,
-            startDestination = startDest,
-            registerOpenMenu = { setter -> openOrdersHistoryMenu = setter },
-            externalQuery = search.text.value, // pass String
-            onOpenOrderDetails = { id -> drawerNavController.navigate("order/$id") },
-        )
-    }
+            currentRoute = currentRoute,
+        ),
+        topBar = topBar,
+        appBar = AppBarConfig(title = spec.title),
+        onLogout = onLogout,
+        userName = effectiveUserName,
+        content = {
+            drawerNavGraph(
+                navController = drawerNavController,
+                startDestination = startDest,
+                registerOpenMenu = { setter -> openOrdersHistoryMenu = setter },
+                externalQuery = search.text.value,
+                onOpenOrderDetails = { id -> drawerNavController.navigate("order/$id") },
+            )
+        }
+    )
 }
 
 // ======================= Helpers =======================

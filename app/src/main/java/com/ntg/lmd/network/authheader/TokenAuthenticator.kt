@@ -1,4 +1,3 @@
-// TokenAuthenticator.kt
 package com.ntg.lmd.network.authheader
 
 import android.os.Looper
@@ -24,10 +23,7 @@ class TokenAuthenticator(
     private val store: SecureTokenStore,
     private val refreshApi: AuthApi,
 ) : Authenticator {
-
     private val mutex = Mutex()
-
-    // Avoid runBlocking on main
     private inline fun <T> runBlockingNotMain(crossinline block: suspend () -> T): T {
         if (Looper.myLooper() != Looper.getMainLooper()) {
             return runBlocking(Dispatchers.IO) { block() }

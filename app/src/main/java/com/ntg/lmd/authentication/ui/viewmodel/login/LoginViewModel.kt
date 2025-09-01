@@ -140,12 +140,16 @@ private fun MutableStateFlow<LoginUiState>.setLoading() {
 }
 
 private fun MutableStateFlow<LoginUiState>.handleSuccess() {
+    val username = _uiState.value.username.trim()
+    val password = _uiState.value.password
+    val result = authRepo.login(username, password)
     update {
         it.copy(
             isLoading = false,
             loginSuccess = true,
             message = R.string.msg_welcome,
-            errorMessage = null
+            errorMessage = null,
+            displayName = authRepo.lastLoginName
         )
     }
 }
@@ -156,7 +160,7 @@ private fun MutableStateFlow<LoginUiState>.handleError(message: String?) {
             isLoading = false,
             loginSuccess = false,
             message = null,
-            errorMessage = message ?: "Unknown error"
+            errorMessage = result.error.message ?: "Unknown error",
         )
     }
 }
