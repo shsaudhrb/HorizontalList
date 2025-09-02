@@ -42,6 +42,7 @@ enum class OrderStatus(
         fun fromId(id: Int?): OrderStatus? = values().firstOrNull { it.id == id }
     }
 }
+
 fun OrderStatus.toApiId(): Int =
     when (this) {
         OrderStatus.ADDED -> STATUS_ADDED
