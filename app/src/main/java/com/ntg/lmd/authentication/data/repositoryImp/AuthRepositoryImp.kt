@@ -8,7 +8,6 @@ import com.ntg.lmd.network.authheader.SecureTokenStore
 import com.ntg.lmd.network.queue.NetworkError
 import com.ntg.lmd.network.queue.NetworkResult
 import com.ntg.lmd.utils.SecureUserStore
-import retrofit2.HttpException
 
 class AuthRepositoryImp(
     private val loginApi: AuthApi,

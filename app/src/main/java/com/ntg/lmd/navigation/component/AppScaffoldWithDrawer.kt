@@ -83,7 +83,6 @@ data class AppBarConfig(
 fun appScaffoldWithDrawer(
     navConfig: AppNavConfig,
     topBar: TopBarConfigWithTitle,
-    appBar: AppBarConfig,
     onLogout: () -> Unit,
     userName: String?,
     showChrome: Boolean = true,

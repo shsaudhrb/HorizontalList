@@ -31,7 +31,6 @@ import com.ntg.lmd.R
 import com.ntg.lmd.authentication.ui.viewmodel.login.LoginViewModel
 import com.ntg.lmd.authentication.ui.viewmodel.login.LoginViewModelFactory
 import com.ntg.lmd.mainscreen.domain.model.SearchController
-import com.ntg.lmd.navigation.component.AppBarConfig
 import com.ntg.lmd.navigation.component.appScaffoldWithDrawer
 import com.ntg.lmd.navigation.component.drawerNavGraph
 import com.ntg.lmd.navigation.component.navigateSingleTop
@@ -175,7 +174,6 @@ private fun drawerHost(
                 currentRoute = currentRoute,
             ),
         topBar = topBar,
-        appBar = AppBarConfig(title = spec.title),
         onLogout = onLogout,
         userName = effectiveUserName,
         showChrome = showChrome,

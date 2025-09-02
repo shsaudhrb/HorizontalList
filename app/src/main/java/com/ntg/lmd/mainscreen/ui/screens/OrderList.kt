@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
@@ -26,25 +25,11 @@ import androidx.compose.ui.res.dimensionResource
 import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
-import com.ntg.lmd.mainscreen.ui.components.ActionDialog
 import com.ntg.lmd.mainscreen.ui.components.myOrderCard
 import com.ntg.lmd.mainscreen.ui.model.MyOrderCardCallbacks
+import com.ntg.lmd.mainscreen.ui.model.OrderListCallbacks
+import com.ntg.lmd.mainscreen.ui.model.OrderListState
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
-
-data class OrderListState(
-    val orders: List<OrderInfo>,
-    val listState: LazyListState,
-    val isLoadingMore: Boolean,
-    val updatingIds: Set<String>,
-)
-
-data class OrderListCallbacks(
-    val onReassignRequested: (String) -> Unit,
-    val onDetails: (String) -> Unit,
-    val onCall: (String) -> Unit,
-    val onAction: (String, ActionDialog) -> Unit,
-    val onRefresh: () -> Unit,
-)
 
 @Composable
 fun orderList(

@@ -98,43 +98,44 @@ private fun myOrderCardPrimaryRow(
     setDialog: (ActionDialog) -> Unit,
 ) {
     Row(horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.smallerSpace))) {
-        OutlinedButton(
-            onClick = onDetails,
-            enabled = !isUpdating,
-            modifier = Modifier.weight(DETAILS_BUTTON_WEIGHT),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
-            border = BorderStroke(OUTLINE_STROKE, MaterialTheme.colorScheme.primary),
-            shape = RoundedCornerShape(dimensionResource(R.dimen.mediumSpace)),
-        ) {
-            Spacer(Modifier.width(dimensionResource(R.dimen.smallerSpace)))
-            Text(
-                text = stringResource(R.string.order_details),
-                style = MaterialTheme.typography.titleSmall,
-                maxLines = 1,
-            )
-        }
+        detailsButton(isUpdating, onDetails)
 
-        when (status) {
-            OrderStatus.ADDED ->
-                myOrderCardPrimaryAction(R.string.confirm_order, isUpdating) {
-                    setDialog(ActionDialog.Confirm)
-                }
-            OrderStatus.CONFIRMED ->
-                myOrderCardPrimaryAction(R.string.pick_order, isUpdating) {
-                    setDialog(ActionDialog.PickUp)
-                }
-            OrderStatus.PICKUP ->
-                myOrderCardPrimaryAction(R.string.start_delivery, isUpdating) {
-                    setDialog(ActionDialog.Start)
-                }
-            OrderStatus.START_DELIVERY ->
-                myOrderCardPrimaryAction(R.string.deliver_order, isUpdating) {
-                    setDialog(ActionDialog.Deliver)
-                }
-            else -> Unit
+        actionForStatus(status)?.let { (labelRes, dialog) ->
+            myOrderCardPrimaryAction(labelRes, isUpdating) { setDialog(dialog) }
         }
     }
 }
+
+@Composable
+private fun RowScope.detailsButton(
+    isUpdating: Boolean,
+    onClick: () -> Unit,
+) {
+    OutlinedButton(
+        onClick = onClick,
+        enabled = !isUpdating,
+        modifier = Modifier.weight(DETAILS_BUTTON_WEIGHT),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
+        border = BorderStroke(OUTLINE_STROKE, MaterialTheme.colorScheme.primary),
+        shape = RoundedCornerShape(dimensionResource(R.dimen.mediumSpace)),
+    ) {
+        Spacer(Modifier.width(dimensionResource(R.dimen.smallerSpace)))
+        Text(
+            text = stringResource(R.string.order_details),
+            style = MaterialTheme.typography.titleSmall,
+            maxLines = 1,
+        )
+    }
+}
+
+private fun actionForStatus(status: OrderStatus?): Pair<Int, ActionDialog>? =
+    when (status) {
+        OrderStatus.ADDED -> R.string.confirm_order to ActionDialog.Confirm
+        OrderStatus.CONFIRMED -> R.string.pick_order to ActionDialog.PickUp
+        OrderStatus.PICKUP -> R.string.start_delivery to ActionDialog.Start
+        OrderStatus.START_DELIVERY -> R.string.deliver_order to ActionDialog.Deliver
+        else -> null
+    }
 
 @Composable
 private fun RowScope.myOrderCardPrimaryAction(

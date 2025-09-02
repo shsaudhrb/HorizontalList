@@ -32,6 +32,7 @@ import com.ntg.lmd.mainscreen.ui.components.bottomStickyButton
 import com.ntg.lmd.mainscreen.ui.components.ordersContent
 import com.ntg.lmd.mainscreen.ui.components.ordersEffects
 import com.ntg.lmd.mainscreen.ui.components.reassignBottomSheet
+import com.ntg.lmd.mainscreen.ui.model.OrdersContentParams
 import com.ntg.lmd.mainscreen.ui.viewmodel.ActiveAgentsViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.ActiveAgentsViewModelFactory
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyOrdersViewModel
@@ -106,14 +107,16 @@ fun myOrdersScreen(onOpenOrderDetails: (String) -> Unit) {
                     .padding(innerPadding),
         ) {
             ordersContent(
-                ordersVm = ordersVm,
-                updateVm = updateVm,
-                state = state,
-                listState = listState,
-                onOpenOrderDetails = onOpenOrderDetails,
-                context = ctx,
-                updatingIds = updatingIds,
-                onReassignRequested = onReassignRequested,
+                OrdersContentParams(
+                    ordersVm = ordersVm,
+                    updateVm = updateVm,
+                    state = state,
+                    listState = listState,
+                    onOpenOrderDetails = onOpenOrderDetails,
+                    context = ctx,
+                    updatingIds = updatingIds,
+                    onReassignRequested = onReassignRequested,
+                ),
             )
         }
     }
