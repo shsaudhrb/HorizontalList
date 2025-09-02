@@ -50,7 +50,7 @@ import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.ntg.lmd.R
-import com.ntg.lmd.notification.data.dataSource.remote.ServiceLocator
+import com.ntg.lmd.notification.data.model.FCMServiceLocator
 import com.ntg.lmd.notification.data.repository.seedNotifications
 import com.ntg.lmd.notification.domain.model.AgentNotification
 import com.ntg.lmd.notification.ui.components.filterRow
@@ -66,22 +66,23 @@ private const val MILLIS_PER_MINUTE = 60_000L
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun notificationScreen(
-    viewModel: NotificationsViewModel = viewModel(factory = NotificationsVMFactory()),
-) {
+fun notificationScreen(viewModel: NotificationsViewModel = viewModel(factory = NotificationsVMFactory())) {
     val filter by viewModel.filter.collectAsState()
     val lazyPagingItems = viewModel.pagingDataFlow.collectAsLazyPagingItems()
 
     // Seed once
     seedNotificationsOnce()
 
-    val isRefreshing  = lazyPagingItems.loadState.refresh is LoadState.Loading
-    val isLoadingMore = lazyPagingItems.loadState.append  is LoadState.Loading
-    val endReached    = (lazyPagingItems.loadState.append as? LoadState.NotLoading)
-        ?.endOfPaginationReached == true
-    val items: List<NotificationUi> = remember(
-        lazyPagingItems.itemCount, lazyPagingItems.loadState
-    ) { List(lazyPagingItems.itemCount) { i -> lazyPagingItems[i] }.filterNotNull() }
+    val isRefreshing = lazyPagingItems.loadState.refresh is LoadState.Loading
+    val isLoadingMore = lazyPagingItems.loadState.append is LoadState.Loading
+    val endReached =
+        (lazyPagingItems.loadState.append as? LoadState.NotLoading)
+            ?.endOfPaginationReached == true
+    val items: List<NotificationUi> =
+        remember(
+            lazyPagingItems.itemCount,
+            lazyPagingItems.loadState,
+        ) { List(lazyPagingItems.itemCount) { i -> lazyPagingItems[i] }.filterNotNull() }
     val topId = items.firstOrNull()?.id ?: -1L
     val listState = remember(topId) { LazyListState(0, 0) }
     val scope = rememberCoroutineScope()
@@ -205,8 +206,8 @@ private fun seedNotificationsOnce() {
     val seeded = rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         if (!seeded.value) {
-            seedNotifications(ServiceLocator.saveIncomingNotificationUseCase)
-//            seedNotifications(FCMServiceLocator.saveIncomingNotificationUseCase)
+//            seedNotifications(ServiceLocator.saveIncomingNotificationUseCase)
+            seedNotifications(FCMServiceLocator.saveIncomingNotificationUseCase)
             seeded.value = true
         }
     }
