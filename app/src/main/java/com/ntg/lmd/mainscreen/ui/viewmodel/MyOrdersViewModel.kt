@@ -15,11 +15,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlin.collections.take
 import retrofit2.HttpException
 import java.io.IOException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
+import kotlin.collections.take
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.min
 
@@ -30,7 +30,6 @@ class MyOrdersViewModel(
     private val computeDistancesUseCase: ComputeDistancesUseCase,
     initialUserId: String?
 ) : ViewModel() {
-
     private val _state = MutableStateFlow(MyOrdersUiState(isLoading = false))
     val state: StateFlow<MyOrdersUiState> = _state.asStateFlow()
 
@@ -74,8 +73,10 @@ class MyOrdersViewModel(
                 allOrders.addAll(page1.items)
                 endReached = page1.rawCount < PAGE_SIZE
 
-                val withDist = withDistances(applyDisplayFilter(allOrders))
-                _state.publishFirstPageFrom(withDist, PAGE_SIZE, state.value.query)
+                val base = currentFilteredFor(state.value.query, allOrders)
+                _state.publishFirstPageFrom(base, PAGE_SIZE, state.value.query)
+            } catch (ce: CancellationException) {
+                throw ce
             } catch (e: Exception) {
                 _state.update { it.copy(isLoading = false, isLoadingMore = false, errorMessage = messageFor(e)) }
             }
@@ -216,18 +217,20 @@ class MyOrdersViewModel(
         val visible = _state.value.orders.toMutableList()
         val i = visible.indexOfFirst { it.id == updated.id }
         if (i != -1) {
-            visible[i] = visible[i].copy(
-                status = updated.status,
-                details = updated.details ?: visible[i].details,
-            )
+            visible[i] =
+                visible[i].copy(
+                    status = updated.status,
+                    details = updated.details ?: visible[i].details,
+                )
             _state.update { it.copy(orders = visible) }
         }
         val j = allOrders.indexOfFirst { it.id == updated.id }
         if (j != -1) {
-            allOrders[j] = allOrders[j].copy(
-                status = updated.status,
-                details = updated.details ?: allOrders[j].details,
-            )
+            allOrders[j] =
+                allOrders[j].copy(
+                    status = updated.status,
+                    details = updated.details ?: allOrders[j].details,
+                )
         }
     }
 
@@ -235,7 +238,7 @@ class MyOrdersViewModel(
 private fun MutableStateFlow<MyOrdersUiState>.publishFirstPageFrom(
     base: List<OrderInfo>,
     pageSize: Int,
-    query: String
+    query: String,
 ) {
     val first = base.take(pageSize)
     val emptyMsg =
@@ -259,7 +262,7 @@ private fun MutableStateFlow<MyOrdersUiState>.publishFirstPageFrom(
 private fun MutableStateFlow<MyOrdersUiState>.publishAppendFrom(
     base: List<OrderInfo>,
     page: Int,
-    pageSize: Int
+    pageSize: Int,
 ) {
     val visibleCount = min(page * pageSize, base.size) // page is 1-based
     update { it.copy(isLoadingMore = false, orders = base.take(visibleCount)) }

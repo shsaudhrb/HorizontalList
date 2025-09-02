@@ -24,12 +24,11 @@ fun drawerNavGraph(
     navController: NavHostController,
     startDestination: String,
     registerOpenMenu: (setter: (() -> Unit)?) -> Unit,
-    externalQuery: String,
     onOpenOrderDetails: (String) -> Unit,
 ) {
     NavHost(navController = navController, startDestination = startDestination) {
         addGeneralPool(navController)
-        addMyOrders( onOpenOrderDetails)
+        addMyOrders(onOpenOrderDetails)
         addOrderDetails(navController)
         addNotifications()
         addOrdersHistory(registerOpenMenu)
@@ -40,15 +39,11 @@ fun drawerNavGraph(
     }
 }
 
-// ------------ Extracted routes (logic unchanged) ------------
-
 private fun NavGraphBuilder.addGeneralPool(navController: NavHostController) {
     composable(Screen.GeneralPool.route) { generalPoolScreen(navController) }
 }
 
-private fun NavGraphBuilder.addMyOrders(
-    onOpenOrderDetails: (String) -> Unit,
-) {
+private fun NavGraphBuilder.addMyOrders(onOpenOrderDetails: (String) -> Unit) {
     composable(Screen.MyOrders.route) {
         myOrdersScreen(
             onOpenOrderDetails = onOpenOrderDetails,

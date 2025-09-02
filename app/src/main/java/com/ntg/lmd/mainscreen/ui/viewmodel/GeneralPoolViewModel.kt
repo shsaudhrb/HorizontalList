@@ -10,6 +10,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.maps.model.LatLng
+import com.ntg.lmd.mainscreen.data.model.Order
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.repository.OrdersRepository
 import com.ntg.lmd.mainscreen.ui.mapper.toUi
@@ -23,6 +24,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.collections.map
 
 sealed class GeneralPoolUiEvent {
     data object RequestLocationPermission : GeneralPoolUiEvent()
@@ -84,43 +86,45 @@ class GeneralPoolViewModel : ViewModel() {
     // collect live orders from socket and push to UI
     private fun observeRealtimeOrders(repo: OrdersRepository) {
         realtimeJob?.cancel()
-        realtimeJob = viewModelScope.launch {
-            repo.orders().collect { liveOrders ->
-                // map -> UI
-                val incoming = liveOrders.map { it.toUi(ctx) }
+        realtimeJob =
+            viewModelScope.launch {
+                repo.orders().collect { liveOrders ->
+                    // map -> UI
+                    val incoming = liveOrders.map { it.toUi(ctx) }
 
-                // merge with existing by orderNumber
-                val merged = mergeOrders(_ui.value.orders, incoming)
+                    // merge with existing by orderNumber
+                    val merged = mergeOrders(_ui.value.orders, incoming)
 
-                // keep selection policy
-                val currentSel = _ui.value.selected
-                val nextSel =
-                    when {
-                        userPinnedSelection -> currentSel
-                        currentSel == null -> merged.firstOrNull { it.lat != 0.0 && it.lng != 0.0 }
-                            ?: merged.firstOrNull()
+                    // keep selection policy
+                    val currentSel = _ui.value.selected
+                    val nextSel =
+                        when {
+                            userPinnedSelection -> currentSel
+                            currentSel == null ->
+                                merged.firstOrNull { it.lat != 0.0 && it.lng != 0.0 }
+                                    ?: merged.firstOrNull()
 
-                        merged.none { it.orderNumber == currentSel.orderNumber } -> null
-                        else -> merged.firstOrNull { it.orderNumber == currentSel.orderNumber }
+                            merged.none { it.orderNumber == currentSel.orderNumber } -> null
+                            else -> merged.firstOrNull { it.orderNumber == currentSel.orderNumber }
+                        }
+
+                    _ui.update {
+                        it.copy(
+                            orders = merged,
+                            selected = nextSel ?: it.selected,
+                        )
                     }
 
-                _ui.update {
-                    it.copy(
-                        orders = merged,
-                        selected = nextSel ?: it.selected,
-                    )
+                    if (merged.isNotEmpty()) lastNonEmptyOrders = merged
+
+                    // if we already have location permission, re-apply distances so new orders get distance & filters
+                    if (_ui.value.hasLocationPerm) {
+                        fetchAndApplyDistances(ctx)
+                    }
+
+                    ui.ensureSelectedStillVisible { _ui.update(it) }
                 }
-
-                if (merged.isNotEmpty()) lastNonEmptyOrders = merged
-
-                // if we already have location permission, re-apply distances so new orders get distance & filters
-                if (_ui.value.hasLocationPerm) {
-                    fetchAndApplyDistances(ctx)
-                }
-
-                ensureSelectedStillVisible()
             }
-        }
     }
 
     private fun mergeOrders(
@@ -144,7 +148,7 @@ class GeneralPoolViewModel : ViewModel() {
     // change the max distance, used to filter map orders
     fun onDistanceChange(km: Double) {
         _ui.update { it.copy(distanceThresholdKm = km) }
-        ensureSelectedStillVisible()
+        ui.ensureSelectedStillVisible { _ui.update(it) }
     }
 
     fun onOrderSelected(order: OrderInfo?) {
@@ -202,7 +206,7 @@ class GeneralPoolViewModel : ViewModel() {
 
                 if (updated.isNotEmpty()) lastNonEmptyOrders = updated
                 _deviceLatLng.value = LatLng(origin.latitude, origin.longitude)
-                ensureSelectedStillVisible()
+                ui.ensureSelectedStillVisible { _ui.update(it) }
             } else {
                 Log.d("GeneralPoolVM", "No device location yet")
             }
@@ -217,51 +221,54 @@ class GeneralPoolViewModel : ViewModel() {
             val result = loadUseCase(pageSize = 25)
 
             result
-                .onSuccess { allOrders ->
-                    val initial = allOrders.map { it.toUi(ctx) }
-
-                    val defaultSelection =
-                        _ui.value.selected
-                            ?: initial.firstOrNull { it.lat != 0.0 && it.lng != 0.0 }
-                            ?: initial.firstOrNull()
-
-                    userPinnedSelection = false
-
-                    _ui.update {
-                        it.copy(
-                            orders = initial,
-                            isLoading = false,
-                            selected = defaultSelection,
-                            errorMessage = null,
-                        )
-                    }
-                    if (initial.isNotEmpty()) lastNonEmptyOrders = initial
-
-                    if (_ui.value.hasLocationPerm) {
-                        fetchAndApplyDistances(ctx)
-                    }
-
-                    ensureSelectedStillVisible()
-                }.onFailure { e ->
+                .onSuccess { handleOrdersLoaded(it) }
+                .onFailure { e ->
                     Log.e("GeneralPoolVM", "Failed to load paged orders: ${e.message}", e)
-                    _ui.update {
-                        it.copy(
-                            isLoading = false,
-                            errorMessage = "Unable to load orders.",
-                        )
-                    }
+                    _ui.update { s -> s.copy(isLoading = false, errorMessage = "Unable to load orders.") }
                 }
         }
     }
 
-    fun ensureSelectedStillVisible() {
-        _ui.update { s ->
-            val sel = s.selected
-            if (sel != null && s.mapOrders.none { it.orderNumber == sel.orderNumber }) {
-                s.copy(selected = null)
-            } else {
-                s
-            }
+    private fun handleOrdersLoaded(allOrders: List<Order>) {
+        val initial = allOrders.map { it.toUi(ctx) }
+        val defaultSelection = pickDefaultSelection(_ui.value.selected, initial)
+
+        userPinnedSelection = false
+        _ui.update {
+            it.copy(
+                orders = initial,
+                isLoading = false,
+                selected = defaultSelection,
+                errorMessage = null,
+            )
+        }
+
+        if (initial.isNotEmpty()) lastNonEmptyOrders = initial
+        if (_ui.value.hasLocationPerm) fetchAndApplyDistances(ctx)
+        ui.ensureSelectedStillVisible { _ui.update(it) }
+    }
+}
+
+private fun StateFlow<GeneralPoolUiState>.ensureSelectedStillVisible(
+    update: (
+        GeneralPoolUiState.()
+        -> GeneralPoolUiState,
+    ) -> Unit,
+) {
+    update {
+        val sel = selected
+        if (sel != null && mapOrders.none { it.orderNumber == sel.orderNumber }) {
+            copy(selected = null)
+        } else {
+            this
         }
     }
 }
+
+private fun pickDefaultSelection(
+    current: OrderInfo?,
+    initial: List<OrderInfo>,
+): OrderInfo? =
+    current
+        ?: initial.firstOrNull { it.lat != 0.0 && it.lng != 0.0 }
+        ?: initial.firstOrNull()

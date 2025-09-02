@@ -20,7 +20,7 @@ import com.ntg.lmd.mainscreen.ui.viewmodel.MyOrdersViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
 
 @Composable
- fun ordersContent(
+fun ordersContent(
     ordersVm: MyOrdersViewModel,
     updateVm: UpdateOrderStatusViewModel,
     state: MyOrdersUiState,

@@ -78,7 +78,7 @@ class UpdateOrderStatusViewModel(
 
         fun postSuccess(
             orderId: String,
-            new: OrderStatus,
+            new: OrderStatus?,
         ) {
             Log.i(TAG, "API ← success | orderId=$orderId newStatus=$new")
         }

@@ -35,23 +35,32 @@ fun usernameField(
         onValueChange = props.onValueChange,
         label = { Text(stringResource(props.label)) },
         placeholder = { Text(stringResource(props.placeholder)) },
-        trailingIcon = {
-            Icon(
-                Icons.Default.Person,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-            )
-        },
+        trailingIcon = { usernameTrailingIcon() },
         isError = hasError,
         singleLine = true,
-        supportingText = {
-            if (hasError) {
-                Text(
-                    text = stringResource(props.errorResId!!),
-                    color = MaterialTheme.colorScheme.error,
-                )
-            }
-        },
+        supportingText = { usernameSupportingText(hasError, props) },
         shape = RoundedCornerShape(dimensionResource(id = R.dimen.textFieldRoundCorner)),
     )
+}
+
+@Composable
+private fun usernameTrailingIcon() {
+    Icon(
+        imageVector = Icons.Default.Person,
+        contentDescription = null,
+        tint = MaterialTheme.colorScheme.primary,
+    )
+}
+
+@Composable
+private fun usernameSupportingText(
+    hasError: Boolean,
+    props: InputProps,
+) {
+    if (hasError) {
+        Text(
+            text = stringResource(props.errorResId!!),
+            color = MaterialTheme.colorScheme.error,
+        )
+    }
 }

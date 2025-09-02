@@ -134,8 +134,6 @@ fun appNavGraph(
     }
 }
 
-// ======================= Drawer host =======================
-
 @Composable
 private fun drawerHost(
     onLogout: () -> Unit,
@@ -186,7 +184,6 @@ private fun drawerHost(
             navController = drawerNavController,
             startDestination = startDest,
             registerOpenMenu = { setter -> openOrdersHistoryMenu = setter },
-            externalQuery = search.text.value,
             onOpenOrderDetails = { id -> drawerNavController.navigate("order/$id") },
         )
     }

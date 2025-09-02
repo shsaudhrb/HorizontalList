@@ -43,26 +43,38 @@ fun passwordField(
         onValueChange = props.onValueChange,
         label = { Text(stringResource(props.label)) },
         placeholder = { Text(stringResource(props.placeholder)) },
-        trailingIcon = {
-            IconButton(onClick = { visible = !visible }) {
-                Icon(
-                    Icons.Default.Key,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-            }
-        },
+        trailingIcon = { passwordVisibilityToggle(visible) { visible = !visible } },
         isError = hasError,
         singleLine = true,
         visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
-        supportingText = {
-            if (hasError) {
-                Text(
-                    text = stringResource(props.errorResId!!),
-                    color = MaterialTheme.colorScheme.error,
-                )
-            }
-        },
+        supportingText = { passwordSupportingText(hasError, props) },
         shape = RoundedCornerShape(dimensionResource(R.dimen.textFieldRoundCorner)),
     )
+}
+
+@Composable
+private fun passwordVisibilityToggle(
+    visible: Boolean,
+    onToggle: () -> Unit,
+) {
+    IconButton(onClick = onToggle) {
+        Icon(
+            imageVector = Icons.Default.Key,
+            contentDescription = if (visible) "Hide password" else "Show password",
+            tint = MaterialTheme.colorScheme.primary,
+        )
+    }
+}
+
+@Composable
+private fun passwordSupportingText(
+    hasError: Boolean,
+    props: InputProps,
+) {
+    if (hasError) {
+        Text(
+            text = stringResource(props.errorResId!!),
+            color = MaterialTheme.colorScheme.error,
+        )
+    }
 }
