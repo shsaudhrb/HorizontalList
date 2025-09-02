@@ -1,6 +1,6 @@
 package com.ntg.lmd.authentication.data.repositoryImp
 
-import com.ntg.lmd.authentication.data.datasource.model.LoginRefreshToken
+import com.ntg.lmd.authentication.data.datasource.model.LoginData
 import com.ntg.lmd.authentication.data.datasource.model.LoginRequest
 import com.ntg.lmd.authentication.data.datasource.model.LoginResponse
 import com.ntg.lmd.authentication.data.datasource.remote.api.AuthApi
@@ -21,64 +21,10 @@ class AuthRepositoryImp(
     suspend fun login(
         email: String,
         password: String,
-    ): NetworkResult<Unit> {
-        return try {
-            val response = loginApi.login(LoginRequest(email, password))
-
-            if (response?.success != true) {
-                val msg = response?.error?.takeIf { it.isNullOrBlank().not() } ?: "Login failed"
-                return NetworkResult.Error(NetworkError.BadRequest(msg))
-            }
-
-            // Guard: payload present
-            val payload =
-                response.data
-                    ?: return NetworkResult.Error(
-                        NetworkError.BadRequest(
-                            response.error ?: "Login failed: no data received",
-                        ),
-                    )
-
-            // Guard: required fields present
-            val access =
-                payload.accessToken
-                    ?: return NetworkResult.Error(NetworkError.BadRequest("Login failed: missing access token"))
-            val refresh =
-                payload.refreshToken
-                    ?: return NetworkResult.Error(NetworkError.BadRequest("Login failed: missing refresh token"))
-            val expiresAt =
-                payload.expiresAt
-                    ?: return NetworkResult.Error(NetworkError.BadRequest("Login failed: missing access token expiry"))
-            val refreshExpiresAt =
-                payload.refreshExpiresAt
-                    ?: return NetworkResult.Error(NetworkError.BadRequest("Login failed: missing refresh token expiry"))
-
-            // Persist tokens safely
-            store.saveFromPayload(
-                access = access,
-                refresh = refresh,
-                expiresAt = expiresAt,
-                refreshExpiresAt = refreshExpiresAt,
-            )
-            val u = payload.user
-            userStore.saveUser(
-                id = u?.id,
-                email = u?.email,
-                fullName = u?.fullName,
-            )
-            // Null-safe user name capture
-            lastLoginName = payload.user?.fullName?.takeIf { it.isNullOrBlank().not() }
-
-            // Optional: debug log without risking NPEs
-            android.util.Log.d(
-                "AuthRepo",
-                "Setting lastLoginName = ${lastLoginName ?: "<none>"} repo=${this.hashCode()}",
-            )
-
     ): NetworkResult<Unit> =
         try {
             val payload = validate(loginApi.login(LoginRequest(email, password)))
-            persistTokens(payload)
+            persistTokensAndUser(payload)
             captureLastLoginName(payload)
             NetworkResult.Success(Unit)
         } catch (e: IllegalStateException) {
@@ -91,19 +37,23 @@ class AuthRepositoryImp(
             NetworkResult.Error(NetworkError.fromException(e))
         }
 
-    private fun validate(response: LoginResponse?): LoginRefreshToken {
+    // Ensures success flag true and data present; maps to IllegalStateException for compact guards
+    private fun validate(response: LoginResponse?): LoginData {
         if (response == null || !response.success) {
             val msg = response?.error?.takeUnless { it.isNullOrBlank() } ?: "Login failed"
             throw IllegalStateException(msg)
         }
-        return response.data ?: throw IllegalStateException(response.error ?: "Login failed: no data received")
+        return response.data
+            ?: throw IllegalStateException(response.error ?: "Login failed: no data received")
     }
 
-    private fun persistTokens(payload: LoginRefreshToken) {
+    // Saves tokens and user atomically from payload; throws if any required token field missing
+    private fun persistTokensAndUser(payload: LoginData) {
         val access = payload.accessToken ?: throw IllegalStateException("Missing access token")
         val refresh = payload.refreshToken ?: throw IllegalStateException("Missing refresh token")
         val expiresAt = payload.expiresAt ?: throw IllegalStateException("Missing access token expiry")
-        val refreshExpiresAt = payload.refreshExpiresAt ?: throw IllegalStateException("Missing refresh token expiry")
+        val refreshExpiresAt =
+            payload.refreshExpiresAt ?: throw IllegalStateException("Missing refresh token expiry")
 
         store.saveFromPayload(
             access = access,
@@ -111,10 +61,20 @@ class AuthRepositoryImp(
             expiresAt = expiresAt,
             refreshExpiresAt = refreshExpiresAt,
         )
+
+        val u = payload.user
+        userStore.saveUser(
+            id = u?.id,
+            email = u?.email,
+            fullName = u?.fullName,
+        )
     }
 
-    private fun captureLastLoginName(payload: LoginRefreshToken) {
+    private fun captureLastLoginName(payload: LoginData) {
         lastLoginName = payload.user?.fullName?.takeUnless { it.isNullOrBlank() }
-        android.util.Log.d("AuthRepo", "lastLoginName=${lastLoginName ?: "<none>"} repo=${this.hashCode()}")
+        android.util.Log.d(
+            "AuthRepo",
+            "lastLoginName=${lastLoginName ?: "<none>"} repo=${this.hashCode()}",
+        )
     }
 }

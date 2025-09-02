@@ -12,8 +12,10 @@ class AuthInterceptor(
         val path = req.url.encodedPath
         val isAuthEndpoint = path.endsWith("/login") || path.endsWith("/refresh-token")
 
-        val b = req.newBuilder()
-            .header("apikey", supabaseKey)
+        val b =
+            req
+                .newBuilder()
+                .header("apikey", supabaseKey)
 
         if (isAuthEndpoint) {
             b.header("Authorization", "Bearer $supabaseKey")

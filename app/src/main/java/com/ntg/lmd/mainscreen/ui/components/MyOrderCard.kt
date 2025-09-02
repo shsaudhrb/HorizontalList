@@ -1,9 +1,11 @@
 package com.ntg.lmd.mainscreen.ui.components
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -27,25 +29,29 @@ import androidx.compose.ui.res.stringResource
 import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
-import com.ntg.lmd.mainscreen.ui.components.OrdersUi.CARD_ELEVATION
-import com.ntg.lmd.mainscreen.ui.components.OrdersUi.DETAILS_BUTTON_WEIGHT
-import com.ntg.lmd.mainscreen.ui.components.OrdersUi.OUTLINE_STROKE
+import com.ntg.lmd.mainscreen.ui.components.OrdersUiConstants.CARD_ELEVATION
+import com.ntg.lmd.mainscreen.ui.components.OrdersUiConstants.DETAILS_BUTTON_WEIGHT
+import com.ntg.lmd.mainscreen.ui.components.OrdersUiConstants.OUTLINE_STROKE
 import com.ntg.lmd.mainscreen.ui.model.LocalUiOnlyStatusBus
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
+
+data class MyOrderCardCallbacks(
+    val onDetails: () -> Unit,
+    val onCall: () -> Unit,
+    val onAction: (ActionDialog) -> Unit,
+    val onReassignRequested: () -> Unit,
+)
 
 @Composable
 fun myOrderCard(
     order: OrderInfo,
     isUpdating: Boolean,
-    onDetails: () -> Unit,
-    onCall: () -> Unit,
-    onAction: (ActionDialog) -> Unit,
-    onReassignRequested: () -> Unit,
+    callbacks: MyOrderCardCallbacks,
     updateVm: UpdateOrderStatusViewModel,
 ) {
     var dialog by remember { mutableStateOf<ActionDialog?>(null) }
     var showReassign by remember { mutableStateOf(false) }
-    val reassignLabel = stringResource(R.string.reassign_order)
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(dimensionResource(R.dimen.card_radius)),
@@ -53,142 +59,160 @@ fun myOrderCard(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
     ) {
         Column(Modifier.padding(dimensionResource(R.dimen.largeSpace))) {
-            orderHeaderWithMenu(
-                order = order,
-                enabled = !isUpdating,
-                onPickUp = {
-                    updateVm.update(order.id, OrderStatus.PICKUP)
-                },
-                onCancel = {
-                    updateVm.update(order.id, OrderStatus.CANCELED)
-                },
-                onReassign = { onReassignRequested() },
-            )
-
+            myOrderCardHeader(order, isUpdating, callbacks.onReassignRequested, updateVm)
             Spacer(Modifier.height(dimensionResource(R.dimen.mediumSpace)))
-
-            Row(horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.smallerSpace))) {
-                OutlinedButton(
-                    onClick = onDetails,
-                    enabled = !isUpdating,
-                    modifier = Modifier.weight(DETAILS_BUTTON_WEIGHT),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
-                    border = BorderStroke(OUTLINE_STROKE,
-                        MaterialTheme.colorScheme.primary),
-                    shape = RoundedCornerShape(dimensionResource(R.dimen.mediumSpace)),
-                ) {
-                    Spacer(Modifier.width(dimensionResource(R.dimen.smallerSpace)))
-                    Text(text = stringResource(
-                        R.string.order_details),
-                        style = MaterialTheme.typography.titleSmall,
-                        maxLines = 1)
-                }
-
-                when (order.status) {
-                    OrderStatus.ADDED ->
-                        primaryActionButton(
-                            text = stringResource(R.string.confirm_order),
-                            modifier = Modifier.weight(1f),
-                            enabled = !isUpdating,
-                            onClick = { dialog = ActionDialog.Confirm },
-                        )
-                    OrderStatus.CONFIRMED ->
-                        primaryActionButton(
-                            text = stringResource(R.string.pick_order),
-                            modifier = Modifier.weight(1f),
-                            enabled = !isUpdating,
-                            onClick = { dialog = ActionDialog.PickUp },
-                        )
-                    OrderStatus.PICKUP ->
-                        primaryActionButton(
-                            text = stringResource(R.string.start_delivery),
-                            modifier = Modifier.weight(1f),
-                            enabled = !isUpdating,
-                            onClick = { dialog = ActionDialog.Start },
-                        )
-                    OrderStatus.START_DELIVERY ->
-                        primaryActionButton(
-                            text = stringResource(R.string.deliver_order),
-                            modifier = Modifier.weight(1f),
-                            enabled = !isUpdating,
-                            onClick = { dialog = ActionDialog.Deliver },
-                        )
-                    else -> {}
-                }
-            }
-
+            myOrderCardPrimaryRow(order.status, isUpdating, callbacks.onDetails) { dialog = it }
             Spacer(Modifier.height(dimensionResource(R.dimen.smallerSpace)))
-
-            if (order.status == OrderStatus.PICKUP || order.status == OrderStatus.START_DELIVERY) {
-                OutlinedButton(
-                    onClick = { dialog = ActionDialog.Fail },
-                    enabled = !isUpdating,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(dimensionResource(R.dimen.mediumSpace)),
-                ) { Text(stringResource(R.string.delivery_failed)) }
-            }
-
-            callButton(onCall)
+            myOrderCardFailIfNeeded(order.status, isUpdating) { dialog = ActionDialog.Fail }
+            callButton(callbacks.onCall)
         }
     }
 
-    if (showReassign) {
-        reassignDialog(
-            onDismiss = { showReassign = false },
-            onConfirm = { assignee ->
-                LocalUiOnlyStatusBus.errorEvents.tryEmit(
-                    "$reassignLabel → $assignee" to null,
-                )
-                showReassign = false
-            },
-        )
-    }
+    myOrderCardReassignDialog(show = showReassign, onClose = { showReassign = false })
 
+    myOrderCardDialogsHost(
+        dialog = dialog,
+        onDismiss = { dialog = null },
+        onConfirmForward = { act ->
+            callbacks.onAction(act)
+            dialog = null
+        },
+    )
+}
+
+@Composable
+private fun myOrderCardHeader(
+    order: OrderInfo,
+    isUpdating: Boolean,
+    onReassignRequested: () -> Unit,
+    updateVm: UpdateOrderStatusViewModel,
+) {
+    orderHeaderWithMenu(
+        order = order,
+        enabled = !isUpdating,
+        onPickUp = { updateVm.update(order.id, OrderStatus.PICKUP) },
+        onCancel = { updateVm.update(order.id, OrderStatus.CANCELED) },
+        onReassign = onReassignRequested,
+    )
+}
+
+@Composable
+private fun myOrderCardPrimaryRow(
+    status: OrderStatus,
+    isUpdating: Boolean,
+    onDetails: () -> Unit,
+    setDialog: (ActionDialog) -> Unit,
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.smallerSpace))) {
+        OutlinedButton(
+            onClick = onDetails,
+            enabled = !isUpdating,
+            modifier = Modifier.weight(DETAILS_BUTTON_WEIGHT),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
+            border = BorderStroke(OUTLINE_STROKE, MaterialTheme.colorScheme.primary),
+            shape = RoundedCornerShape(dimensionResource(R.dimen.mediumSpace)),
+        ) {
+            Spacer(Modifier.width(dimensionResource(R.dimen.smallerSpace)))
+            Text(text = stringResource(R.string.order_details), style = MaterialTheme.typography.titleSmall, maxLines = 1)
+        }
+
+        when (status) {
+            OrderStatus.ADDED -> myOrderCardPrimaryAction(R.string.confirm_order, isUpdating) { setDialog(ActionDialog.Confirm) }
+            OrderStatus.CONFIRMED -> myOrderCardPrimaryAction(R.string.pick_order, isUpdating) { setDialog(ActionDialog.PickUp) }
+            OrderStatus.PICKUP -> myOrderCardPrimaryAction(R.string.start_delivery, isUpdating) { setDialog(ActionDialog.Start) }
+            OrderStatus.START_DELIVERY -> myOrderCardPrimaryAction(R.string.deliver_order, isUpdating) { setDialog(ActionDialog.Deliver) }
+            else -> Unit
+        }
+    }
+}
+
+@Composable
+private fun RowScope.myOrderCardPrimaryAction(
+    @StringRes labelRes: Int,
+    isUpdating: Boolean,
+    onClick: () -> Unit,
+) {
+    primaryActionButton(
+        text = stringResource(labelRes),
+        modifier = Modifier.weight(1f),
+        enabled = !isUpdating,
+        onClick = onClick,
+    )
+}
+
+@Composable
+private fun myOrderCardFailIfNeeded(
+    status: OrderStatus,
+    isUpdating: Boolean,
+    onFail: () -> Unit,
+) {
+    if (status == OrderStatus.PICKUP || status == OrderStatus.START_DELIVERY) {
+        OutlinedButton(
+            onClick = onFail,
+            enabled = !isUpdating,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(dimensionResource(R.dimen.mediumSpace)),
+        ) { Text(stringResource(R.string.delivery_failed)) }
+    }
+}
+
+@Composable
+private fun myOrderCardReassignDialog(
+    show: Boolean,
+    onClose: () -> Unit,
+) {
+    if (!show) return
+    val reassignLabel = stringResource(R.string.reassign_order)
+    reassignDialog(
+        onDismiss = onClose,
+        onConfirm = { assignee ->
+            LocalUiOnlyStatusBus.errorEvents.tryEmit("$reassignLabel → $assignee" to null)
+            onClose()
+        },
+    )
+}
+
+@Composable
+private fun myOrderCardDialogsHost(
+    dialog: ActionDialog?,
+    onDismiss: () -> Unit,
+    onConfirmForward: (ActionDialog) -> Unit,
+) {
     when (dialog) {
         ActionDialog.Confirm ->
-            simpleConfirmDialog(
-                title = stringResource(R.string.confirm_order),
-                onDismiss = { dialog = null },
-                onConfirm = {
-                    onAction(ActionDialog.Confirm)
-                    dialog = null
-                },
-            )
+            myOrderCardSimpleDialog(R.string.confirm_order, onDismiss) {
+                onConfirmForward(ActionDialog.Confirm)
+            }
         ActionDialog.PickUp ->
-            simpleConfirmDialog(
-                title = stringResource(R.string.pick_order),
-                onDismiss = { dialog = null },
-                onConfirm = {
-                    onAction(ActionDialog.PickUp)
-                    dialog = null
-                },
-            )
+            myOrderCardSimpleDialog(R.string.pick_order, onDismiss) {
+                onConfirmForward(ActionDialog.PickUp)
+            }
         ActionDialog.Start ->
-            simpleConfirmDialog(
-                title = stringResource(R.string.start_delivery),
-                onDismiss = { dialog = null },
-                onConfirm = {
-                    onAction(ActionDialog.Start)
-                    dialog = null
-                },
-            )
+            myOrderCardSimpleDialog(R.string.start_delivery, onDismiss) {
+                onConfirmForward(ActionDialog.Start)
+            }
         ActionDialog.Deliver ->
-            deliverDialog(
-                onDismiss = { dialog = null },
-                onConfirm = {
-                    onAction(ActionDialog.Deliver)
-                    dialog = null
-                },
-            )
+            deliverDialog(onDismiss = onDismiss) {
+                onConfirmForward(ActionDialog.Deliver)
+            }
         ActionDialog.Fail ->
             reasonDialog(
                 title = stringResource(R.string.delivery_failed),
-                onDismiss = { dialog = null },
-                onConfirm = {
-                    onAction(ActionDialog.Fail)
-                    dialog = null
-                },
-            )
-        null -> {}
+                onDismiss = onDismiss,
+            ) { onConfirmForward(ActionDialog.Fail) }
+        null -> Unit
     }
+}
+
+@Composable
+private fun myOrderCardSimpleDialog(
+    @StringRes titleRes: Int,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    simpleConfirmDialog(
+        title = stringResource(titleRes),
+        onDismiss = onDismiss,
+        onConfirm = onConfirm,
+    )
 }
