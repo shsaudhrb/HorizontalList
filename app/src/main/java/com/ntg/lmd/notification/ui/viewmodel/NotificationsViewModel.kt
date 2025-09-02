@@ -78,11 +78,12 @@ class NotificationsViewModel(
         combine(_filter, repoChanges) { currentFilter, _ -> currentFilter }
             .flatMapLatest { current ->
                 Pager(
-                    config = PagingConfig(
-                        pageSize = OrdersPaging.PAGE_SIZE,
-                        initialLoadSize = OrdersPaging.PAGE_SIZE,
-                        enablePlaceholders = false,
-                    ),
+                    config =
+                        PagingConfig(
+                            pageSize = OrdersPaging.PAGE_SIZE,
+                            initialLoadSize = OrdersPaging.PAGE_SIZE,
+                            enablePlaceholders = false,
+                        ),
                     pagingSourceFactory = {
                         NotificationsPagingSource(
                             repo = repo,

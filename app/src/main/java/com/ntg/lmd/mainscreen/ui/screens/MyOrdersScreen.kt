@@ -128,9 +128,14 @@ fun myOrdersScreen(
         onRetry = { agentsVm.load() },
         onSelect = { user ->
             val orderId = reassignOrderId ?: return@reassignBottomSheet
-            OrderLogger.uiTap(orderId,
-                state.orders.firstOrNull
-                { it.id == orderId }?.orderNumber, "Menu:Reassign→${user.name}")
+            OrderLogger.uiTap(
+                orderId,
+                state.orders
+                    .firstOrNull
+                    { it.id == orderId }
+                    ?.orderNumber,
+                "Menu:Reassign→${user.name}",
+            )
             updateVm.update(orderId, OrderStatus.REASSIGNED, assignedAgentId = user.id)
             reassignOrderId = null
         },

@@ -54,7 +54,7 @@ fun orderList(
                 myUserId != null &&
                     serverOrder.assignedAgentId != null &&
                     serverOrder.assignedAgentId != myUserId
-            val shouldHide = serverOrder.status.isTerminal() || movedAway
+            val shouldHide = serverOrder.status?.isTerminal() == true || movedAway
             if (shouldHide) hiddenIds = hiddenIds + serverOrder.id
             callbacks.onRefresh()
         }
@@ -65,13 +65,16 @@ fun orderList(
             state.orders
                 .asSequence()
                 .filter { it.id !in hiddenIds }
-                .filter { order -> !order.status.isTerminal() && order.isMine(myUserId) }
+                .filter { order -> !order.status?.isTerminal()!! && order.isMine(myUserId) }
                 .toList()
         }
     }
 
     LaunchedEffect(state.orders, myUserId, hiddenIds, filteredOrders) {
-        Log.d("OrderListFilter", "me=$myUserId total=${state.orders.size} hidden=${hiddenIds.size} filtered=${filteredOrders.size}")
+        Log.d(
+            "OrderListFilter",
+            "me=$myUserId total=${state.orders.size} hidden=${hiddenIds.size} filtered=${filteredOrders.size}",
+        )
         filteredOrders.take(5).forEach { o ->
             Log.d("OrderListFilter", "id=${o.id} status=${o.status} assigned=${o.assignedAgentId}")
         }
@@ -84,10 +87,13 @@ fun orderList(
             myOrderCard(
                 order = order,
                 isUpdating = state.updatingIds.contains(order.id),
-                onDetails = { callbacks.onDetails(order.id) },
-                onCall = { callbacks.onCall(order.id) },
-                onAction = { d -> callbacks.onAction(order.id, d) },
-                onReassignRequested = { callbacks.onReassignRequested(order.id) },
+                callbacks =
+                    com.ntg.lmd.mainscreen.ui.model.MyOrderCardCallbacks(
+                        onDetails = { callbacks.onDetails(order.id) },
+                        onCall = { callbacks.onCall(order.id) },
+                        onAction = { d -> callbacks.onAction(order.id, d) },
+                        onReassignRequested = { callbacks.onReassignRequested(order.id) },
+                    ),
                 updateVm = updateVm,
             )
         },

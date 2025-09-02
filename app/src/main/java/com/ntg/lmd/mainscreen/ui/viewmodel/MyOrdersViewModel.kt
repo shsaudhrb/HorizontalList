@@ -219,15 +219,18 @@ class MyOrdersViewModel(
     }
 }
 
-/* ---- File-level helpers ---- */
+// ---- File-level helpers ----
 
-private fun currentFilteredFor(queryRaw: String, all: List<OrderInfo>): List<OrderInfo> {
+private fun currentFilteredFor(
+    queryRaw: String,
+    all: List<OrderInfo>,
+): List<OrderInfo> {
     val q = queryRaw.trim()
     if (q.isBlank()) return all
     return all.filter { o ->
         o.orderNumber.contains(q, ignoreCase = true) ||
-                o.name.contains(q, ignoreCase = true) ||
-                (o.details?.contains(q, ignoreCase = true) == true)
+            o.name.contains(q, ignoreCase = true) ||
+            (o.details?.contains(q, ignoreCase = true) == true)
     }
 }
 
@@ -292,10 +295,11 @@ private fun handleInitialLoadError(
     }
 }
 
-private fun messageFor(e: Exception): String = when (e) {
-    is HttpException -> "HTTP ${e.code()}"
-    is UnknownHostException -> "No internet connection"
-    is SocketTimeoutException -> "Request timed out"
-    is IOException -> "Network error"
-    else -> e.message ?: "Unknown error"
-}
+private fun messageFor(e: Exception): String =
+    when (e) {
+        is HttpException -> "HTTP ${e.code()}"
+        is UnknownHostException -> "No internet connection"
+        is SocketTimeoutException -> "Request timed out"
+        is IOException -> "Network error"
+        else -> e.message ?: "Unknown error"
+    }

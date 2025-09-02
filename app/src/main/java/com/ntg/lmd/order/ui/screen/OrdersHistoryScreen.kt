@@ -74,7 +74,7 @@ private fun ordersHistoryStateHolders(
             token,
             uiState.orders.size,
             uiState.listState,
-            registerOpenMenu
+            registerOpenMenu,
         ) {
             uiState.setMenuOpen(true)
         },
@@ -206,23 +206,24 @@ private fun ordersHistoryUi(
         isLoadingMore = state.isLoadingMore,
         endReached = state.endReached,
         onLoadMore = config.onLoadMore,
-
-        contentPadding = PaddingValues(
-            top = 16.dp,
-            start = 16.dp,
-            end = 16.dp,
-            bottom = 16.dp,
-        ),
+        contentPadding =
+            PaddingValues(
+                top = 16.dp,
+                start = 16.dp,
+                end = 16.dp,
+                bottom = 16.dp,
+            ),
     )
 
     ordersHistoryDialogs(
         state = OrdersDialogsState(config.showFilterDialog, config.showSortDialog, config.filter),
-        callbacks = OrdersDialogsCallbacks(
-            onFilterDismiss = config.onDismissFilter,
-            onSortDismiss = config.onDismissSort,
-            onApplyFilter = config.onApplyFilter,
-            onApplySort = config.onApplySort,
-        ),
+        callbacks =
+            OrdersDialogsCallbacks(
+                onFilterDismiss = config.onDismissFilter,
+                onSortDismiss = config.onDismissSort,
+                onApplyFilter = config.onApplyFilter,
+                onApplySort = config.onApplySort,
+            ),
     )
 
     ordersHistoryMenu(
