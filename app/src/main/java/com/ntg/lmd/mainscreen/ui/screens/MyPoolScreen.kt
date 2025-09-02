@@ -192,7 +192,6 @@ private fun ordersHorizontalList(
 ) {
     generalHorizontalList(
         orders = state.orders,
-        selectedOrderNumber = state.mapUi.selected?.orderNumber,
         callbacks =
             HorizontalListCallbacks(
                 onCenteredOrderChange = { order, index ->

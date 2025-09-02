@@ -46,13 +46,11 @@ class AuthRepositoryImp(
             ?: throw IllegalStateException(response.error ?: "Login failed: no data received")
     }
 
-    // Saves tokens and user atomically from payload; throws if any required token field missing
     private fun persistTokensAndUser(payload: LoginData) {
-        val access = payload.accessToken ?: throw IllegalStateException("Missing access token")
-        val refresh = payload.refreshToken ?: throw IllegalStateException("Missing refresh token")
-        val expiresAt = payload.expiresAt ?: throw IllegalStateException("Missing access token expiry")
-        val refreshExpiresAt =
-            payload.refreshExpiresAt ?: throw IllegalStateException("Missing refresh token expiry")
+        val access = checkNotNull(payload.accessToken) { "Missing access token" }
+        val refresh = checkNotNull(payload.refreshToken) { "Missing refresh token" }
+        val expiresAt = checkNotNull(payload.expiresAt) { "Missing access token expiry" }
+        val refreshExpiresAt = checkNotNull(payload.refreshExpiresAt) { "Missing refresh token expiry" }
 
         store.saveFromPayload(
             access = access,
@@ -61,12 +59,13 @@ class AuthRepositoryImp(
             refreshExpiresAt = refreshExpiresAt,
         )
 
-        val u = payload.user
-        userStore.saveUser(
-            id = u?.id,
-            email = u?.email,
-            fullName = u?.fullName,
-        )
+        payload.user?.let { user ->
+            userStore.saveUser(
+                id = user.id,
+                email = user.email,
+                fullName = user.fullName,
+            )
+        }
     }
 
     private fun captureLastLoginName(payload: LoginData) {

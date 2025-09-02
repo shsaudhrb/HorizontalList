@@ -3,8 +3,7 @@ package com.ntg.lmd.mainscreen.ui.model
 import android.content.Context
 import androidx.compose.foundation.lazy.LazyListState
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
-import com.ntg.lmd.mainscreen.ui.components.ActionDialog
-import com.ntg.lmd.mainscreen.ui.screens.orders.model.MyOrdersUiState
+import com.ntg.lmd.mainscreen.ui.components.OrderActions
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyOrdersViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel.OrderLogger
@@ -23,7 +22,7 @@ data class OrdersContentParams(
 data class MyOrderCardCallbacks(
     val onDetails: () -> Unit,
     val onCall: () -> Unit,
-    val onAction: (ActionDialog) -> Unit,
+    val onAction: (OrderActions) -> Unit,
     val onReassignRequested: () -> Unit,
 )
 
@@ -45,7 +44,7 @@ data class OrderListCallbacks(
     val onReassignRequested: (String) -> Unit,
     val onDetails: (String) -> Unit,
     val onCall: (String) -> Unit,
-    val onAction: (String, ActionDialog) -> Unit,
+    val onAction: (String, OrderActions) -> Unit,
     val onRefresh: () -> Unit,
 )
 

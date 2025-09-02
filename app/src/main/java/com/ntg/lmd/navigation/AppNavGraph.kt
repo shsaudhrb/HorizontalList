@@ -18,6 +18,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -49,31 +50,13 @@ fun appNavGraph(
         navController = rootNavController,
         startDestination = Screen.Splash.route,
     ) {
-        // ---------- Splash ----------
         composable(Screen.Splash.route) {
-            SplashScreen(
-                navController = rootNavController,
-                onDecide = { isLoggedIn ->
-                    val wantsNotifications = deeplinkVM.consumeOpenNotifications()
-                    rootNavController.navigate(
-                        when {
-                            !isLoggedIn -> Screen.Login.route
-                            wantsNotifications -> "${Screen.Drawer.route}?openNotifications=true"
-                            else -> Screen.Drawer.route
-                        },
-                    ) {
-                        popUpTo(Screen.Splash.route) { inclusive = true }
-                        launchSingleTop = true
-                    }
-                },
-            )
+            handleSplashNavigation(rootNavController, deeplinkVM)
         }
 
-        // ---------- Auth ----------
         composable(Screen.Login.route) { LoginScreen(navController = rootNavController) }
         composable(Screen.Register.route) { RegisterScreen(navController = rootNavController) }
 
-        // ---------- Drawer Host (AFTER LOGIN) ----------
         composable(
             route = Screen.Drawer.route + "?openNotifications={openNotifications}",
             arguments =
@@ -85,53 +68,146 @@ fun appNavGraph(
                 ),
             deepLinks = listOf(navDeepLink { uriPattern = "myapp://notifications" }),
         ) { backStackEntry ->
-            val argOpen = backStackEntry.arguments?.getBoolean("openNotifications") ?: false
-
-            val deepLinkIntent: Intent? =
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    backStackEntry.arguments?.getParcelable(
-                        "android-support-nav:controller:deepLinkIntent",
-                        Intent::class.java,
-                    )
-                } else {
-                    @Suppress("DEPRECATION")
-                    backStackEntry.arguments?.getParcelable("android-support-nav:controller:deepLinkIntent")
-                }
-            val uri = deepLinkIntent?.data
-            val deepOpen = (uri?.scheme == "myapp" && uri.host == "notifications")
-            val ctx = LocalContext.current
-            val settingsVm: com.ntg.lmd.settings.ui.viewmodel.SettingsViewModel =
-                viewModel(
-                    factory =
-                        com.ntg.lmd.settings.ui.viewmodel.SettingsViewModelFactory(
-                            ctx.applicationContext as Application,
-                        ),
-                )
-
-            val logoutState by settingsVm.logoutState.collectAsState()
-
-            LaunchedEffect(logoutState) {
-                when (logoutState) {
-                    is com.ntg.lmd.settings.data.LogoutUiState.Success -> {
-                        rootNavController.navigate(Screen.Login.route) {
-                            popUpTo(Screen.Drawer.route) { inclusive = true }
-                            launchSingleTop = true
-                        }
-                        settingsVm.resetLogoutState()
-                    }
-                    is com.ntg.lmd.settings.data.LogoutUiState.Error -> {
-                        settingsVm.resetLogoutState()
-                    }
-                    else -> Unit
-                }
-            }
-            drawerHost(
-                onLogout = { settingsVm.logout() },
-                openNotifications = argOpen || deepOpen,
-            )
+            handleDrawerHost(backStackEntry, rootNavController)
         }
     }
 }
+
+@Composable
+private fun handleSplashNavigation(
+    navController: NavHostController,
+    deeplinkVM: DeepLinkViewModel,
+) {
+    SplashScreen(
+        navController = navController,
+        onDecide = { isLoggedIn ->
+            val wantsNotifications = deeplinkVM.consumeOpenNotifications()
+            navController.navigate(
+                when {
+                    !isLoggedIn -> Screen.Login.route
+                    wantsNotifications -> "${Screen.Drawer.route}?openNotifications=true"
+                    else -> Screen.Drawer.route
+                },
+            ) {
+                popUpTo(Screen.Splash.route) { inclusive = true }
+                launchSingleTop = true
+            }
+        },
+    )
+}
+
+@Composable
+private fun handleDrawerHost(
+    backStackEntry: NavBackStackEntry,
+    rootNavController: NavHostController,
+) {
+    val argOpen = backStackEntry.arguments?.getBoolean("openNotifications") ?: false
+
+    val deepLinkIntent: Intent? =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            backStackEntry.arguments?.getParcelable("android-support-nav:controller:deepLinkIntent", Intent::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            backStackEntry.arguments?.getParcelable("android-support-nav:controller:deepLinkIntent")
+        }
+
+    val uri = deepLinkIntent?.data
+    val deepOpen = (uri?.scheme == "myapp" && uri.host == "notifications")
+
+    val ctx = LocalContext.current
+    val settingsVm: com.ntg.lmd.settings.ui.viewmodel.SettingsViewModel =
+        viewModel(
+            factory =
+                com.ntg.lmd.settings.ui.viewmodel
+                    .SettingsViewModelFactory(ctx.applicationContext as Application),
+        )
+
+    val logoutState by settingsVm.logoutState.collectAsState()
+
+    LaunchedEffect(logoutState) {
+        when (logoutState) {
+            is com.ntg.lmd.settings.data.LogoutUiState.Success -> {
+                rootNavController.navigate(Screen.Login.route) {
+                    popUpTo(Screen.Drawer.route) { inclusive = true }
+                    launchSingleTop = true
+                }
+                settingsVm.resetLogoutState()
+            }
+            is com.ntg.lmd.settings.data.LogoutUiState.Error -> {
+                settingsVm.resetLogoutState()
+            }
+            else -> Unit
+        }
+    }
+
+    drawerHost(
+        onLogout = { settingsVm.logout() },
+        openNotifications = argOpen || deepOpen,
+    )
+}
+
+@Composable
+private fun buildRouteUiSpec(
+    currentRoute: String,
+    nav: NavHostController,
+    openOrdersHistoryMenu: (() -> Unit)?,
+): RouteUiSpec =
+    when (currentRoute) {
+        Screen.GeneralPool.route ->
+            RouteUiSpec(
+                title = stringResource(R.string.menu_general_pool),
+                showSearchIcon = true,
+                searchPlaceholder = stringResource(R.string.search_order_number_customer_name),
+                actionButtonLabel = stringResource(R.string.my_pool),
+                onActionButtonClick = { nav.navigateSingleTop(Screen.MyPool.route) },
+            )
+        Screen.MyPool.route ->
+            RouteUiSpec(
+                title = stringResource(R.string.my_pool),
+                showSearchIcon = false,
+                actionButtonLabel = stringResource(R.string.menu_general_pool),
+                onActionButtonClick = { nav.navigateSingleTop(Screen.GeneralPool.route) },
+            )
+        Screen.MyOrders.route ->
+            RouteUiSpec(
+                title = stringResource(R.string.menu_my_orders),
+                showSearchIcon = true,
+                searchPlaceholder = stringResource(R.string.search_order_number),
+            )
+        Screen.DeliveriesLog.route ->
+            RouteUiSpec(
+                title = stringResource(R.string.menu_deliveries_log),
+                showSearchIcon = true,
+                searchPlaceholder = stringResource(R.string.search_order_number),
+            )
+        Screen.OrdersHistory.route ->
+            RouteUiSpec(
+                title = stringResource(R.string.menu_order_history),
+                showSearchIcon = false,
+                actionIcon = Icons.Filled.MoreVert,
+                onActionIconClick = { openOrdersHistoryMenu?.invoke() },
+            )
+        Screen.Notifications.route ->
+            RouteUiSpec(
+                title = stringResource(R.string.menu_notifications),
+                showSearchIcon = false,
+            )
+        Screen.Settings.route ->
+            RouteUiSpec(
+                title = stringResource(R.string.menu_settings),
+                showSearchIcon = false,
+            )
+        Screen.Chat.route ->
+            RouteUiSpec(
+                title = stringResource(R.string.menu_chat),
+                showSearchIcon = false,
+            )
+        else ->
+            RouteUiSpec(
+                title = stringResource(R.string.app_name),
+                showSearchIcon = false,
+            )
+    }
 
 @Composable
 private fun drawerHost(
@@ -230,72 +306,3 @@ private fun buildTopBar(
         searchActionIcon = if (spec.showSearchIcon) Icons.Filled.Search else null,
         onSearchIconClick = { search.onToggle(true) },
     )
-
-// ======================= Route UI Spec =======================
-
-@Composable
-private fun buildRouteUiSpec(
-    currentRoute: String,
-    nav: NavHostController,
-    openOrdersHistoryMenu: (() -> Unit)?,
-): RouteUiSpec =
-    when (currentRoute) {
-        Screen.GeneralPool.route ->
-            RouteUiSpec(
-                title = stringResource(R.string.menu_general_pool),
-                showSearchIcon = true,
-                searchPlaceholder = stringResource(R.string.search_order_number_customer_name),
-                actionButtonLabel = stringResource(R.string.my_pool),
-                onActionButtonClick = { nav.navigateSingleTop(Screen.MyPool.route) },
-            )
-
-        Screen.MyPool.route ->
-            RouteUiSpec(
-                title = stringResource(R.string.my_pool),
-                showSearchIcon = false,
-                actionButtonLabel = stringResource(R.string.menu_general_pool),
-                onActionButtonClick = { nav.navigateSingleTop(Screen.GeneralPool.route) },
-            )
-
-        Screen.MyOrders.route ->
-            RouteUiSpec(
-                title = stringResource(R.string.menu_my_orders),
-                showSearchIcon = true,
-                searchPlaceholder = stringResource(R.string.search_order_number),
-            )
-
-        Screen.DeliveriesLog.route ->
-            RouteUiSpec(
-                title = stringResource(R.string.menu_deliveries_log),
-                showSearchIcon = true,
-                searchPlaceholder = stringResource(R.string.search_order_number),
-            )
-
-        Screen.OrdersHistory.route ->
-            RouteUiSpec(
-                title = stringResource(R.string.menu_order_history),
-                showSearchIcon = false,
-                actionIcon = Icons.Filled.MoreVert,
-                onActionIconClick = { openOrdersHistoryMenu?.invoke() },
-            )
-
-        Screen.Notifications.route ->
-            RouteUiSpec(
-                title = stringResource(R.string.menu_notifications),
-                showSearchIcon = false,
-            )
-
-        Screen.Settings.route ->
-            RouteUiSpec(
-                title = stringResource(R.string.menu_settings),
-                showSearchIcon = false,
-            )
-
-        Screen.Chat.route ->
-            RouteUiSpec(
-                title = stringResource(R.string.menu_chat),
-                showSearchIcon = false,
-            )
-
-        else -> RouteUiSpec(title = stringResource(R.string.app_name), showSearchIcon = false)
-    }

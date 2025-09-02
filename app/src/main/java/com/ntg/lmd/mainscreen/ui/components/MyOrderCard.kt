@@ -43,7 +43,7 @@ fun myOrderCard(
     callbacks: MyOrderCardCallbacks,
     updateVm: UpdateOrderStatusViewModel,
 ) {
-    var dialog by remember { mutableStateOf<ActionDialog?>(null) }
+    var dialog by remember { mutableStateOf<OrderActions?>(null) }
     var showReassign by remember { mutableStateOf(false) }
 
     Card(
@@ -57,7 +57,7 @@ fun myOrderCard(
             Spacer(Modifier.height(dimensionResource(R.dimen.mediumSpace)))
             myOrderCardPrimaryRow(order.status, isUpdating, callbacks.onDetails) { dialog = it }
             Spacer(Modifier.height(dimensionResource(R.dimen.smallerSpace)))
-            myOrderCardFailIfNeeded(order.status, isUpdating) { dialog = ActionDialog.Fail }
+            myOrderCardFailIfNeeded(order.status, isUpdating) { dialog = OrderActions.Fail }
             callButton(callbacks.onCall)
         }
     }
@@ -95,7 +95,7 @@ private fun myOrderCardPrimaryRow(
     status: OrderStatus?,
     isUpdating: Boolean,
     onDetails: () -> Unit,
-    setDialog: (ActionDialog) -> Unit,
+    setDialog: (OrderActions) -> Unit,
 ) {
     Row(horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.smallerSpace))) {
         detailsButton(isUpdating, onDetails)
@@ -128,12 +128,12 @@ private fun RowScope.detailsButton(
     }
 }
 
-private fun actionForStatus(status: OrderStatus?): Pair<Int, ActionDialog>? =
+private fun actionForStatus(status: OrderStatus?): Pair<Int, OrderActions>? =
     when (status) {
-        OrderStatus.ADDED -> R.string.confirm_order to ActionDialog.Confirm
-        OrderStatus.CONFIRMED -> R.string.pick_order to ActionDialog.PickUp
-        OrderStatus.PICKUP -> R.string.start_delivery to ActionDialog.Start
-        OrderStatus.START_DELIVERY -> R.string.deliver_order to ActionDialog.Deliver
+        OrderStatus.ADDED -> R.string.confirm_order to OrderActions.Confirm
+        OrderStatus.CONFIRMED -> R.string.pick_order to OrderActions.PickUp
+        OrderStatus.PICKUP -> R.string.start_delivery to OrderActions.Start
+        OrderStatus.START_DELIVERY -> R.string.deliver_order to OrderActions.Deliver
         else -> null
     }
 
@@ -185,32 +185,32 @@ private fun myOrderCardReassignDialog(
 
 @Composable
 private fun myOrderCardDialogsHost(
-    dialog: ActionDialog?,
+    dialog: OrderActions?,
     onDismiss: () -> Unit,
-    onConfirmForward: (ActionDialog) -> Unit,
+    onConfirmForward: (OrderActions) -> Unit,
 ) {
     when (dialog) {
-        ActionDialog.Confirm ->
+        OrderActions.Confirm ->
             myOrderCardSimpleDialog(R.string.confirm_order, onDismiss) {
-                onConfirmForward(ActionDialog.Confirm)
+                onConfirmForward(OrderActions.Confirm)
             }
-        ActionDialog.PickUp ->
+        OrderActions.PickUp ->
             myOrderCardSimpleDialog(R.string.pick_order, onDismiss) {
-                onConfirmForward(ActionDialog.PickUp)
+                onConfirmForward(OrderActions.PickUp)
             }
-        ActionDialog.Start ->
+        OrderActions.Start ->
             myOrderCardSimpleDialog(R.string.start_delivery, onDismiss) {
-                onConfirmForward(ActionDialog.Start)
+                onConfirmForward(OrderActions.Start)
             }
-        ActionDialog.Deliver ->
+        OrderActions.Deliver ->
             deliverDialog(onDismiss = onDismiss) {
-                onConfirmForward(ActionDialog.Deliver)
+                onConfirmForward(OrderActions.Deliver)
             }
-        ActionDialog.Fail ->
+        OrderActions.Fail ->
             reasonDialog(
                 title = stringResource(R.string.delivery_failed),
                 onDismiss = onDismiss,
-            ) { onConfirmForward(ActionDialog.Fail) }
+            ) { onConfirmForward(OrderActions.Fail) }
         null -> Unit
     }
 }

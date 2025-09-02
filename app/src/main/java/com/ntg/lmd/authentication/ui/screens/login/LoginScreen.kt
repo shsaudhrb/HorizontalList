@@ -94,7 +94,7 @@ private fun collectLoginUi(viewModel: LoginViewModel): LoginUiState {
 }
 
 @Composable
-private fun rememberCardAndFocusHandlers(viewModel: LoginViewModel): Triple<CardUi, (Boolean) -> Unit, (Boolean) -> Unit> {
+fun rememberCardAndFocusHandlers(viewModel: LoginViewModel): Triple<CardUi, (Boolean) -> Unit, (Boolean) -> Unit> {
     var anyFieldFocused by remember { mutableStateOf(false) }
 
     val transition = updateTransition(targetState = anyFieldFocused, label = "focusTransition")

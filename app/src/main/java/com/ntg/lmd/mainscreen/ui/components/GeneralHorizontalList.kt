@@ -24,7 +24,6 @@ import kotlinx.coroutines.flow.map
 @Composable
 fun generalHorizontalList(
     orders: List<OrderInfo>,
-    selectedOrderNumber: String?,
     modifier: Modifier = Modifier,
     callbacks: HorizontalListCallbacks = HorizontalListCallbacks(),
     cardContent: @Composable (OrderInfo, Int) -> Unit,

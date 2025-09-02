@@ -12,11 +12,11 @@ import androidx.compose.ui.Modifier
 import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
 import com.ntg.lmd.mainscreen.ui.model.LocalUiOnlyStatusBus
+import com.ntg.lmd.mainscreen.ui.model.MyOrdersUiState
 import com.ntg.lmd.mainscreen.ui.model.OrderListCallbacks
 import com.ntg.lmd.mainscreen.ui.model.OrderListState
 import com.ntg.lmd.mainscreen.ui.model.OrdersContentParams
 import com.ntg.lmd.mainscreen.ui.screens.orderList
-import com.ntg.lmd.mainscreen.ui.screens.orders.model.MyOrdersUiState
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
 
 @Composable
@@ -84,29 +84,29 @@ private fun handleCallClick(
 
 private fun handleOrderAction(
     orderId: String,
-    dialog: ActionDialog,
+    dialog: OrderActions,
     uiState: MyOrdersUiState,
     updateVm: UpdateOrderStatusViewModel,
 ) {
     val order = uiState.orders.firstOrNull { it.id == orderId }
     val label =
         when (dialog) {
-            ActionDialog.Confirm -> "Confirm"
-            ActionDialog.PickUp -> "PickUp"
-            ActionDialog.Start -> "StartDelivery"
-            ActionDialog.Deliver -> "Deliver"
-            ActionDialog.Fail -> "DeliveryFailed"
+            OrderActions.Confirm -> "Confirm"
+            OrderActions.PickUp -> "PickUp"
+            OrderActions.Start -> "StartDelivery"
+            OrderActions.Deliver -> "Deliver"
+            OrderActions.Fail -> "DeliveryFailed"
         }
 
     UpdateOrderStatusViewModel.OrderLogger.uiTap(orderId, order?.orderNumber, label)
 
     val status =
         when (dialog) {
-            ActionDialog.Confirm -> OrderStatus.CONFIRMED
-            ActionDialog.PickUp -> OrderStatus.PICKUP
-            ActionDialog.Start -> OrderStatus.START_DELIVERY
-            ActionDialog.Deliver -> OrderStatus.DELIVERY_DONE
-            ActionDialog.Fail -> OrderStatus.DELIVERY_FAILED
+            OrderActions.Confirm -> OrderStatus.CONFIRMED
+            OrderActions.PickUp -> OrderStatus.PICKUP
+            OrderActions.Start -> OrderStatus.START_DELIVERY
+            OrderActions.Deliver -> OrderStatus.DELIVERY_DONE
+            OrderActions.Fail -> OrderStatus.DELIVERY_FAILED
         }
 
     updateVm.update(orderId, status)

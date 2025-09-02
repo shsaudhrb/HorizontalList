@@ -7,7 +7,7 @@ import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
 import com.ntg.lmd.mainscreen.domain.usecase.GetMyOrdersUseCase
 import com.ntg.lmd.mainscreen.ui.model.LocalUiOnlyStatusBus
-import com.ntg.lmd.mainscreen.ui.screens.orders.model.MyOrdersUiState
+import com.ntg.lmd.mainscreen.ui.model.MyOrdersUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
