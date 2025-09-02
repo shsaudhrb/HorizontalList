@@ -33,6 +33,7 @@ import com.ntg.lmd.mainscreen.ui.components.deliveryLogItem
 import com.ntg.lmd.mainscreen.ui.components.emptyState
 import com.ntg.lmd.mainscreen.ui.components.loadingFooter
 import com.ntg.lmd.mainscreen.ui.viewmodel.DeliveriesLogViewModel
+import com.ntg.lmd.order.domain.model.defaultVerticalListConfig
 import com.ntg.lmd.order.ui.components.verticalListComponent
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -67,18 +68,23 @@ fun deliveriesLogScreen(
         HorizontalDivider()
 
         Box(Modifier.weight(1f)) {
+            val config =
+                defaultVerticalListConfig(
+                    listState = listState,
+                    isRefreshing = ui.refreshing,
+                    onRefresh = { vm.refresh(ctx) },
+                    isLoadingMore = ui.loadingMore,
+                    endReached = ui.endReached,
+                    onLoadMore = { vm.loadMore(ctx) },
+                ).copy(
+                    emptyContent = { emptyState(Modifier.fillMaxSize()) },
+                    loadingFooter = { loadingFooter() },
+                )
             verticalListComponent(
                 items = ui.logs,
                 key = { it.orderId },
                 itemContent = { deliveryLogItem(it) },
-                listState = listState,
-                isRefreshing = ui.refreshing,
-                onRefresh = { vm.refresh(ctx) },
-                isLoadingMore = ui.loadingMore,
-                endReached = ui.endReached,
-                onLoadMore = { vm.loadMore(ctx) },
-                emptyContent = { emptyState(Modifier.fillMaxSize()) },
-                loadingFooter = { loadingFooter() },
+                config = config,
             )
         }
     }

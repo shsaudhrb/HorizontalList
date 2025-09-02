@@ -29,6 +29,7 @@ import com.ntg.lmd.order.domain.model.OrdersDialogsCallbacks
 import com.ntg.lmd.order.domain.model.OrdersDialogsState
 import com.ntg.lmd.order.domain.model.OrdersHistoryFilter
 import com.ntg.lmd.order.domain.model.OrdersHistoryUiState
+import com.ntg.lmd.order.domain.model.defaultVerticalListConfig
 import com.ntg.lmd.order.domain.model.usecase.GetOrdersUseCase
 import com.ntg.lmd.order.ui.components.OrdersHistoryEffectsConfig
 import com.ntg.lmd.order.ui.components.OrdersHistoryUiConfig
@@ -196,23 +197,29 @@ private fun ordersHistoryUi(
     config: OrdersHistoryUiConfig,
     onRefresh: () -> Unit,
 ) {
+    val listConfig =
+        defaultVerticalListConfig(
+            listState = listState,
+            isRefreshing = state.isRefreshing,
+            onRefresh = onRefresh,
+            isLoadingMore = state.isLoadingMore,
+            endReached = state.endReached,
+            onLoadMore = config.onLoadMore,
+        ).copy(
+            contentPadding =
+                PaddingValues(
+                    top = 16.dp,
+                    start = 16.dp,
+                    end = 16.dp,
+                    bottom = 16.dp,
+                ),
+        )
+
     verticalListComponent(
         items = state.orders,
         key = { order -> "${config.filter.ageAscending}:${config.filter.allowed}:${order.number}" },
         itemContent = { order -> orderHistoryCard(ctx, order) },
-        listState = listState,
-        isRefreshing = state.isRefreshing,
-        onRefresh = onRefresh,
-        isLoadingMore = state.isLoadingMore,
-        endReached = state.endReached,
-        onLoadMore = config.onLoadMore,
-        contentPadding =
-            PaddingValues(
-                top = 16.dp,
-                start = 16.dp,
-                end = 16.dp,
-                bottom = 16.dp,
-            ),
+        config = listConfig,
     )
 
     ordersHistoryDialogs(

@@ -58,6 +58,7 @@ import com.ntg.lmd.notification.ui.model.NotificationUi
 import com.ntg.lmd.notification.ui.model.relativeAgeLabel
 import com.ntg.lmd.notification.ui.viewmodel.NotificationsVMFactory
 import com.ntg.lmd.notification.ui.viewmodel.NotificationsViewModel
+import com.ntg.lmd.order.domain.model.defaultVerticalListConfig
 import com.ntg.lmd.order.ui.components.verticalListComponent
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -100,29 +101,34 @@ fun notificationScreen(viewModel: NotificationsViewModel = viewModel(factory = N
         Spacer(Modifier.height(dimensionResource(R.dimen.smallSpace)))
 
         Box(Modifier.weight(1f)) {
+            val config =
+                defaultVerticalListConfig(
+                    listState = listState,
+                    isRefreshing = isRefreshing,
+                    onRefresh = {
+                        scope.launch { listState.scrollToItem(0) }
+                        viewModel.addDummyAndRefresh()
+                        lazyPagingItems.refresh()
+                    },
+                    isLoadingMore = isLoadingMore,
+                    endReached = endReached,
+                    onLoadMore = {
+                        if (lazyPagingItems.loadState.append !is LoadState.Loading && !endReached) {
+                            val last = lazyPagingItems.itemCount - 1
+                            if (last >= 0) {
+                                @Suppress("UNUSED_EXPRESSION")
+                                lazyPagingItems[last]
+                            }
+                        }
+                    },
+                ).copy(
+                    emptyContent = { emptySection() },
+                )
             verticalListComponent(
                 items = items,
                 key = { item -> "$topId:${item.id}" },
                 itemContent = { notificationCard(it) },
-                listState = listState,
-                isRefreshing = isRefreshing,
-                onRefresh = {
-                    scope.launch { listState.scrollToItem(0) }
-                    viewModel.addDummyAndRefresh()
-                    lazyPagingItems.refresh()
-                },
-                isLoadingMore = isLoadingMore,
-                endReached = endReached,
-                onLoadMore = {
-                    if (lazyPagingItems.loadState.append !is LoadState.Loading && !endReached) {
-                        val last = lazyPagingItems.itemCount - 1
-                        if (last >= 0) {
-                            @Suppress("UNUSED_EXPRESSION")
-                            lazyPagingItems[last]
-                        }
-                    }
-                },
-                emptyContent = { emptySection() },
+                config = config,
             )
         }
     }
