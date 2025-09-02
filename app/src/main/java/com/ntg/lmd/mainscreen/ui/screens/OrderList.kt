@@ -27,8 +27,8 @@ import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
 import com.ntg.lmd.mainscreen.ui.components.ActionDialog
-import com.ntg.lmd.mainscreen.ui.components.MyOrderCardCallbacks
 import com.ntg.lmd.mainscreen.ui.components.myOrderCard
+import com.ntg.lmd.mainscreen.ui.model.MyOrderCardCallbacks
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
 
 data class OrderListState(
@@ -78,7 +78,11 @@ fun orderList(
     }
 
     LaunchedEffect(state.orders, myUserId, hiddenIds, filteredOrders) {
-        Log.d("OrderListFilter", "me=$myUserId total=${state.orders.size} hidden=${hiddenIds.size} filtered=${filteredOrders.size}")
+        Log.d(
+            "OrderListFilter",
+            "me=$myUserId total=${state.orders.size}" +
+                " hidden=${hiddenIds.size} filtered=${filteredOrders.size}",
+        )
         filteredOrders.take(5).forEach { o ->
             Log.d("OrderListFilter", "id=${o.id} status=${o.status} assigned=${o.assignedAgentId}")
         }

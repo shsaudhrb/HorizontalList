@@ -16,9 +16,6 @@ import java.io.IOException
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicReference
 
-private const val HTTP_UNAUTHORIZED = 401
-private const val MAX_AUTH_RETRIES = 1
-
 class TokenAuthenticator(
     private val store: SecureTokenStore,
     private val refreshApi: AuthApi,

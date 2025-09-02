@@ -33,14 +33,8 @@ import com.ntg.lmd.mainscreen.ui.components.OrdersUiConstants.CARD_ELEVATION
 import com.ntg.lmd.mainscreen.ui.components.OrdersUiConstants.DETAILS_BUTTON_WEIGHT
 import com.ntg.lmd.mainscreen.ui.components.OrdersUiConstants.OUTLINE_STROKE
 import com.ntg.lmd.mainscreen.ui.model.LocalUiOnlyStatusBus
+import com.ntg.lmd.mainscreen.ui.model.MyOrderCardCallbacks
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
-
-data class MyOrderCardCallbacks(
-    val onDetails: () -> Unit,
-    val onCall: () -> Unit,
-    val onAction: (ActionDialog) -> Unit,
-    val onReassignRequested: () -> Unit,
-)
 
 @Composable
 fun myOrderCard(
@@ -113,14 +107,30 @@ private fun myOrderCardPrimaryRow(
             shape = RoundedCornerShape(dimensionResource(R.dimen.mediumSpace)),
         ) {
             Spacer(Modifier.width(dimensionResource(R.dimen.smallerSpace)))
-            Text(text = stringResource(R.string.order_details), style = MaterialTheme.typography.titleSmall, maxLines = 1)
+            Text(
+                text = stringResource(R.string.order_details),
+                style = MaterialTheme.typography.titleSmall,
+                maxLines = 1,
+            )
         }
 
         when (status) {
-            OrderStatus.ADDED -> myOrderCardPrimaryAction(R.string.confirm_order, isUpdating) { setDialog(ActionDialog.Confirm) }
-            OrderStatus.CONFIRMED -> myOrderCardPrimaryAction(R.string.pick_order, isUpdating) { setDialog(ActionDialog.PickUp) }
-            OrderStatus.PICKUP -> myOrderCardPrimaryAction(R.string.start_delivery, isUpdating) { setDialog(ActionDialog.Start) }
-            OrderStatus.START_DELIVERY -> myOrderCardPrimaryAction(R.string.deliver_order, isUpdating) { setDialog(ActionDialog.Deliver) }
+            OrderStatus.ADDED ->
+                myOrderCardPrimaryAction(R.string.confirm_order, isUpdating) {
+                    setDialog(ActionDialog.Confirm)
+                }
+            OrderStatus.CONFIRMED ->
+                myOrderCardPrimaryAction(R.string.pick_order, isUpdating) {
+                    setDialog(ActionDialog.PickUp)
+                }
+            OrderStatus.PICKUP ->
+                myOrderCardPrimaryAction(R.string.start_delivery, isUpdating) {
+                    setDialog(ActionDialog.Start)
+                }
+            OrderStatus.START_DELIVERY ->
+                myOrderCardPrimaryAction(R.string.deliver_order, isUpdating) {
+                    setDialog(ActionDialog.Deliver)
+                }
             else -> Unit
         }
     }
