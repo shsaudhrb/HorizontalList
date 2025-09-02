@@ -17,6 +17,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.unit.Dp
@@ -27,10 +28,13 @@ import com.google.maps.android.compose.CameraPositionState
 import com.google.maps.android.compose.MarkerState
 import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
+import com.ntg.lmd.mainscreen.ui.components.generalHorizontalList
 import com.ntg.lmd.mainscreen.ui.components.initialCameraPositionEffect
 import com.ntg.lmd.mainscreen.ui.components.locationPermissionAndLastLocation
+import com.ntg.lmd.mainscreen.ui.components.makeCallOrError
 import com.ntg.lmd.mainscreen.ui.components.mapCenter
 import com.ntg.lmd.mainscreen.ui.components.myPoolBottom
+import com.ntg.lmd.mainscreen.ui.components.myPoolOrderCardItem
 import com.ntg.lmd.mainscreen.ui.components.rememberFocusOnMyOrder
 import com.ntg.lmd.mainscreen.ui.model.MapStates
 import com.ntg.lmd.mainscreen.ui.model.MapUiState
@@ -168,11 +172,22 @@ private fun BoxScope.bottomOverlay(
                         .padding(bottom = dimensionResource(R.dimen.smallSpace)),
             )
         }
-        myPoolBottom(
+
+        //  Use generalized horizontal list with MyPool-specific card
+        generalHorizontalList(
             orders = state.orders,
-            onCenteredOrderChange = callbacks.onCenteredOrderChange,
-            onOpenOrderDetails = callbacks.onOpenOrderDetails,
+            selectedOrderNumber = state.mapUi.selected?.orderNumber,
+            onCenteredOrderChange = { order, index ->
+                callbacks.onCenteredOrderChange(order, index) // move map marker + update VM
+            },
             onNearEnd = callbacks.onNearEnd,
+            cardContent = { order, _ ->
+                myPoolOrderCardItem(
+                    order = order,
+                    onOpenOrderDetails = callbacks.onOpenOrderDetails,
+                    onCall = {  }
+                )
+            }
         )
     }
 }

@@ -34,9 +34,10 @@ import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
-import com.ntg.lmd.mainscreen.ui.components.customBottom
 import com.ntg.lmd.mainscreen.ui.components.distanceFilterBar
+import com.ntg.lmd.mainscreen.ui.components.generalHorizontalList
 import com.ntg.lmd.mainscreen.ui.components.mapCenter
+import com.ntg.lmd.mainscreen.ui.components.orderCard
 import com.ntg.lmd.mainscreen.ui.components.searchResultsDropdown
 import com.ntg.lmd.mainscreen.ui.model.GeneralPoolUiState
 import com.ntg.lmd.mainscreen.ui.model.MapStates
@@ -135,13 +136,23 @@ fun generalPoolScreen(
             )
         } else if (ui.mapOrders.isNotEmpty()) {
             Box(Modifier.align(Alignment.BottomCenter)) {
-                customBottom(
+                generalHorizontalList(
                     orders = ui.mapOrders,
                     selectedOrderNumber = ui.selected?.orderNumber,
-                    onOrderClick = { order -> focusOnOrder(order, false) },
-                    onCenteredOrderChange = { order, _ -> focusOnOrder(order, false) },
-                    onAddClick = { },
+                    onCenteredOrderChange = { order, _ ->
+                        focusOnOrder(order, false)
+                        generalPoolViewModel.onOrderSelected(order)
+                    },
+                    onNearEnd = { }, // the paging not applied yet
+                    cardContent = { order, _ ->
+                        orderCard(
+                            order = order,
+                            onAddClick = { /* handle add */ },
+                            onOrderClick = { clicked -> focusOnOrder(clicked, false) }
+                        )
+                    }
                 )
+
             }
         }
     }

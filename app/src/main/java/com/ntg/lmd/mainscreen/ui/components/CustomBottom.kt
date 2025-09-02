@@ -141,7 +141,7 @@ fun customBottom(
 }
 
 @Composable
-private fun orderCard(
+fun orderCard(
     order: OrderInfo,
     onAddClick: (OrderInfo) -> Unit,
     onOrderClick: (OrderInfo) -> Unit,
