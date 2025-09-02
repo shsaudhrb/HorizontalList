@@ -28,13 +28,12 @@ fun myPoolOrderCardItem(
         myOrderCard(
             order = order,
             isUpdating = false,
-            callbacks =
-                MyOrderCardCallbacks(
-                    onDetails = { onOpenOrderDetails(order.orderNumber) },
-                    onCall = { onCall(order.customerPhone) },
-                    onAction = {},
-                    onReassignRequested = {},
-                ),
+            callbacks = MyOrderCardCallbacks(
+                onReassignRequested = {},
+                onDetails = { onOpenOrderDetails(order.orderNumber) },
+                onCall = { onCall(order.customerPhone) },
+                onAction = {},
+            ),
             updateVm = updateVm,
         )
     }

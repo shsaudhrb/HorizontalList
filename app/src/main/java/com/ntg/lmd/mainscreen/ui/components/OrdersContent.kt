@@ -31,7 +31,6 @@ fun ordersContent(
     onReassignRequested: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // Collect once to avoid multiple recompositions in params
     val uiState by ordersVm.state.collectAsState()
 
     Column(Modifier.fillMaxSize()) {
@@ -47,7 +46,7 @@ fun ordersContent(
                             listState = listState,
                             isLoadingMore = uiState.isLoadingMore,
                             updatingIds = updatingIds,
-                            isRefreshing = uiState.isRefreshing,
+                            isRefreshing = ordersVm.state.collectAsState().value.isRefreshing,
                             endReached = uiState.endReached,
                         ),
                     updateVm = updateVm,

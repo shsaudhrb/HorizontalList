@@ -42,44 +42,37 @@ data class OrderListCallbacks(
     val onLoadMore: () -> Unit,
 )
 
+private val AutoHideOnSuccessStatuses = setOf(
+    OrderStatus.DELIVERY_DONE,
+    OrderStatus.DELIVERY_FAILED,
+    OrderStatus.REASSIGNED,
+)
+
 @Composable
 fun orderList(
     state: OrderListState,
     updateVm: UpdateOrderStatusViewModel,
     callbacks: OrderListCallbacks,
 ) {
-    val myUserId by updateVm.currentUserId.collectAsState()
     var hiddenIds by remember { mutableStateOf(emptySet<String>()) }
 
-    LaunchedEffect(updateVm, myUserId) {
+
+    LaunchedEffect(updateVm) {
         updateVm.success.collect { serverOrder ->
-            val movedAway =
-                myUserId != null &&
-                        serverOrder.assignedAgentId != null &&
-                        serverOrder.assignedAgentId != myUserId
-            val shouldHide = serverOrder.status?.isTerminal() == true || movedAway
-            if (shouldHide) hiddenIds = hiddenIds + serverOrder.id
-            callbacks.onRefresh()
+            if (serverOrder.status in AutoHideOnSuccessStatuses) {
+                hiddenIds = hiddenIds + serverOrder.id
+            }
         }
     }
 
-    val filteredOrders by remember(state.orders, myUserId, hiddenIds) {
+    LaunchedEffect(state.isRefreshing) {
+        if (!state.isRefreshing) hiddenIds = emptySet()
+    }
+
+    val filteredOrders by remember(state.orders, hiddenIds) {
         derivedStateOf {
-            state.orders
-                .asSequence()
-                .filter { it.id !in hiddenIds }
-                .filter { order -> !order.status?.isTerminal()!! && order.isMine(myUserId) }
-                .toList()
-        }
-    }
-
-    LaunchedEffect(state.orders, myUserId, hiddenIds, filteredOrders) {
-        Log.d(
-            "OrderListFilter",
-            "me=$myUserId total=${state.orders.size} hidden=${hiddenIds.size} filtered=${filteredOrders.size}",
-        )
-        filteredOrders.take(5).forEach { o ->
-            Log.d("OrderListFilter", "id=${o.id} status=${o.status} assigned=${o.assignedAgentId}")
+            // VM already filtered by status + user
+            state.orders.filter { it.id !in hiddenIds }
         }
     }
 
@@ -92,13 +85,12 @@ fun orderList(
                 myOrderCard(
                     order = order,
                     isUpdating = state.updatingIds.contains(order.id),
-                    callbacks =
-                        MyOrderCardCallbacks(
-                            onDetails = { callbacks.onDetails(order.id) },
-                            onCall = { callbacks.onCall(order.id) },
-                            onAction = { d -> callbacks.onAction(order.id, d) },
-                            onReassignRequested = { callbacks.onReassignRequested(order.id) },
-                        ),
+                    callbacks = MyOrderCardCallbacks(
+                        onReassignRequested = { callbacks.onReassignRequested(order.id) },
+                        onDetails = { callbacks.onDetails(order.id) },
+                        onCall = { callbacks.onCall(order.id) },
+                        onAction = { act -> callbacks.onAction(order.id, act) },
+                    ),
                     updateVm = updateVm,
                 )
             },
@@ -116,8 +108,3 @@ fun orderList(
         )
     }
 }
-
-private fun OrderStatus.isTerminal() =
-    this == OrderStatus.CANCELED || this == OrderStatus.DELIVERY_DONE
-
-private fun OrderInfo.isMine(myUserId: String?) = myUserId != null && assignedAgentId == myUserId

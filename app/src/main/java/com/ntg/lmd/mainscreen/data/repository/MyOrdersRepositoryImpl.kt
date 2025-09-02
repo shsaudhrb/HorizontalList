@@ -37,12 +37,19 @@ class MyOrdersRepositoryImpl(
         page: Int,
         limit: Int,
         bypassCache: Boolean,
+        assignedAgentId: String?,
+        userOrdersOnly: Boolean?
     ): OrdersPage {
         if (isCacheValid(page, limit, bypassCache)) {
             return cachedPageData!!
         }
 
-        val env = api.getOrders(page = page, limit = limit)
+        val env = api.getOrders(
+            page = page,
+            limit = limit,
+            assignedAgentId = assignedAgentId,
+            userOrdersOnly = userOrdersOnly
+        )
         if (!env.success) error(env.error ?: "Unknown error from orders-list")
 
         val raw = env.data?.orders.orEmpty()
@@ -50,11 +57,11 @@ class MyOrdersRepositoryImpl(
             raw
                 .filter { dto ->
                     dto.statusId?.let { it in allowedIds } ?: (
-                        dto.orderstatuses
-                            ?.statusName
-                            ?.trim()
-                            ?.lowercase() in allowedNames
-                    )
+                            dto.orderstatuses
+                                ?.statusName
+                                ?.trim()
+                                ?.lowercase() in allowedNames
+                            )
                 }.map { it.toDomain() }
 
         val pageData = OrdersPage(items = filtered, rawCount = raw.size)
@@ -76,9 +83,9 @@ class MyOrdersRepositoryImpl(
         bypassCache: Boolean,
     ): Boolean =
         !bypassCache &&
-            cachedPage == page &&
-            cachedLimit == limit &&
-            cachedPageData != null
+                cachedPage == page &&
+                cachedLimit == limit &&
+                cachedPageData != null
 
     private fun updateCache(
         page: Int,
