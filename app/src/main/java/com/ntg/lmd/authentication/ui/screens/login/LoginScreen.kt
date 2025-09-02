@@ -1,32 +1,18 @@
 package com.ntg.lmd.authentication.ui.screens.login
 
 import android.app.Application
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.updateTransition
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -38,19 +24,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.ntg.lmd.R
 import com.ntg.lmd.authentication.ui.components.appLogo
+import com.ntg.lmd.authentication.ui.components.authCard
+import com.ntg.lmd.authentication.ui.components.forgotPasswordLink
 import com.ntg.lmd.authentication.ui.components.gradientPrimaryButton
+import com.ntg.lmd.authentication.ui.components.messageBanner
 import com.ntg.lmd.authentication.ui.components.passwordField
 import com.ntg.lmd.authentication.ui.components.usernameField
 import com.ntg.lmd.authentication.ui.model.CardUi
@@ -67,44 +52,15 @@ private const val CARD_ELEVATION_DEFAULT = 2f
 
 @Composable
 fun loginScreen(navController: NavController) {
-    val ctx = LocalContext.current
-    val viewModel: LoginViewModel =
-        viewModel(
-            factory = LoginViewModelFactory(ctx.applicationContext as Application),
-        )
-    val focus = LocalFocusManager.current
-    val ui by viewModel.uiState.collectAsState()
-    // Tracks anyFieldFocused locally to drive card animation (scale/elevation).
-    var anyFieldFocused by remember { mutableStateOf(false) }
+    val viewModel = rememberLoginViewModel()
+    val ui = collectLoginUi(viewModel)
+    val focusManager = LocalFocusManager.current
 
-    val transition =
-        updateTransition(
-            targetState = anyFieldFocused,
-            label = "focusTransition",
-        )
+    val (cardUi, onUsernameFocus, onPasswordFocus) = rememberCardAndFocusHandlers(viewModel)
 
-    val cardScale by transition.animateFloat(label = "cardScale") { focused ->
-        if (focused) CARD_SCALE_FOCUSED else CARD_SCALE_DEFAULT
-    }
-
-    val cardElevation by transition.animateFloat(label = "cardElevation") { focused ->
-        if (focused) CARD_ELEVATION_FOCUSED else CARD_ELEVATION_DEFAULT
-    }
-
-    val cardUi =
-        remember(cardScale, cardElevation) {
-            CardUi(scale = cardScale, elevation = cardElevation)
-        }
-
-    CompositionLocalProvider(
-        LocalOnFocusForUsername provides { f ->
-            anyFieldFocused = f
-            viewModel.updateUsernameFocus(f)
-        },
-        LocalOnFocusForPassword provides { f ->
-            anyFieldFocused = f
-            viewModel.updatePasswordFocus(f)
-        },
+    provideLoginFocusLocals(
+        onUsernameFocus = onUsernameFocus,
+        onPasswordFocus = onPasswordFocus,
     ) {
         loginScaffold(
             card = cardUi,
@@ -117,12 +73,60 @@ fun loginScreen(navController: NavController) {
                 onUsername = viewModel::updateUsername,
                 onPassword = viewModel::updatePassword,
                 onSubmit = {
-                    focus.clearFocus()
+                    focusManager.clearFocus()
                     viewModel.submit()
                 },
             )
         }
     }
+}
+
+@Composable
+private fun rememberLoginViewModel(): LoginViewModel {
+    val ctx = LocalContext.current
+    return viewModel(factory = LoginViewModelFactory(ctx.applicationContext as Application))
+}
+
+@Composable
+private fun collectLoginUi(viewModel: LoginViewModel): LoginUiState {
+    val ui by viewModel.uiState.collectAsState()
+    return ui
+}
+
+@Composable
+private fun rememberCardAndFocusHandlers(viewModel: LoginViewModel): Triple<CardUi, (Boolean) -> Unit, (Boolean) -> Unit> {
+    var anyFieldFocused by remember { mutableStateOf(false) }
+
+    val transition = updateTransition(targetState = anyFieldFocused, label = "focusTransition")
+    val scale by transition.animateFloat(label = "cardScale") {
+        if (it) CARD_SCALE_FOCUSED else CARD_SCALE_DEFAULT
+    }
+    val elevation by transition.animateFloat(label = "cardElevation") {
+        if (it) CARD_ELEVATION_FOCUSED else CARD_ELEVATION_DEFAULT
+    }
+    val cardUi = remember(scale, elevation) { CardUi(scale = scale, elevation = elevation) }
+
+    val onUsernameFocus: (Boolean) -> Unit = {
+        anyFieldFocused = it
+        viewModel.updateUsernameFocus(it)
+    }
+    val onPasswordFocus: (Boolean) -> Unit = {
+        anyFieldFocused = it
+        viewModel.updatePasswordFocus(it)
+    }
+    return Triple(cardUi, onUsernameFocus, onPasswordFocus)
+}
+
+@Composable
+private fun provideLoginFocusLocals(
+    onUsernameFocus: (Boolean) -> Unit,
+    onPasswordFocus: (Boolean) -> Unit,
+    content: @Composable () -> Unit,
+) {
+    CompositionLocalProvider(
+        LocalOnFocusForUsername provides onUsernameFocus,
+        LocalOnFocusForPassword provides onPasswordFocus,
+    ) { content() }
 }
 
 @Composable
@@ -155,53 +159,6 @@ private fun loginScaffold(
     }
 }
 
-// result message chip
-@Composable
-private fun messageBanner(
-    messageRes: Int?,
-    messageText: String?,
-) {
-    val textToShow = messageText ?: messageRes?.let { stringResource(it) }
-    AnimatedVisibility(
-        visible = !textToShow.isNullOrEmpty(),
-        enter = slideInVertically { -it } + fadeIn(),
-        exit = slideOutVertically { -it } + fadeOut(),
-    ) {
-        textToShow?.let { txt ->
-            AssistChip(onClick = {}, label = { Text(txt) })
-        }
-    }
-}
-
-// Card with animation
-@Composable
-private fun authCard(
-    cardScale: Float,
-    cardElevation: Float,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    val shape = RoundedCornerShape(dimensionResource(R.dimen.cardRoundCorner))
-    Card(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .graphicsLayer {
-                    scaleX = cardScale
-                    scaleY = cardScale
-                }.shadow(cardElevation.dp, shape, clip = false)
-                .clip(shape),
-        shape = shape,
-        border =
-            BorderStroke(
-                dimensionResource(R.dimen.smallestStrokeWidth),
-                MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
-            ),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
-    ) {
-        Column(Modifier.padding(dimensionResource(R.dimen.largeSpace))) { content() }
-    }
-}
-
 // Card Fields & Button
 @Composable
 private fun authFields(
@@ -210,6 +167,19 @@ private fun authFields(
     onUsername: (String) -> Unit,
     onPassword: (String) -> Unit,
     onSubmit: () -> Unit,
+) {
+    credentialsInputs(ui, onUsername, onPassword)
+    forgotPasswordLink(enabled = !ui.isLoading)
+    Spacer(Modifier.height(dimensionResource(R.dimen.largeSpace)))
+    loginButton(loading = ui.isLoading, onSubmit = onSubmit)
+    loginSuccessHandler(loginSuccess = ui.loginSuccess, navController = navController)
+}
+
+@Composable
+private fun credentialsInputs(
+    ui: LoginUiState,
+    onUsername: (String) -> Unit,
+    onPassword: (String) -> Unit,
 ) {
     usernameField(
         props =
@@ -224,7 +194,6 @@ private fun authFields(
             ),
     )
     Spacer(Modifier.height(dimensionResource(R.dimen.smallSpace)))
-
     passwordField(
         props =
             InputProps(
@@ -238,24 +207,27 @@ private fun authFields(
             ),
     )
     Spacer(Modifier.height(dimensionResource(R.dimen.smallerSpace)))
+}
 
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-        Text(
-            text = stringResource(R.string.forgotPassword),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.clickable(enabled = !ui.isLoading) {},
-        )
-    }
-    Spacer(Modifier.height(dimensionResource(R.dimen.largeSpace)))
-
+@Composable
+private fun loginButton(
+    loading: Boolean,
+    onSubmit: () -> Unit,
+) {
     gradientPrimaryButton(
         text = stringResource(R.string.login),
-        loading = ui.isLoading,
+        loading = loading,
         onClick = onSubmit,
     )
-    LaunchedEffect(ui.loginSuccess) {
-        if (ui.loginSuccess) {
+}
+
+@Composable
+private fun loginSuccessHandler(
+    loginSuccess: Boolean,
+    navController: NavController,
+) {
+    LaunchedEffect(loginSuccess) {
+        if (loginSuccess) {
             navController.navigate(Screen.Drawer.route) {
                 popUpTo(Screen.Login.route) { inclusive = true }
                 launchSingleTop = true

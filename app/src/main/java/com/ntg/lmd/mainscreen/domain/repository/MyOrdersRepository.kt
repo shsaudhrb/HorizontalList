@@ -6,5 +6,6 @@ interface MyOrdersRepository {
     suspend fun getOrders(
         page: Int,
         limit: Int,
+        bypassCache: Boolean,
     ): OrdersPage
 }

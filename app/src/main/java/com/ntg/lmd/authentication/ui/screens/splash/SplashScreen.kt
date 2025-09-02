@@ -20,10 +20,10 @@ fun splashScreen(
     onDecide: (Boolean) -> Unit,
 ) {
     LaunchedEffect(Unit) {
-        // check token or saved state
         val isLoggedIn = false
         onDecide(isLoggedIn)
     }
+
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
@@ -33,22 +33,26 @@ fun splashScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(text = "Splash Screen")
-
-            Button(
-                onClick = {
-                    navController.navigate(Screen.Login.route) {
-                        popUpTo(Screen.Splash.route) { inclusive = true }
-                    }
-                },
-            ) { Text("Go to Login") }
-
-            Button(
-                onClick = {
-                    navController.navigate(Screen.Register.route) {
-                        popUpTo(Screen.Splash.route) { inclusive = true }
-                    }
-                },
-            ) { Text("Go to Register") }
+            splashButtons(navController)
         }
     }
+}
+
+@Composable
+private fun splashButtons(navController: NavController) {
+    Button(
+        onClick = {
+            navController.navigate(Screen.Login.route) {
+                popUpTo(Screen.Splash.route) { inclusive = true }
+            }
+        },
+    ) { Text("Go to Login") }
+
+    Button(
+        onClick = {
+            navController.navigate(Screen.Register.route) {
+                popUpTo(Screen.Splash.route) { inclusive = true }
+            }
+        },
+    ) { Text("Go to Register") }
 }

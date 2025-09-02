@@ -15,7 +15,7 @@ data class Order(
     @SerializedName(value = "order_date", alternate = ["orderDate"]) val orderDate: String? = null,
     @SerializedName(value = "delivery_time", alternate = ["deliveryTime"]) val deliveryTime: String? = null,
     @SerializedName(value = "last_updated", alternate = ["updatedAt", "lastUpdated"]) val lastUpdated: String? = null,
-    @SerializedName("coordinates") val coordinates: Coordinates? = null,
+    @SerializedName("coordinates") val coordinates: Coordinates,
     @SerializedName(value = "latitude", alternate = ["lat"]) val latitude: Double? = null,
     @SerializedName(value = "longitude", alternate = ["lng", "lon"]) val longitude: Double? = null,
 )

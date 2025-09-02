@@ -31,7 +31,6 @@ import com.ntg.lmd.authentication.ui.components.gradientPrimaryButton
 import com.ntg.lmd.settings.ui.viewmodel.NotificationWindow
 import com.ntg.lmd.settings.ui.viewmodel.SettingsViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun notificationWindowScreen(
     vm: SettingsViewModel,
@@ -42,60 +41,85 @@ fun notificationWindowScreen(
     var temp by remember { mutableStateOf(ui.window) }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.notification_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.back),
-                        )
-                    }
-                },
-                colors =
-                    TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                        navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
-                    ),
-            )
-        },
+        topBar = { notificationTopBar(onBack) },
     ) { padding ->
-        Column(
+        notificationOptions(
             modifier =
                 Modifier
                     .padding(padding)
                     .padding(dimensionResource(R.dimen.mediumSpace)),
-            verticalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.smallerSpace)),
-        ) {
-            radioLine(stringResource(R.string.notif_every_15_days), temp == NotificationWindow.D15) {
-                temp = NotificationWindow.D15
-            }
-            radioLine(stringResource(R.string.notif_every_30_days), temp == NotificationWindow.D30) {
-                temp = NotificationWindow.D30
-            }
-            radioLine(stringResource(R.string.notif_every_90_days), temp == NotificationWindow.D90) {
-                temp = NotificationWindow.D90
-            }
+            selected = temp,
+            onSelect = { temp = it },
+            onApply = {
+                vm.setNotificationWindow(temp)
+                onApplyWindowDays(temp.days)
+                onBack()
+            },
+        )
+    }
+}
 
-            Spacer(Modifier.height(dimensionResource(R.dimen.mediumSpace)))
-
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.smallSpace)),
-            ) {
-                gradientPrimaryButton(
-                    modifier = Modifier.weight(1f),
-                    text = stringResource(R.string.apply),
-                    loading = false,
-                    onClick = {
-                        vm.setNotificationWindow(temp)
-                        onApplyWindowDays(temp.days)
-                        onBack()
-                    },
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun notificationTopBar(onBack: () -> Unit) {
+    TopAppBar(
+        title = { Text(stringResource(R.string.notification_title)) },
+        navigationIcon = {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(R.string.back),
                 )
             }
+        },
+        colors =
+            TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+            ),
+    )
+}
+
+@Composable
+private fun notificationOptions(
+    modifier: Modifier = Modifier,
+    selected: NotificationWindow,
+    onSelect: (NotificationWindow) -> Unit,
+    onApply: () -> Unit,
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.smallerSpace)),
+    ) {
+        radioLine(
+            label = stringResource(R.string.notif_every_15_days),
+            selected = selected == NotificationWindow.D15,
+            onPick = { onSelect(NotificationWindow.D15) },
+        )
+        radioLine(
+            label = stringResource(R.string.notif_every_30_days),
+            selected = selected == NotificationWindow.D30,
+            onPick = { onSelect(NotificationWindow.D30) },
+        )
+        radioLine(
+            label = stringResource(R.string.notif_every_90_days),
+            selected = selected == NotificationWindow.D90,
+            onPick = { onSelect(NotificationWindow.D90) },
+        )
+
+        Spacer(Modifier.height(dimensionResource(R.dimen.mediumSpace)))
+
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.smallSpace)),
+        ) {
+            gradientPrimaryButton(
+                modifier = Modifier.weight(1f),
+                text = stringResource(R.string.apply),
+                loading = false,
+                onClick = onApply,
+            )
         }
     }
 }

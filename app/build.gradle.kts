@@ -1,5 +1,6 @@
 @file:Suppress("DEPRECATION")
 
+import io.gitlab.arturbosch.detekt.Detekt
 import java.io.File
 import java.util.Properties
 
@@ -85,6 +86,9 @@ detekt {
         xml.required.set(false)
         txt.required.set(false)
     }
+}
+tasks.withType<Detekt>().configureEach {
+    jvmTarget = "11" // match your compileOptions/kotlinOptions
 }
 
 // Custom detekt task for unused imports only
