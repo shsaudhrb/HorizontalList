@@ -13,6 +13,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,9 +36,8 @@ import com.google.maps.android.compose.rememberCameraPositionState
 import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.ui.components.distanceFilterBar
-import com.ntg.lmd.mainscreen.ui.components.generalHorizontalList
 import com.ntg.lmd.mainscreen.ui.components.mapCenter
-import com.ntg.lmd.mainscreen.ui.components.orderCard
+import com.ntg.lmd.mainscreen.ui.components.poolBottomContent
 import com.ntg.lmd.mainscreen.ui.components.searchResultsDropdown
 import com.ntg.lmd.mainscreen.ui.model.GeneralPoolUiState
 import com.ntg.lmd.mainscreen.ui.model.MapStates
@@ -56,34 +56,17 @@ fun generalPoolScreen(
 ) {
     val context = LocalContext.current
     val ui by generalPoolViewModel.ui.collectAsStateWithLifecycle()
-
-    // selected order and camera position to it
     val cameraPositionState = rememberCameraPositionState()
     val markerState = remember { MarkerState(position = LatLng(0.0, 0.0)) }
     val scope = rememberCoroutineScope()
-
     val deviceLatLng by generalPoolViewModel.deviceLatLng.collectAsStateWithLifecycle()
-
     val hasCenteredOnDevice = remember { mutableStateOf(false) }
 
-    LaunchedEffect(deviceLatLng, ui.selected) {
-        val loc = deviceLatLng
-        if (loc != null && ui.selected == null && !hasCenteredOnDevice.value) {
-            cameraPositionState.move(
-                CameraUpdateFactory.newLatLngZoom(loc, INITIAL_MAP_ZOOM),
-            )
-            hasCenteredOnDevice.value = true
-        }
-    }
+    setupInitialCamera(ui, deviceLatLng, cameraPositionState, hasCenteredOnDevice)
+    LaunchedEffect(Unit) { generalPoolViewModel.attach(context) }
+    locationPermissionGate(generalPoolViewModel)
+    rememberSearchEffects(navController, generalPoolViewModel)
 
-    LaunchedEffect(Unit) {
-        generalPoolViewModel.attach(context) // loads API, connects socket
-    }
-
-    // handle location permission
-    locationPermissionGate(viewModel = generalPoolViewModel)
-
-    // we will use this focusOnOrder when we search orders and click on it to be showing on the map
     val focusOnOrder =
         rememberFocusOnOrder(
             viewModel = generalPoolViewModel,
@@ -91,29 +74,6 @@ fun generalPoolScreen(
             cameraPositionState = cameraPositionState,
             scope = scope,
         )
-
-    // react to the app-bar "searching" on/off
-    LaunchedEffect(Unit) {
-        val handle = navController.currentBackStackEntry?.savedStateHandle ?: return@LaunchedEffect
-        handle.getStateFlow("searching", false).collect { searching ->
-            generalPoolViewModel.onSearchingChange(searching)
-            if (!searching) generalPoolViewModel.onSearchTextChange("")
-        }
-    }
-
-    // live text from the app-bar TextField
-    LaunchedEffect(Unit) {
-        val handle = navController.currentBackStackEntry?.savedStateHandle ?: return@LaunchedEffect
-        handle.getStateFlow("search_text", "").collect { text ->
-            generalPoolViewModel.onSearchTextChange(text)
-        }
-    }
-    // react when user presses IME search
-    LaunchedEffect(Unit) {
-        val handle = navController.currentBackStackEntry?.savedStateHandle ?: return@LaunchedEffect
-        handle.getStateFlow("search_submit", "").collect { _ ->
-        }
-    }
 
     Box(Modifier.fillMaxSize()) {
         generalPoolContent(
@@ -123,37 +83,23 @@ fun generalPoolScreen(
             mapStates = MapStates(cameraPositionState, markerState),
             deviceLatLng = deviceLatLng,
         )
+        poolBottomContent(ui, generalPoolViewModel, focusOnOrder)
+    }
+}
 
-        // Bottom list of orders
-        if (ui.isLoading) {
-            Text(
-                text = stringResource(R.string.loading_text),
-                modifier =
-                    Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(16.dp),
-                color = MaterialTheme.colorScheme.onBackground,
+@Composable
+private fun setupInitialCamera(
+    ui: GeneralPoolUiState,
+    deviceLatLng: LatLng?,
+    cameraPositionState: CameraPositionState,
+    hasCenteredOnDevice: MutableState<Boolean>,
+) {
+    LaunchedEffect(deviceLatLng, ui.selected) {
+        if (deviceLatLng != null && ui.selected == null && !hasCenteredOnDevice.value) {
+            cameraPositionState.move(
+                CameraUpdateFactory.newLatLngZoom(deviceLatLng, INITIAL_MAP_ZOOM),
             )
-        } else if (ui.mapOrders.isNotEmpty()) {
-            Box(Modifier.align(Alignment.BottomCenter)) {
-                generalHorizontalList(
-                    orders = ui.mapOrders,
-                    selectedOrderNumber = ui.selected?.orderNumber,
-                    onCenteredOrderChange = { order, _ ->
-                        focusOnOrder(order, false)
-                        generalPoolViewModel.onOrderSelected(order)
-                    },
-                    onNearEnd = { }, // the paging not applied yet
-                    cardContent = { order, _ ->
-                        orderCard(
-                            order = order,
-                            onAddClick = { /* handle add */ },
-                            onOrderClick = { clicked -> focusOnOrder(clicked, false) }
-                        )
-                    }
-                )
-
-            }
+            hasCenteredOnDevice.value = true
         }
     }
 }
@@ -166,62 +112,90 @@ private fun generalPoolContent(
     mapStates: MapStates,
     deviceLatLng: LatLng?,
 ) {
-    Box(
-        Modifier
-            .fillMaxSize(),
-    ) {
+    Box(Modifier.fillMaxSize()) {
         mapCenter(
             ui = ui,
             mapStates = mapStates,
             deviceLatLng = deviceLatLng,
             modifier = Modifier.fillMaxSize(),
         )
-        if (ui.hasLocationPerm) {
-            Row(
-                modifier =
-                    Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = 8.dp)
-                        .zIndex(1f),
-                // below search dropdown, above map
-                horizontalArrangement = Arrangement.Center,
-            ) {
-                distanceFilterBar(
-                    maxDistanceKm = ui.distanceThresholdKm,
-                    onMaxDistanceKm = onMaxDistanceKm,
-                    enabled = true, // already guarded here
-                )
-            }
-        } else {
-            // Show the hint instead of the slider
-            Text(
-                text = stringResource(R.string.location_access_request),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier =
-                    Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = 12.dp)
-                        .zIndex(1f),
-            )
-        }
-
-        // Search results should be ON TOP of both map and filter
+        distanceFilterOrHint(ui, onMaxDistanceKm)
         if (ui.searching && ui.searchText.isNotBlank()) {
-            Box(
-                modifier =
-                    Modifier
-                        .align(Alignment.TopStart)
-                        .fillMaxWidth()
-                        .padding(top = 4.dp)
-                        .zIndex(2f), // topmost layer
-            ) {
-                searchResultsDropdown(
-                    visible = true,
-                    orders = ui.filteredOrdersInRange,
-                    onPick = { focusOnOrder(it, true) },
-                )
-            }
+            searchDropdown(ui, focusOnOrder)
+        }
+    }
+}
+
+@Composable
+private fun distanceFilterOrHint(
+    ui: GeneralPoolUiState,
+    onMaxDistanceKm: (Double) -> Unit,
+) {
+    if (ui.hasLocationPerm) {
+        distanceFilterRow(ui, onMaxDistanceKm)
+    } else {
+        locationAccessHint()
+    }
+}
+
+@Composable
+private fun distanceFilterRow(
+    ui: GeneralPoolUiState,
+    onMaxDistanceKm: (Double) -> Unit,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp)
+                .zIndex(1f),
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        distanceFilterBar(
+            maxDistanceKm = ui.distanceThresholdKm,
+            onMaxDistanceKm = onMaxDistanceKm,
+            enabled = true,
+        )
+    }
+}
+
+@Composable
+private fun locationAccessHint() {
+    Box(Modifier.fillMaxSize()) {
+        Text(
+            text = stringResource(R.string.location_access_request),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier =
+                Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 12.dp)
+                    .zIndex(1f),
+        )
+    }
+}
+
+@Composable
+private fun searchDropdown(
+    ui: GeneralPoolUiState,
+    focusOnOrder: (OrderInfo, Boolean) -> Unit,
+) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .align(Alignment.TopStart)
+                    .fillMaxWidth()
+                    .padding(top = 4.dp)
+                    .zIndex(2f),
+        ) {
+            searchResultsDropdown(
+                visible = true,
+                orders = ui.filteredOrdersInRange,
+                onPick = { focusOnOrder(it, true) },
+            )
         }
     }
 }
@@ -229,36 +203,55 @@ private fun generalPoolContent(
 @Composable
 private fun locationPermissionGate(viewModel: GeneralPoolViewModel) {
     val context = LocalContext.current
-
-    // Launcher that re-checks readiness without prompting again (prevents loops)
     val permissionLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
             viewModel.ensureLocationReady(context, promptIfMissing = false)
         }
 
-    // Listen for VM events that ask for a permission request
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
-            when (event) {
-                is GeneralPoolUiEvent.RequestLocationPermission -> {
-                    permissionLauncher.launch(
-                        arrayOf(
-                            Manifest.permission.ACCESS_FINE_LOCATION,
-                            Manifest.permission.ACCESS_COARSE_LOCATION,
-                        ),
-                    )
-                }
+            if (event is GeneralPoolUiEvent.RequestLocationPermission) {
+                permissionLauncher.launch(
+                    arrayOf(
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION,
+                    ),
+                )
             }
         }
     }
 
-    // Initial readiness check (this one is allowed to prompt)
     LaunchedEffect(Unit) {
         viewModel.ensureLocationReady(context, promptIfMissing = true)
     }
 }
 
-// we will use this focusOnOrder when we search orders and click on it to be showing on the map
+@Composable
+private fun rememberSearchEffects(
+    navController: NavController,
+    viewModel: GeneralPoolViewModel,
+) {
+    LaunchedEffect(Unit) {
+        val handle = navController.currentBackStackEntry?.savedStateHandle ?: return@LaunchedEffect
+        handle.getStateFlow("searching", false).collect { searching ->
+            viewModel.onSearchingChange(searching)
+            if (!searching) viewModel.onSearchTextChange("")
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        val handle = navController.currentBackStackEntry?.savedStateHandle ?: return@LaunchedEffect
+        handle.getStateFlow("search_text", "").collect { text ->
+            viewModel.onSearchTextChange(text)
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        val handle = navController.currentBackStackEntry?.savedStateHandle ?: return@LaunchedEffect
+        handle.getStateFlow("search_submit", "").collect { /* ignore */ }
+    }
+}
+
 @Composable
 fun rememberFocusOnOrder(
     viewModel: GeneralPoolViewModel,
@@ -267,7 +260,6 @@ fun rememberFocusOnOrder(
     scope: kotlinx.coroutines.CoroutineScope,
     focusZoom: Float = ORDER_FOCUS_ZOOM,
 ): (OrderInfo, Boolean) -> Unit {
-    // keep latest references without re-allocating the lambda on every recomposition
     val vm = rememberUpdatedState(viewModel)
     val marker = rememberUpdatedState(markerState)
     val camera = rememberUpdatedState(cameraPositionState)
@@ -275,13 +267,8 @@ fun rememberFocusOnOrder(
 
     return remember {
         { order: OrderInfo, closeSearch: Boolean ->
-            // which order is selected
             vm.value.onOrderSelected(order)
-
-            // move the marker on the map to that order's location
             marker.value.position = LatLng(order.lat, order.lng)
-
-            // animate the map camera to zoom in on the order
             coroutineScope.value.launch {
                 camera.value.animate(
                     CameraUpdateFactory.newLatLngZoom(
@@ -290,8 +277,6 @@ fun rememberFocusOnOrder(
                     ),
                 )
             }
-
-            // close the search UI
             if (closeSearch) {
                 vm.value.onSearchingChange(false)
                 vm.value.onSearchTextChange("")

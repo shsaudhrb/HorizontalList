@@ -26,15 +26,47 @@ fun generalHorizontalList(
     orders: List<OrderInfo>,
     selectedOrderNumber: String?,
     modifier: Modifier = Modifier,
-    onCenteredOrderChange: (OrderInfo, Int) -> Unit = { _, _ -> },
-    onNearEnd: (Int) -> Unit = {},
-    cardContent: @Composable (OrderInfo, Int) -> Unit
+    callbacks: HorizontalListCallbacks = HorizontalListCallbacks(),
+    cardContent: @Composable (OrderInfo, Int) -> Unit,
 ) {
     if (orders.isEmpty()) return
-
     val listState = rememberLazyListState()
 
-    //  Observe centered item
+    observeCenteredItem(listState, orders, callbacks.onCenteredOrderChange)
+    observeNearEnd(listState, orders, callbacks.onNearEnd)
+
+    Box(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .height(220.dp)
+                .background(MaterialTheme.colorScheme.primary),
+        contentAlignment = Alignment.Center,
+    ) {
+        LazyRow(
+            state = listState,
+            flingBehavior = rememberSnapFlingBehavior(lazyListState = listState),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(horizontal = 16.dp),
+        ) {
+            itemsIndexed(orders, key = { _, order -> order.orderNumber }) { index, order ->
+                cardContent(order, index)
+            }
+        }
+    }
+}
+
+data class HorizontalListCallbacks(
+    val onCenteredOrderChange: (OrderInfo, Int) -> Unit = { _, _ -> },
+    val onNearEnd: (Int) -> Unit = {},
+)
+
+@Composable
+private fun observeCenteredItem(
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    orders: List<OrderInfo>,
+    onCenteredOrderChange: (OrderInfo, Int) -> Unit,
+) {
     LaunchedEffect(listState, orders) {
         snapshotFlow { listState.firstVisibleItemIndex }
             .map { idx -> idx.coerceAtLeast(0) }
@@ -45,35 +77,24 @@ fun generalHorizontalList(
                 }
             }
     }
+}
 
-    // Observe near-end for pagination
+@Composable
+private fun observeNearEnd(
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    orders: List<OrderInfo>,
+    onNearEnd: (Int) -> Unit,
+) {
     LaunchedEffect(listState, orders) {
-        snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1 }
-            .distinctUntilChanged()
+        snapshotFlow {
+            listState.layoutInfo.visibleItemsInfo
+                .lastOrNull()
+                ?.index ?: -1
+        }.distinctUntilChanged()
             .collect { lastVisible ->
                 if (lastVisible >= orders.size - 3) {
                     onNearEnd(lastVisible)
                 }
             }
-    }
-
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(220.dp)
-            .background(MaterialTheme.colorScheme.primary)
-        ,
-        contentAlignment = Alignment.Center
-    ) {
-        LazyRow(
-            state = listState,
-            flingBehavior = rememberSnapFlingBehavior(lazyListState = listState),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = PaddingValues(horizontal = 16.dp)
-        ) {
-            itemsIndexed(orders, key = { _, order -> order.orderNumber }) { index, order ->
-                cardContent(order, index) //  inject card composable
-            }
-        }
     }
 }
