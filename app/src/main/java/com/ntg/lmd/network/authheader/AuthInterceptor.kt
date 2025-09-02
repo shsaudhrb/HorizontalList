@@ -13,18 +13,15 @@ class AuthInterceptor(
         val isAuthEndpoint = path.endsWith("/login") || path.endsWith("/refresh-token")
 
         val b = req.newBuilder()
-        b.header("apikey", supabaseKey)
+            .header("apikey", supabaseKey)
 
         if (isAuthEndpoint) {
             b.header("Authorization", "Bearer $supabaseKey")
         } else {
             store.getAccessToken()?.takeIf { it.isNotBlank() }?.let {
                 b.header("Authorization", "Bearer $it")
-            } ?: run {
-                b.header("Authorization", "Bearer $supabaseKey")
-            }
+            } // else: no Authorization header
         }
-
         return chain.proceed(b.build())
     }
 }

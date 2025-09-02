@@ -8,8 +8,10 @@ import com.ntg.lmd.mainscreen.data.model.WebSocketMessage
 import com.ntg.lmd.network.authheader.SecureTokenStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -36,6 +38,10 @@ class SocketIntegration(
 
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.DISCONNECTED)
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
+
+    private var hbJob: Job? = null
+    @Volatile
+    private var refCounter = 1
 
     // Orders store
     private val orderStore = OrderStore()
@@ -69,12 +75,14 @@ class SocketIntegration(
                 object : ConnectionListener {
                     override fun onOpen() {
                         _connectionState.value = ConnectionState.CONNECTED
+                        startHeartbeat()
                     }
 
                     override fun onClosed(
                         code: Int,
                         reason: String,
                     ) {
+                        stopHeartbeat()
                         _connectionState.value = ConnectionState.DISCONNECTED
                         if (code != WS_CLOSE_NORMAL) recon.schedule(DEFAULT_RETRY_DELAY_MS)
                     }
@@ -84,6 +92,7 @@ class SocketIntegration(
                         message: String?,
                         t: Throwable?,
                     ) {
+                        stopHeartbeat()
                         if (httpCode == HTTP_UNAUTHORIZED) {
                             _connectionState.value =
                                 ConnectionState.ERROR("Authentication failed - token refresh needed")
@@ -180,6 +189,24 @@ class SocketIntegration(
             disconnect()
             connect(currentChannelName ?: "orders")
         }
+    }
+
+    // keep the WebSocket connection alive
+    private fun startHeartbeat() {
+        hbJob?.cancel()
+        hbJob = scope.launch {
+            while (true) {
+                val json =
+                    """{"topic":"phoenix","event":"heartbeat","payload":{},"ref":"${refCounter++}"}"""
+                ws?.send(json)
+                delay(28_000) // every ~28s (before Phoenix’s 30s timeout)
+            }
+        }
+    }
+
+    private fun stopHeartbeat() {
+        hbJob?.cancel()
+        hbJob = null
     }
 }
 

@@ -32,7 +32,7 @@
 
     <string name="my_orders_title">My Orders (%1$d)</string>
     <string name="search_by_order_number">Search by Order Number</string>
-    <string name="order_details">Order Details</string>
+    <string name="order_details">Details</string>
     <string name="call">Call</string>
     <string name="retry">Retry</string>
     <string name="no_active_orders">No active orders.</string>
@@ -151,5 +151,6 @@
     <string name="notif_every_15_days">Every 15 days</string>
     <string name="notif_every_30_days">Every 30 days</string>
     <string name="notif_every_90_days">Every 90 days</string>
+    <string name="no_data">No data Available</string>
 
 </resources>

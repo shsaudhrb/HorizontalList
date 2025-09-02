@@ -22,6 +22,7 @@ class MainActivity : ComponentActivity() {
         val localized = applyLanguage(newBase, langCode, recreateActivity = false)
         super.attachBaseContext(localized)
     }
+
     private lateinit var navController: NavHostController
     private val deepLinkVM by viewModels<DeepLinkViewModel>()
 

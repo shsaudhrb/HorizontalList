@@ -206,6 +206,7 @@ private fun seedNotificationsOnce() {
     LaunchedEffect(Unit) {
         if (!seeded.value) {
             seedNotifications(ServiceLocator.saveIncomingNotificationUseCase)
+//            seedNotifications(FCMServiceLocator.saveIncomingNotificationUseCase)
             seeded.value = true
         }
     }

@@ -8,7 +8,7 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.ntg.lmd.mainscreen.domain.paging.OrdersPaging
 import com.ntg.lmd.notification.data.dataSource.paging.NotificationsPagingSource
-import com.ntg.lmd.notification.data.dataSource.remote.ServiceLocator
+import com.ntg.lmd.notification.data.model.FCMServiceLocator
 import com.ntg.lmd.notification.domain.model.AgentNotification
 import com.ntg.lmd.notification.domain.model.NotificationFilter
 import com.ntg.lmd.notification.domain.usecase.ObserveNotificationsUseCase
@@ -31,7 +31,7 @@ class NotificationsViewModel(
     private val observeNotifications: ObserveNotificationsUseCase,
     private val refreshNotifications: RefreshNotificationsUseCase,
 ) : ViewModel() {
-    private val repo = ServiceLocator.notificationsRepo()
+    private val repo = FCMServiceLocator.notificationsRepo()
 
     private val _state = MutableStateFlow<NotificationsState>(NotificationsState.Loading)
     val state: StateFlow<NotificationsState> = _state.asStateFlow()
@@ -99,7 +99,7 @@ class NotificationsViewModel(
     fun addDummyAndRefresh() {
         viewModelScope.launch {
             val now = System.currentTimeMillis()
-            ServiceLocator.saveIncomingNotificationUseCase(
+            FCMServiceLocator.saveIncomingNotificationUseCase(
                 AgentNotification(
                     id = 0,
                     message = "New update at ${Date(now)}",

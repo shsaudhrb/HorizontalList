@@ -45,19 +45,21 @@ fun languageSettingsScreen(
 
     Scaffold(topBar = { languageTopBar(onBack) }) { padding ->
         languageBody(
-            modifier = Modifier
-                .padding(padding)
-                .padding(dimensionResource(R.dimen.mediumSpace)),
+            modifier =
+                Modifier
+                    .padding(padding)
+                    .padding(dimensionResource(R.dimen.mediumSpace)),
             selected = selected,
             onSelect = { selected = it },
             onApply = {
                 vm.setLanguage(it)
                 LocaleHelper.applyLanguage(
-                    ctx, if (it == AppLanguage.AR) "ar" else "en",
-                    recreateActivity = true
+                    ctx,
+                    if (it == AppLanguage.AR) "ar" else "en",
+                    recreateActivity = true,
                 )
                 onBack()
-            }
+            },
         )
     }
 }
@@ -71,15 +73,16 @@ private fun languageTopBar(onBack: () -> Unit) {
             IconButton(onClick = onBack) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.back)
+                    contentDescription = stringResource(R.string.back),
                 )
             }
         },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.primary,
-            titleContentColor = MaterialTheme.colorScheme.onPrimary,
-            navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
-        ),
+        colors =
+            TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+            ),
     )
 }
 

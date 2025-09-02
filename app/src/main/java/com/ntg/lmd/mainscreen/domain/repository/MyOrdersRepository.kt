@@ -1,10 +1,11 @@
 package com.ntg.lmd.mainscreen.domain.repository
 
-import com.ntg.lmd.mainscreen.domain.model.OrderInfo
+import com.ntg.lmd.mainscreen.domain.model.OrdersPage
 
 interface MyOrdersRepository {
     suspend fun getOrders(
         page: Int,
         limit: Int,
-    ): List<OrderInfo>
+        bypassCache: Boolean
+    ): OrdersPage
 }

@@ -104,18 +104,16 @@ class OrderHistoryViewModel(
         viewModelScope.launch {
             _isRefreshing.value = true
             try {
+                currentPage = 1
+                _endReached.value = false
+
                 val result =
                     getOrdersUseCase(token, page = 1, limit = OrdersPaging.PAGE_SIZE)
                         .filterByStatus(_filter.value.allowed)
                         .applySorting(_filter.value.ageAscending)
 
-                if (result.isNotEmpty()) {
-                    currentPage = 1
-                    _orders.value = result
-                    _endReached.value = false
-                } else {
-                    Log.w("OrderHistoryVM", "Refresh returned empty list, keeping existing data")
-                }
+                _orders.value = result
+                _endReached.value = result.isEmpty()
             } catch (e: IOException) {
                 Log.e("OrderHistoryVM", "Network error: ${e.message}", e)
             } catch (e: HttpException) {

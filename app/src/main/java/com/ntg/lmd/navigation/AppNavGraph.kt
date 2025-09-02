@@ -5,6 +5,9 @@ package com.ntg.lmd.navigation
 import android.app.Application
 import android.content.Intent
 import android.os.Build
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -13,6 +16,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -23,15 +27,16 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
 import com.ntg.lmd.MyApp
+import com.ntg.lmd.R
 import com.ntg.lmd.authentication.ui.viewmodel.login.LoginViewModel
 import com.ntg.lmd.authentication.ui.viewmodel.login.LoginViewModelFactory
 import com.ntg.lmd.mainscreen.domain.model.SearchController
 import com.ntg.lmd.navigation.component.AppBarConfig
 import com.ntg.lmd.navigation.component.appScaffoldWithDrawer
-import com.ntg.lmd.navigation.component.buildRouteUiSpec
-import com.ntg.lmd.navigation.component.buildTopBar
 import com.ntg.lmd.navigation.component.drawerNavGraph
+import com.ntg.lmd.navigation.component.navigateSingleTop
 import com.ntg.lmd.notification.ui.viewmodel.DeepLinkViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import com.ntg.lmd.authentication.ui.screens.login.loginScreen as LoginScreen
 import com.ntg.lmd.authentication.ui.screens.register.registerScreen as RegisterScreen
 import com.ntg.lmd.authentication.ui.screens.splash.splashScreen as SplashScreen
@@ -97,9 +102,12 @@ fun appNavGraph(
             val deepOpen = (uri?.scheme == "myapp" && uri.host == "notifications")
             val ctx = LocalContext.current
             val settingsVm: com.ntg.lmd.settings.ui.viewmodel.SettingsViewModel =
-                viewModel(factory = com.ntg.lmd.settings.ui.viewmodel.SettingsViewModelFactory(
-                    ctx.applicationContext as Application
-                ))
+                viewModel(
+                    factory =
+                        com.ntg.lmd.settings.ui.viewmodel.SettingsViewModelFactory(
+                            ctx.applicationContext as Application,
+                        ),
+                )
 
             val logoutState by settingsVm.logoutState.collectAsState()
 
@@ -113,7 +121,7 @@ fun appNavGraph(
                         settingsVm.resetLogoutState()
                     }
                     is com.ntg.lmd.settings.data.LogoutUiState.Error -> {
-                        settingsVm.resetLogoutState() // (show snackbar if you have one)
+                        settingsVm.resetLogoutState()
                     }
                     else -> Unit
                 }
@@ -142,45 +150,46 @@ private fun drawerHost(
     val app = ctx.applicationContext as MyApp
 
     // VM for login state (may be a different instance than the one that set the name)
-    val loginVm: LoginViewModel = viewModel(
-        factory = LoginViewModelFactory(ctx.applicationContext as Application)
-    )
+    val loginVm: LoginViewModel =
+        viewModel(
+            factory = LoginViewModelFactory(ctx.applicationContext as Application),
+        )
     val loginUi by loginVm.uiState.collectAsState()
-
     val effectiveUserName = loginUi.displayName ?: app.authRepo.lastLoginName
 
-    // Shared hook for Orders History overflow menu
     var openOrdersHistoryMenu by remember { mutableStateOf<(() -> Unit)?>(null) }
-
-    // Route-specific UI
     val spec = buildRouteUiSpec(currentRoute, drawerNavController, openOrdersHistoryMenu)
-
-    // Shared search controller
     val search = rememberSearchController(drawerNavController)
-
-    // Top bar config
     val topBar = buildTopBar(spec, search)
 
-    // Scaffold + inner nav
+    val inSettingsSub by remember(backStack) {
+        backStack?.savedStateHandle?.getStateFlow("settings_in_sub", false)
+            ?: MutableStateFlow(false)
+    }.collectAsState()
+
+    val hideChrome = currentRoute.startsWith(Screen.Settings.route) && inSettingsSub
+    val showChrome = !hideChrome
+
     appScaffoldWithDrawer(
-        navConfig = AppNavConfig(
-            navController = drawerNavController,
-            currentRoute = currentRoute,
-        ),
+        navConfig =
+            AppNavConfig(
+                navController = drawerNavController,
+                currentRoute = currentRoute,
+            ),
         topBar = topBar,
         appBar = AppBarConfig(title = spec.title),
         onLogout = onLogout,
         userName = effectiveUserName,
-        content = {
-            drawerNavGraph(
-                navController = drawerNavController,
-                startDestination = startDest,
-                registerOpenMenu = { setter -> openOrdersHistoryMenu = setter },
-                externalQuery = search.text.value,
-                onOpenOrderDetails = { id -> drawerNavController.navigate("order/$id") },
-            )
-        }
-    )
+        showChrome = showChrome,
+    ) {
+        drawerNavGraph(
+            navController = drawerNavController,
+            startDestination = startDest,
+            registerOpenMenu = { setter -> openOrdersHistoryMenu = setter },
+            externalQuery = search.text.value,
+            onOpenOrderDetails = { id -> drawerNavController.navigate("order/$id") },
+        )
+    }
 }
 
 // ======================= Helpers =======================
@@ -208,3 +217,90 @@ private fun rememberSearchController(navController: NavHostController): SearchCo
         )
     }
 }
+
+@Composable
+private fun buildTopBar(
+    spec: RouteUiSpec,
+    search: SearchController,
+): TopBarConfigWithTitle =
+    TopBarConfigWithTitle(
+        title = spec.title,
+        search = search,
+        showSearchIcon = spec.showSearchIcon,
+        actionButtonLabel = spec.actionButtonLabel,
+        onActionButtonClick = spec.onActionButtonClick,
+        actionIcon = spec.actionIcon,
+        onActionIconClick = spec.onActionIconClick,
+        searchPlaceholder = spec.searchPlaceholder,
+        searchActionIcon = if (spec.showSearchIcon) Icons.Filled.Search else null,
+        onSearchIconClick = { search.onToggle(true) },
+    )
+
+// ======================= Route UI Spec =======================
+
+@Composable
+private fun buildRouteUiSpec(
+    currentRoute: String,
+    nav: NavHostController,
+    openOrdersHistoryMenu: (() -> Unit)?,
+): RouteUiSpec =
+    when (currentRoute) {
+        Screen.GeneralPool.route ->
+            RouteUiSpec(
+                title = stringResource(R.string.menu_general_pool),
+                showSearchIcon = true,
+                searchPlaceholder = stringResource(R.string.search_order_number_customer_name),
+                actionButtonLabel = stringResource(R.string.my_pool),
+                onActionButtonClick = { nav.navigateSingleTop(Screen.MyPool.route) },
+            )
+
+        Screen.MyPool.route ->
+            RouteUiSpec(
+                title = stringResource(R.string.my_pool),
+                showSearchIcon = false,
+                actionButtonLabel = stringResource(R.string.menu_general_pool),
+                onActionButtonClick = { nav.navigateSingleTop(Screen.GeneralPool.route) },
+            )
+
+        Screen.MyOrders.route ->
+            RouteUiSpec(
+                title = stringResource(R.string.menu_my_orders),
+                showSearchIcon = true,
+                searchPlaceholder = stringResource(R.string.search_order_number),
+            )
+
+        Screen.DeliveriesLog.route ->
+            RouteUiSpec(
+                title = stringResource(R.string.menu_deliveries_log),
+                showSearchIcon = true,
+                searchPlaceholder = stringResource(R.string.search_order_number),
+            )
+
+        Screen.OrdersHistory.route ->
+            RouteUiSpec(
+                title = stringResource(R.string.menu_order_history),
+                showSearchIcon = false,
+                actionIcon = Icons.Filled.MoreVert,
+                onActionIconClick = { openOrdersHistoryMenu?.invoke() },
+            )
+
+        Screen.Notifications.route ->
+            RouteUiSpec(
+                title = stringResource(R.string.menu_notifications),
+                showSearchIcon = false,
+            )
+
+        Screen.Settings.route ->
+            RouteUiSpec(
+                title = stringResource(R.string.menu_settings),
+                showSearchIcon = false,
+            )
+
+        Screen.Chat.route ->
+            RouteUiSpec(
+                title = stringResource(R.string.menu_chat),
+                showSearchIcon = false,
+            )
+
+        else -> RouteUiSpec(title = stringResource(R.string.app_name), showSearchIcon = false)
+    }

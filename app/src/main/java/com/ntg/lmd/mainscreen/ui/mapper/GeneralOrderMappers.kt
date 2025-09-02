@@ -93,5 +93,7 @@ fun Order.toUi(context: Context): OrderInfo {
         distanceKm = Double.POSITIVE_INFINITY,
         lat = lat,
         lng = lng,
+        customerPhone = null,
+        details = null,
     )
 }
