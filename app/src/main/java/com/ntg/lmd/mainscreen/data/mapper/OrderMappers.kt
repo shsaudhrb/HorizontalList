@@ -2,7 +2,7 @@ package com.ntg.lmd.mainscreen.data.mapper
 
 import com.ntg.lmd.mainscreen.data.model.OrderDto
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
-import com.ntg.lmd.mainscreen.domain.model.apiIdToOrderStatus
+import com.ntg.lmd.mainscreen.domain.model.OrderStatus.Companion.fromId
 
 fun OrderDto.toDomain(): OrderInfo =
     OrderInfo(
@@ -14,7 +14,7 @@ fun OrderDto.toDomain(): OrderInfo =
         distanceKm = distanceKm ?: Double.NaN,
         lat = coordinates?.latitude ?: Double.NaN,
         lng = coordinates?.longitude ?: Double.NaN,
-        status = apiIdToOrderStatus(statusId),
+        status = fromId(statusId),
         price = "---",
         customerPhone = null,
         customerId = customerId,

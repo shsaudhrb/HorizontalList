@@ -1,5 +1,4 @@
 package com.ntg.lmd.mainscreen.domain.model
-// / Renad
 
 import com.ntg.lmd.order.domain.model.OrderStatusCode
 
@@ -18,7 +17,7 @@ data class OrderInfo(
     val distanceKm: Double = 0.0,
     val lat: Double = 0.0,
     val lng: Double = 0.0,
-    val status: OrderStatus = OrderStatus.ADDED,
+    val status: OrderStatus? = OrderStatus.ADDED,
     val price: String = "---",
     val customerPhone: String? = "",
     val details: String?,
@@ -43,3 +42,14 @@ enum class OrderStatus(
         fun fromId(id: Int?): OrderStatus? = values().firstOrNull { it.id == id }
     }
 }
+fun OrderStatus.toApiId(): Int =
+    when (this) {
+        OrderStatus.ADDED -> STATUS_ADDED
+        OrderStatus.CONFIRMED -> STATUS_CONFIRMED
+        OrderStatus.CANCELED -> OrderStatusCode.CANCELLED.code
+        OrderStatus.REASSIGNED -> STATUS_REASSIGNED
+        OrderStatus.PICKUP -> STATUS_PICKUP
+        OrderStatus.START_DELIVERY -> STATUS_START_DELIVERY
+        OrderStatus.DELIVERY_FAILED -> OrderStatusCode.FAILED.code
+        OrderStatus.DELIVERY_DONE -> OrderStatusCode.DONE.code
+    }

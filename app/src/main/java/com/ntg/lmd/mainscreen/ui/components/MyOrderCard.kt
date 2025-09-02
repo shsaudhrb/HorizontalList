@@ -98,7 +98,7 @@ private fun myOrderCardHeader(
 
 @Composable
 private fun myOrderCardPrimaryRow(
-    status: OrderStatus,
+    status: OrderStatus?,
     isUpdating: Boolean,
     onDetails: () -> Unit,
     setDialog: (ActionDialog) -> Unit,
@@ -142,7 +142,7 @@ private fun RowScope.myOrderCardPrimaryAction(
 
 @Composable
 private fun myOrderCardFailIfNeeded(
-    status: OrderStatus,
+    status: OrderStatus?,
     isUpdating: Boolean,
     onFail: () -> Unit,
 ) {

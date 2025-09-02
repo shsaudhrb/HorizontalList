@@ -61,7 +61,7 @@ fun orderList(
                     serverOrder.assignedAgentId != null &&
                     serverOrder.assignedAgentId != myUserId
 
-            val shouldHide = serverOrder.status.isTerminal() || movedAway
+            val shouldHide = serverOrder.status?.isTerminal() == true || movedAway
             if (shouldHide) hiddenIds = hiddenIds + serverOrder.id
             callbacks.onRefresh()
         }
@@ -72,7 +72,7 @@ fun orderList(
             state.orders
                 .asSequence()
                 .filter { it.id !in hiddenIds }
-                .filter { order -> !order.status.isTerminal() && order.isMine(myUserId) }
+                .filter { order -> !order.status?.isTerminal()!! && order.isMine(myUserId) }
                 .toList()
         }
     }

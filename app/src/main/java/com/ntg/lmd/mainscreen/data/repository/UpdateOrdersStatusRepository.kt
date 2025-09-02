@@ -4,7 +4,7 @@ import com.ntg.lmd.mainscreen.data.datasource.remote.UpdatetOrdersStatusApi
 import com.ntg.lmd.mainscreen.data.model.UpdateOrderStatusRequest
 import com.ntg.lmd.mainscreen.data.model.UpdatedOrderData
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
-import com.ntg.lmd.mainscreen.domain.model.apiIdToOrderStatus
+import com.ntg.lmd.mainscreen.domain.model.OrderStatus.Companion.fromId
 import com.ntg.lmd.mainscreen.domain.repository.UpdateOrdersStatus
 
 class UpdateOrdersStatusRepository(
@@ -44,7 +44,7 @@ class UpdateOrdersStatusRepository(
             distanceKm = 0.0,
             lat = 0.0,
             lng = 0.0,
-            status = apiIdToOrderStatus(d?.statusId),
+            status = fromId(d?.statusId),
             price = "---",
             customerPhone = null,
             details = d?.address,
