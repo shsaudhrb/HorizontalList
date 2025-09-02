@@ -31,6 +31,8 @@ class MyPoolViewModel(
     val ui: StateFlow<MyOrdersPoolUiState> = _ui.asStateFlow()
 
     private val deviceLocation = MutableStateFlow<Location?>(null)
+    val lastLocation: StateFlow<Location?> = deviceLocation.asStateFlow()
+
     private var page = 1
     private val pageSize = OrdersPaging.PAGE_SIZE
     private var loadingJob: Job? = null

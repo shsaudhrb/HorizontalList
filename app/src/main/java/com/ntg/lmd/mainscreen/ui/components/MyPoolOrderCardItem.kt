@@ -24,7 +24,6 @@ fun myPoolOrderCardItem(
             factory = UpdateOrderStatusViewModelFactory(LocalContext.current.applicationContext as Application)
         )
 
-
         myOrderCard(
             order = order,
             isUpdating = false,

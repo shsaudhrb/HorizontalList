@@ -44,22 +44,18 @@ private const val KM_DIVISOR = 1000.0
 
 @Composable
 fun distanceBadge(
-    distanceMeters: Double?,
+    distanceKm: Double,
     modifier: Modifier = Modifier,
 ) {
     val bg = MaterialTheme.colorScheme.primary
     val fg = MaterialTheme.colorScheme.onPrimary
-    val value = distanceMeters?.div(KM_DIVISOR)
     Box(
-        modifier =
-            modifier
-                .size(56.dp)
-                .background(bg, CircleShape),
+        modifier = modifier.size(56.dp).background(bg, CircleShape),
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = value?.let { String.format(Locale.getDefault(), "%.2f", it) } ?: "--",
+                text = distanceKm.let { String.format(Locale.getDefault(), "%.2f", it) },
                 style = MaterialTheme.typography.labelSmall,
                 color = fg,
             )
@@ -71,6 +67,7 @@ fun distanceBadge(
         }
     }
 }
+
 
 @Composable
 fun primaryActionButton(
@@ -184,18 +181,13 @@ fun orderHeaderLeft(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             distanceBadge(
-                distanceMeters = order.distanceKm,
+                distanceKm = order.distanceKm,
                 modifier = Modifier.padding(end = dimensionResource(R.dimen.mediumSpace)),
             )
             Column {
-                Text(
-                    order.name,
-                    style = MaterialTheme.typography.titleMedium,
-                )
+                Text(order.name, style = MaterialTheme.typography.titleMedium)
                 Text(
                     "#${order.orderNumber}",
                     style = MaterialTheme.typography.bodyMedium,
@@ -209,10 +201,7 @@ fun orderHeaderLeft(
                 )
                 order.details?.let {
                     Spacer(modifier = Modifier.height(dimensionResource(R.dimen.extraSmallSpace)))
-                    Text(
-                        it,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
+                    Text(it, style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
@@ -231,7 +220,7 @@ fun orderHeaderLeft(
                         enabled = enabled && order.status == OrderStatus.CONFIRMED,
                         onClick = {
                             menuExpanded = false
-                            OrderLogger.uiTap(order.id, order.orderNumber, "Menu:PickUp") // ← log
+                            OrderLogger.uiTap(order.id, order.orderNumber, "Menu:PickUp")
                             onPickUp()
                         },
                     )
@@ -241,7 +230,7 @@ fun orderHeaderLeft(
                         enabled = enabled && order.status in listOf(OrderStatus.ADDED, OrderStatus.CONFIRMED),
                         onClick = {
                             menuExpanded = false
-                            OrderLogger.uiTap(order.id, order.orderNumber, "Menu:Cancel") // ← log
+                            OrderLogger.uiTap(order.id, order.orderNumber, "Menu:Cancel")
                             onCancel()
                         },
                     )
@@ -251,18 +240,14 @@ fun orderHeaderLeft(
                         enabled = enabled,
                         onClick = {
                             menuExpanded = false
-                            OrderLogger.uiTap(order.id, order.orderNumber, "Menu:Reassign") // ← log
+                            OrderLogger.uiTap(order.id, order.orderNumber, "Menu:Reassign")
                             onReassign()
                         },
                     )
                 }
             }
             Spacer(modifier = Modifier.height(dimensionResource(R.dimen.smallerSpace)))
-
-            Text(
-                text = order.price,
-                style = MaterialTheme.typography.titleSmall,
-            )
+            Text(text = order.price, style = MaterialTheme.typography.titleSmall)
         }
     }
 }

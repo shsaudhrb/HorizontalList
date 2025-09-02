@@ -6,6 +6,8 @@ interface MyOrdersRepository {
     suspend fun getOrders(
         page: Int,
         limit: Int,
-        bypassCache: Boolean
+        bypassCache: Boolean,
+        assignedAgentId: String? = null,
+        userOrdersOnly: Boolean? = null,
     ): OrdersPage
 }

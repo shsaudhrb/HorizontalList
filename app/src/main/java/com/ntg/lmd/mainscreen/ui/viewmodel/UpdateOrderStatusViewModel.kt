@@ -26,7 +26,7 @@ class UpdateOrderStatusViewModel(
     val success: SharedFlow<OrderInfo> = _success
     private val _currentUserId = MutableStateFlow<String?>(userStore.getUserId())
     val currentUserId: StateFlow<String?> = _currentUserId
-    private val _error = MutableSharedFlow<Pair<String, () -> Unit>>() // message + retry
+    private val _error = MutableSharedFlow<Pair<String, () -> Unit>>()
     val error: SharedFlow<Pair<String, () -> Unit>> = _error
 
     init {
