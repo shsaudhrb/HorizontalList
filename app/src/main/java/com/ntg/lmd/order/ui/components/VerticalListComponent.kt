@@ -16,11 +16,16 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.dimensionResource
 import com.ntg.lmd.R
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -35,20 +40,19 @@ fun <T> verticalListComponent(
     isLoadingMore: Boolean,
     endReached: Boolean,
     onLoadMore: () -> Unit,
-
     // Layout
-    contentPadding: PaddingValues = PaddingValues(
-        start = dimensionResource(R.dimen.mediumSpace),
-        end = dimensionResource(R.dimen.mediumSpace),
-        bottom = dimensionResource(R.dimen.mediumSpace),
-    ),
-    verticalArrangement: Arrangement.Vertical = Arrangement.spacedBy(
-        dimensionResource(R.dimen.list_item_spacing)
-    ),
-
+    contentPadding: PaddingValues =
+        PaddingValues(
+            start = dimensionResource(R.dimen.mediumSpace),
+            end = dimensionResource(R.dimen.mediumSpace),
+            bottom = dimensionResource(R.dimen.mediumSpace),
+        ),
+    verticalArrangement: Arrangement.Vertical =
+        Arrangement.spacedBy(
+            dimensionResource(R.dimen.list_item_spacing),
+        ),
     // Behavior
     prefetchThreshold: Int = 3,
-
     emptyContent: @Composable () -> Unit = { customEmptyState() },
     loadingFooter: @Composable () -> Unit = { customLoadingFooter() },
     endFooter: @Composable () -> Unit = { customEndFooter() },
@@ -56,20 +60,33 @@ fun <T> verticalListComponent(
     // Initial loading
     val showingInitialLoading = (isRefreshing || isLoadingMore) && items.isEmpty()
 
+    // Avoid multiple onLoadMore() calls while Compose/state is in-flight
+    var loadRequested by remember { mutableStateOf(false) }
+
+    // Reset the local guard when VM acknowledges loading or when list grows or we reach the end
+    LaunchedEffect(isLoadingMore, items.size, endReached) {
+        if (isLoadingMore || endReached) {
+            loadRequested = false
+        }
+    }
+
     // Observe near-end to trigger pagination
-    LaunchedEffect(listState, items.size, isLoadingMore, endReached, isRefreshing) {
-        if (endReached) return@LaunchedEffect
+    LaunchedEffect(listState) {
         snapshotFlow {
-            val last = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
+            val last =
+                listState.layoutInfo.visibleItemsInfo
+                    .lastOrNull()
+                    ?.index ?: -1
             val total = listState.layoutInfo.totalItemsCount
             last to total
-        }.distinctUntilChanged().collect { (last, total) ->
-            if (!isRefreshing && !isLoadingMore && !endReached && total > 0 &&
-                last >= total - 1 - prefetchThreshold
-            ) {
-                onLoadMore()
+        }.distinctUntilChanged()
+            .collectLatest { (last, total) ->
+                val nearEnd = total > 0 && last >= total - 1 - prefetchThreshold
+                if (!isRefreshing && !isLoadingMore && !endReached && nearEnd && !loadRequested) {
+                    loadRequested = true
+                    onLoadMore()
+                }
             }
-        }
     }
 
     PullToRefreshBox(isRefreshing = isRefreshing, onRefresh = onRefresh) {
@@ -94,8 +111,13 @@ fun <T> verticalListComponent(
                     items(items, key = { key(it) }) { item ->
                         itemContent(item)
                     }
+
                     if (isLoadingMore) item("loading_footer") { loadingFooter() }
-                    if (endReached && items.isNotEmpty()) item("end_footer") { endFooter() }
+                    val showEnd = endReached && items.isNotEmpty() && !isLoadingMore
+                    if (showEnd) {
+                        item(key = "end_footer_${items.size}_$endReached") { endFooter() }
+                    }
+//                    if (endReached && items.isNotEmpty()) item("end_footer") { endFooter() }
                 }
             }
         }
@@ -127,9 +149,7 @@ fun customEndFooter() {
 }
 
 @Composable
-fun customEmptyState(
-    text: String = "No items yet",
-) {
+fun customEmptyState(text: String = "No items yet") {
     Box(
         Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,

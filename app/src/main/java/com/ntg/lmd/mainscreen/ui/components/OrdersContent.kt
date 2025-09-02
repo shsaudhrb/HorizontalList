@@ -2,10 +2,12 @@ package com.ntg.lmd.mainscreen.ui.components
 
 import android.content.Intent
 import android.net.Uri
+import android.util.Log
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -20,7 +22,7 @@ import com.ntg.lmd.mainscreen.ui.viewmodel.MyOrdersViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
 
 @Composable
- fun ordersContent(
+fun ordersContent(
     ordersVm: MyOrdersViewModel,
     updateVm: UpdateOrderStatusViewModel,
     state: MyOrdersUiState,
@@ -29,6 +31,7 @@ import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
     context: android.content.Context,
     updatingIds: Set<String>,
     onReassignRequested: (String) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     // Collect once to avoid multiple recompositions in params
     val uiState by ordersVm.state.collectAsState()
@@ -38,7 +41,7 @@ import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
             state.isLoading && state.orders.isEmpty() -> loadingView()
             state.errorMessage != null -> errorView(state.errorMessage!!) { ordersVm.retry(context) }
             state.emptyMessage != null -> emptyView(state.emptyMessage!!)
-            else ->
+            else -> {
                 orderList(
                     state =
                         OrderListState(
@@ -46,6 +49,8 @@ import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
                             listState = listState,
                             isLoadingMore = uiState.isLoadingMore,
                             updatingIds = updatingIds,
+                            isRefreshing = uiState.isRefreshing,
+                            endReached = uiState.endReached,
                         ),
                     updateVm = updateVm,
                     callbacks =
@@ -74,19 +79,49 @@ import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
                                         ActionDialog.Deliver -> "Deliver"
                                         ActionDialog.Fail -> "DeliveryFailed"
                                     }
-                                UpdateOrderStatusViewModel.OrderLogger.uiTap(orderId, order?.orderNumber, label)
+                                UpdateOrderStatusViewModel.OrderLogger.uiTap(
+                                    orderId,
+                                    order?.orderNumber,
+                                    label,
+                                )
 
                                 when (dialog) {
-                                    ActionDialog.Confirm -> updateVm.update(orderId, OrderStatus.CONFIRMED)
-                                    ActionDialog.PickUp -> updateVm.update(orderId, OrderStatus.PICKUP)
-                                    ActionDialog.Start -> updateVm.update(orderId, OrderStatus.START_DELIVERY)
-                                    ActionDialog.Deliver -> updateVm.update(orderId, OrderStatus.DELIVERY_DONE)
-                                    ActionDialog.Fail -> updateVm.update(orderId, OrderStatus.DELIVERY_FAILED)
+                                    ActionDialog.Confirm ->
+                                        updateVm.update(
+                                            orderId,
+                                            OrderStatus.CONFIRMED,
+                                        )
+
+                                    ActionDialog.PickUp ->
+                                        updateVm.update(
+                                            orderId,
+                                            OrderStatus.PICKUP,
+                                        )
+
+                                    ActionDialog.Start ->
+                                        updateVm.update(
+                                            orderId,
+                                            OrderStatus.START_DELIVERY,
+                                        )
+
+                                    ActionDialog.Deliver ->
+                                        updateVm.update(
+                                            orderId,
+                                            OrderStatus.DELIVERY_DONE,
+                                        )
+
+                                    ActionDialog.Fail ->
+                                        updateVm.update(
+                                            orderId,
+                                            OrderStatus.DELIVERY_FAILED,
+                                        )
                                 }
                             },
-                            onRefresh = { ordersVm.refreshOrders() }, // IMPORTANT: real reload
+                            onRefresh = { ordersVm.refresh(context) },
+                            onLoadMore = { ordersVm.loadNextPage(context) },
                         ),
                 )
+            }
         }
     }
 }

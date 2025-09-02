@@ -9,8 +9,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -22,14 +20,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.data.repository.MyOrdersRepositoryImpl
-import com.ntg.lmd.mainscreen.data.repository.UpdateOrdersStatusRepository
 import com.ntg.lmd.mainscreen.data.repository.UsersRepositoryImpl
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
 import com.ntg.lmd.mainscreen.domain.usecase.GetActiveUsersUseCase
 import com.ntg.lmd.mainscreen.domain.usecase.GetMyOrdersUseCase
-import com.ntg.lmd.mainscreen.domain.usecase.UpdateOrderStatusUseCase
 import com.ntg.lmd.mainscreen.ui.components.bottomStickyButton
 import com.ntg.lmd.mainscreen.ui.components.ordersContent
 import com.ntg.lmd.mainscreen.ui.components.ordersEffects
@@ -42,20 +39,22 @@ import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel.OrderLogger
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModelFactory
 import com.ntg.lmd.network.core.RetrofitProvider
-import com.ntg.lmd.utils.SecureUserStore
-
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun myOrdersScreen(onOpenOrderDetails: (String) -> Unit) {
+fun myOrdersScreen(
+    navController: NavController,
+    onOpenOrderDetails: (String) -> Unit,
+) {
     val repo = remember { MyOrdersRepositoryImpl(RetrofitProvider.ordersApi) }
-
     val getUsecase = remember { GetMyOrdersUseCase(repo) }
-
     val ordersVm: MyOrdersViewModel = viewModel(factory = MyOrdersViewModelFactory(getUsecase))
-    val updateVm: UpdateOrderStatusViewModel = viewModel(
-        factory = UpdateOrderStatusViewModelFactory(LocalContext.current.applicationContext as Application)
-    )
+
+    val updateVm: UpdateOrderStatusViewModel =
+        viewModel(
+            factory = UpdateOrderStatusViewModelFactory(LocalContext.current.applicationContext as Application),
+        )
 
     val repoUsers = remember { UsersRepositoryImpl(RetrofitProvider.usersApi) }
     val getUsers = remember { GetActiveUsersUseCase(repoUsers) }
@@ -69,14 +68,18 @@ fun myOrdersScreen(onOpenOrderDetails: (String) -> Unit) {
         reassignOrderId = orderId
         agentsVm.load()
     }
+
     val state by ordersVm.state.collectAsState()
     val updatingIds by updateVm.updatingIds.collectAsState()
     val ctx = LocalContext.current
     val snack = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
-    val pullState = rememberPullToRefreshState()
 
     ordersEffects(ordersVm, state, listState, snack, ctx)
+
+    LaunchedEffect(state.query) {
+        listState.scrollToItem(0)
+    }
 
     LaunchedEffect(Unit) {
         updateVm.success.collect { updated ->
@@ -95,31 +98,29 @@ fun myOrdersScreen(onOpenOrderDetails: (String) -> Unit) {
         }
     }
 
+    observeOrdersSearch(navController, ordersVm)
+
     Scaffold(
         snackbarHost = { SnackbarHost(snack) },
         bottomBar = { bottomStickyButton(text = stringResource(R.string.order_pool)) {} },
     ) { innerPadding ->
-        PullToRefreshBox(
-            isRefreshing = state.isRefreshing,
-            onRefresh = { ordersVm.refresh(ctx) },
-            state = pullState,
+
+        ordersContent(
+            ordersVm = ordersVm,
+            updateVm = updateVm,
+            state = state,
+            listState = listState,
+            onOpenOrderDetails = onOpenOrderDetails,
+            context = ctx,
+            updatingIds = updatingIds,
+            onReassignRequested = onReassignRequested,
             modifier =
                 Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
-        ) {
-            ordersContent(
-                ordersVm = ordersVm,
-                updateVm = updateVm,
-                state = state,
-                listState = listState,
-                onOpenOrderDetails = onOpenOrderDetails,
-                context = ctx,
-                updatingIds = updatingIds,
-                onReassignRequested = onReassignRequested,
-            )
-        }
+        )
     }
+
     reassignBottomSheet(
         open = reassignOrderId != null,
         state = agentsState,
@@ -127,15 +128,47 @@ fun myOrdersScreen(onOpenOrderDetails: (String) -> Unit) {
         onRetry = { agentsVm.load() },
         onSelect = { user ->
             val orderId = reassignOrderId ?: return@reassignBottomSheet
-            OrderLogger.uiTap(orderId,
-                state.orders.firstOrNull
-                { it.id == orderId }?.orderNumber, "Menu:Reassign→${user.name}")
+            OrderLogger.uiTap(
+                orderId,
+                state.orders
+                    .firstOrNull
+                    { it.id == orderId }
+                    ?.orderNumber,
+                "Menu:Reassign→${user.name}",
+            )
             updateVm.update(orderId, OrderStatus.REASSIGNED, assignedAgentId = user.id)
             reassignOrderId = null
         },
     )
 }
 
+@Composable
+private fun observeOrdersSearch(
+    navController: NavController,
+    vm: MyOrdersViewModel,
+) {
+    val back = navController.currentBackStackEntry
 
+    LaunchedEffect(back) {
+        val h = back?.savedStateHandle ?: return@LaunchedEffect
+        kotlinx.coroutines.flow
+            .combine(
+                h.getStateFlow("searching", false),
+                h.getStateFlow("search_text", ""),
+            ) { enabled, text -> if (enabled) text else "" }
+            .distinctUntilChanged()
+            .collect { q ->
+                vm.applySearchQuery(q)
+            }
+    }
 
-
+    LaunchedEffect(back) {
+        val h = back?.savedStateHandle ?: return@LaunchedEffect
+        h.getStateFlow("search_submit", "").collect { submitted ->
+            if (submitted.isNotEmpty()) {
+                vm.applySearchQuery(submitted)
+                h["search_submit"] = ""
+            }
+        }
+    }
+}

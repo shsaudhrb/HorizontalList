@@ -12,4 +12,5 @@ data class MyOrdersUiState(
     val emptyMessage: String? = null,
     val errorMessage: String? = null,
     val page: Int? = 0,
+    val endReached: Boolean = false,
 )

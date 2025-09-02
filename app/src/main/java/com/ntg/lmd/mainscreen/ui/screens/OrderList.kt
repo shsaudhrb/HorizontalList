@@ -2,16 +2,9 @@ package com.ntg.lmd.mainscreen.ui.screens
 
 import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -20,8 +13,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.dimensionResource
 import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
@@ -29,12 +20,15 @@ import com.ntg.lmd.mainscreen.domain.model.OrderStatus
 import com.ntg.lmd.mainscreen.ui.components.ActionDialog
 import com.ntg.lmd.mainscreen.ui.components.myOrderCard
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
+import com.ntg.lmd.order.ui.components.verticalListComponent
 
 data class OrderListState(
     val orders: List<OrderInfo>,
     val listState: LazyListState,
     val isLoadingMore: Boolean,
     val updatingIds: Set<String>,
+    val isRefreshing: Boolean,
+    val endReached: Boolean,
 )
 
 data class OrderListCallbacks(
@@ -43,6 +37,7 @@ data class OrderListCallbacks(
     val onCall: (String) -> Unit,
     val onAction: (String, ActionDialog) -> Unit,
     val onRefresh: () -> Unit,
+    val onLoadMore: () -> Unit,
 )
 
 @Composable
@@ -53,13 +48,13 @@ fun orderList(
 ) {
     val myUserId by updateVm.currentUserId.collectAsState()
     var hiddenIds by remember { mutableStateOf(emptySet<String>()) }
+
     LaunchedEffect(updateVm, myUserId) {
         updateVm.success.collect { serverOrder ->
             val movedAway =
                 myUserId != null &&
                     serverOrder.assignedAgentId != null &&
                     serverOrder.assignedAgentId != myUserId
-
             val shouldHide = serverOrder.status.isTerminal() || movedAway
             if (shouldHide) hiddenIds = hiddenIds + serverOrder.id
             callbacks.onRefresh()
@@ -83,12 +78,10 @@ fun orderList(
         }
     }
 
-    LazyColumn(
-        state = state.listState,
-        contentPadding = PaddingValues(dimensionResource(R.dimen.mediumSpace)),
-        verticalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.mediumSpace)),
-    ) {
-        items(items = filteredOrders, key = { it.id }) { order ->
+    verticalListComponent(
+        items = filteredOrders,
+        key = { it.id },
+        itemContent = { order ->
             myOrderCard(
                 order = order,
                 isUpdating = state.updatingIds.contains(order.id),
@@ -98,17 +91,17 @@ fun orderList(
                 onReassignRequested = { callbacks.onReassignRequested(order.id) },
                 updateVm = updateVm,
             )
-        }
-        if (state.isLoadingMore) {
-            item {
-                Box(
-                    Modifier.fillMaxWidth().padding(dimensionResource(R.dimen.mediumSpace)),
-                    contentAlignment = Alignment.Center,
-                ) { CircularProgressIndicator() }
-            }
-        }
-        item { Spacer(modifier = Modifier.height(dimensionResource(R.dimen.extraSmallSpace))) }
-    }
+        },
+        listState = state.listState,
+        isRefreshing = state.isRefreshing,
+        onRefresh = callbacks.onRefresh,
+        isLoadingMore = state.isLoadingMore,
+        endReached = state.endReached,
+        onLoadMore = callbacks.onLoadMore,
+        // Layout identical to your previous LazyColumn:
+        contentPadding = PaddingValues(dimensionResource(R.dimen.mediumSpace)),
+        verticalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.mediumSpace)),
+    )
 }
 
 private fun OrderStatus.isTerminal() = this == OrderStatus.CANCELED || this == OrderStatus.DELIVERY_DONE
