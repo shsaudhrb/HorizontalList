@@ -28,6 +28,7 @@ import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
 import com.ntg.lmd.mainscreen.ui.components.ActionDialog
 import com.ntg.lmd.mainscreen.ui.components.myOrderCard
+import com.ntg.lmd.mainscreen.ui.model.MyOrderCardCallbacks
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
 
 data class OrderListState(
@@ -60,7 +61,7 @@ fun orderList(
                     serverOrder.assignedAgentId != null &&
                     serverOrder.assignedAgentId != myUserId
 
-            val shouldHide = serverOrder.status.isTerminal() || movedAway
+            val shouldHide = serverOrder.status?.isTerminal() == true || movedAway
             if (shouldHide) hiddenIds = hiddenIds + serverOrder.id
             callbacks.onRefresh()
         }
@@ -71,13 +72,17 @@ fun orderList(
             state.orders
                 .asSequence()
                 .filter { it.id !in hiddenIds }
-                .filter { order -> !order.status.isTerminal() && order.isMine(myUserId) }
+                .filter { order -> !order.status?.isTerminal()!! && order.isMine(myUserId) }
                 .toList()
         }
     }
 
     LaunchedEffect(state.orders, myUserId, hiddenIds, filteredOrders) {
-        Log.d("OrderListFilter", "me=$myUserId total=${state.orders.size} hidden=${hiddenIds.size} filtered=${filteredOrders.size}")
+        Log.d(
+            "OrderListFilter",
+            "me=$myUserId total=${state.orders.size}" +
+                " hidden=${hiddenIds.size} filtered=${filteredOrders.size}",
+        )
         filteredOrders.take(5).forEach { o ->
             Log.d("OrderListFilter", "id=${o.id} status=${o.status} assigned=${o.assignedAgentId}")
         }
@@ -92,17 +97,24 @@ fun orderList(
             myOrderCard(
                 order = order,
                 isUpdating = state.updatingIds.contains(order.id),
-                onDetails = { callbacks.onDetails(order.id) },
-                onCall = { callbacks.onCall(order.id) },
-                onAction = { d -> callbacks.onAction(order.id, d) },
-                onReassignRequested = { callbacks.onReassignRequested(order.id) },
+                callbacks =
+                    MyOrderCardCallbacks(
+                        onDetails = { callbacks.onDetails(order.id) },
+                        onCall = { callbacks.onCall(order.id) },
+                        onAction = { d -> callbacks.onAction(order.id, d) },
+                        onReassignRequested = {
+                            callbacks.onReassignRequested(order.id)
+                        },
+                    ),
                 updateVm = updateVm,
             )
         }
         if (state.isLoadingMore) {
             item {
                 Box(
-                    Modifier.fillMaxWidth().padding(dimensionResource(R.dimen.mediumSpace)),
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(dimensionResource(R.dimen.mediumSpace)),
                     contentAlignment = Alignment.Center,
                 ) { CircularProgressIndicator() }
             }

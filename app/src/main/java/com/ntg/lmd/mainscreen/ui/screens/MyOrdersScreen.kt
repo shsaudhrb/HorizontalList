@@ -24,12 +24,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.data.repository.MyOrdersRepositoryImpl
-import com.ntg.lmd.mainscreen.data.repository.UpdateOrdersStatusRepository
 import com.ntg.lmd.mainscreen.data.repository.UsersRepositoryImpl
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
 import com.ntg.lmd.mainscreen.domain.usecase.GetActiveUsersUseCase
 import com.ntg.lmd.mainscreen.domain.usecase.GetMyOrdersUseCase
-import com.ntg.lmd.mainscreen.domain.usecase.UpdateOrderStatusUseCase
 import com.ntg.lmd.mainscreen.ui.components.bottomStickyButton
 import com.ntg.lmd.mainscreen.ui.components.ordersContent
 import com.ntg.lmd.mainscreen.ui.components.ordersEffects
@@ -42,8 +40,6 @@ import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel.OrderLogger
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModelFactory
 import com.ntg.lmd.network.core.RetrofitProvider
-import com.ntg.lmd.utils.SecureUserStore
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,9 +49,10 @@ fun myOrdersScreen(onOpenOrderDetails: (String) -> Unit) {
     val getUsecase = remember { GetMyOrdersUseCase(repo) }
 
     val ordersVm: MyOrdersViewModel = viewModel(factory = MyOrdersViewModelFactory(getUsecase))
-    val updateVm: UpdateOrderStatusViewModel = viewModel(
-        factory = UpdateOrderStatusViewModelFactory(LocalContext.current.applicationContext as Application)
-    )
+    val updateVm: UpdateOrderStatusViewModel =
+        viewModel(
+            factory = UpdateOrderStatusViewModelFactory(LocalContext.current.applicationContext as Application),
+        )
 
     val repoUsers = remember { UsersRepositoryImpl(RetrofitProvider.usersApi) }
     val getUsers = remember { GetActiveUsersUseCase(repoUsers) }
@@ -127,15 +124,16 @@ fun myOrdersScreen(onOpenOrderDetails: (String) -> Unit) {
         onRetry = { agentsVm.load() },
         onSelect = { user ->
             val orderId = reassignOrderId ?: return@reassignBottomSheet
-            OrderLogger.uiTap(orderId,
-                state.orders.firstOrNull
-                { it.id == orderId }?.orderNumber, "Menu:Reassign→${user.name}")
+            OrderLogger.uiTap(
+                orderId,
+                state.orders
+                    .firstOrNull
+                    { it.id == orderId }
+                    ?.orderNumber,
+                "Menu:Reassign→${user.name}",
+            )
             updateVm.update(orderId, OrderStatus.REASSIGNED, assignedAgentId = user.id)
             reassignOrderId = null
         },
     )
 }
-
-
-
-
