@@ -73,8 +73,8 @@ class MyOrdersViewModel(
                 allOrders.addAll(page1.items)
                 endReached = page1.rawCount < PAGE_SIZE
 
-                val base = currentFilteredFor(state.value.query, allOrders)
-                _state.publishFirstPageFrom(base, PAGE_SIZE, state.value.query)
+                val withDist = withDistances(applyDisplayFilter(allOrders))
+                _state.publishFirstPageFrom(withDist, PAGE_SIZE, state.value.query)
             } catch (ce: CancellationException) {
                 throw ce
             } catch (e: Exception) {

@@ -24,15 +24,16 @@ fun myPoolOrderCardItem(
         val updateVm: UpdateOrderStatusViewModel = viewModel(
             factory = UpdateOrderStatusViewModelFactory(LocalContext.current.applicationContext as Application)
         )
-
         myOrderCard(
             order = order,
             isUpdating = false,
-            onDetails = { onOpenOrderDetails(order.orderNumber) },
-            onCall = { onCall(order.customerPhone)},
-            onAction = {},
-            onReassignRequested = {},
-            updateVm =updateVm ,
+            callbacks = MyOrderCardCallbacks(
+                onReassignRequested = {},
+                onDetails = { onOpenOrderDetails(order.orderNumber) },
+                onCall = { onCall(order.customerPhone) },
+                onAction = {},
+            ),
+            updateVm = updateVm,
         )
     }
 }

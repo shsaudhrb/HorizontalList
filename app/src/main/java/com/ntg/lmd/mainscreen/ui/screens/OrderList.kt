@@ -26,6 +26,7 @@ import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
 import com.ntg.lmd.mainscreen.ui.components.ActionDialog
 import com.ntg.lmd.mainscreen.ui.components.myOrderCard
+import com.ntg.lmd.mainscreen.ui.model.MyOrderCardCallbacks
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
 
 data class OrderListState(
@@ -83,10 +84,12 @@ fun orderList(
             myOrderCard(
                 order = order,
                 isUpdating = state.updatingIds.contains(order.id),
-                onDetails = { callbacks.onDetails(order.id) },
-                onCall = { callbacks.onCall(order.id) },
-                onAction = { d -> callbacks.onAction(order.id, d) },
-                onReassignRequested = { callbacks.onReassignRequested(order.id) },
+                callbacks = MyOrderCardCallbacks(
+                    onReassignRequested = { callbacks.onReassignRequested(order.id) },
+                    onDetails = { callbacks.onDetails(order.id) },
+                    onCall = { callbacks.onCall(order.id) },
+                    onAction = { act -> callbacks.onAction(order.id, act) },
+                ),
                 updateVm = updateVm,
             )
         }
