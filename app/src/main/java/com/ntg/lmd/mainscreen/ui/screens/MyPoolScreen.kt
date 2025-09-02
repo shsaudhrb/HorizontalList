@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
@@ -27,10 +28,12 @@ import com.google.maps.android.compose.CameraPositionState
 import com.google.maps.android.compose.MarkerState
 import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
+import com.ntg.lmd.mainscreen.ui.components.HorizontalListCallbacks
+import com.ntg.lmd.mainscreen.ui.components.generalHorizontalList
 import com.ntg.lmd.mainscreen.ui.components.initialCameraPositionEffect
 import com.ntg.lmd.mainscreen.ui.components.locationPermissionAndLastLocation
 import com.ntg.lmd.mainscreen.ui.components.mapCenter
-import com.ntg.lmd.mainscreen.ui.components.myPoolBottom
+import com.ntg.lmd.mainscreen.ui.components.myPoolOrderCardItem
 import com.ntg.lmd.mainscreen.ui.components.rememberFocusOnMyOrder
 import com.ntg.lmd.mainscreen.ui.model.MapStates
 import com.ntg.lmd.mainscreen.ui.model.MapUiState
@@ -160,7 +163,18 @@ private fun BoxScope.bottomOverlay(
             .align(Alignment.BottomCenter)
             .onGloballyPositioned { callbacks.onBottomHeightMeasured(it.size.height) },
     ) {
-        AnimatedVisibility(visible = state.isLoadingMore) {
+        loadingMoreIndicator(state)
+        ordersHorizontalList(state, callbacks)
+    }
+}
+
+@Composable
+private fun loadingMoreIndicator(state: MapOverlayState) {
+    AnimatedVisibility(visible = state.isLoadingMore) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
             CircularProgressIndicator(
                 modifier =
                     Modifier
@@ -168,11 +182,30 @@ private fun BoxScope.bottomOverlay(
                         .padding(bottom = dimensionResource(R.dimen.smallSpace)),
             )
         }
-        myPoolBottom(
-            orders = state.orders,
-            onCenteredOrderChange = callbacks.onCenteredOrderChange,
-            onOpenOrderDetails = callbacks.onOpenOrderDetails,
-            onNearEnd = callbacks.onNearEnd,
-        )
     }
+}
+
+@Composable
+private fun ordersHorizontalList(
+    state: MapOverlayState,
+    callbacks: MapOverlayCallbacks,
+) {
+    generalHorizontalList(
+        orders = state.orders,
+        selectedOrderNumber = state.mapUi.selected?.orderNumber,
+        callbacks =
+            HorizontalListCallbacks(
+                onCenteredOrderChange = { order, index ->
+                    callbacks.onCenteredOrderChange(order, index)
+                },
+                onNearEnd = { idx -> callbacks.onNearEnd(idx) },
+            ),
+        cardContent = { order, _ ->
+            myPoolOrderCardItem(
+                order = order,
+                onOpenOrderDetails = callbacks.onOpenOrderDetails,
+                onCall = { },
+            )
+        },
+    )
 }

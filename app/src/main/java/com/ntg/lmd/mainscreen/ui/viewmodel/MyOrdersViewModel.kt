@@ -25,7 +25,6 @@ private const val PAGE_SIZE = 10
 class MyOrdersViewModel(
     private val getMyOrders: GetMyOrdersUseCase,
 ) : ViewModel() {
-
     private val _state = MutableStateFlow(MyOrdersUiState(isLoading = false))
     val state: StateFlow<MyOrdersUiState> = _state
 
@@ -33,7 +32,9 @@ class MyOrdersViewModel(
     private var page = 1
     private var endReached = false
 
-    init { refreshOrders() }
+    init {
+        refreshOrders()
+    }
 
     /** Simple refresh (pull first page fresh) */
     fun refreshOrders() {
@@ -218,18 +219,15 @@ class MyOrdersViewModel(
     }
 }
 
-// ---- File-level helpers ----
+/* ---- File-level helpers ---- */
 
-private fun currentFilteredFor(
-    queryRaw: String,
-    all: List<OrderInfo>,
-): List<OrderInfo> {
+private fun currentFilteredFor(queryRaw: String, all: List<OrderInfo>): List<OrderInfo> {
     val q = queryRaw.trim()
     if (q.isBlank()) return all
     return all.filter { o ->
         o.orderNumber.contains(q, ignoreCase = true) ||
-            o.name.contains(q, ignoreCase = true) ||
-            (o.details?.contains(q, ignoreCase = true) == true)
+                o.name.contains(q, ignoreCase = true) ||
+                (o.details?.contains(q, ignoreCase = true) == true)
     }
 }
 
@@ -294,11 +292,10 @@ private fun handleInitialLoadError(
     }
 }
 
-private fun messageFor(e: Exception): String =
-    when (e) {
-        is HttpException -> "HTTP ${e.code()}"
-        is UnknownHostException -> "No internet connection"
-        is SocketTimeoutException -> "Request timed out"
-        is IOException -> "Network error"
-        else -> e.message ?: "Unknown error"
-    }
+private fun messageFor(e: Exception): String = when (e) {
+    is HttpException -> "HTTP ${e.code()}"
+    is UnknownHostException -> "No internet connection"
+    is SocketTimeoutException -> "Request timed out"
+    is IOException -> "Network error"
+    else -> e.message ?: "Unknown error"
+}

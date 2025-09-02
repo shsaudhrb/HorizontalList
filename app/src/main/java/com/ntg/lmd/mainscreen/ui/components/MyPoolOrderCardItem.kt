@@ -10,6 +10,7 @@ import androidx.compose.ui.res.dimensionResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
+import com.ntg.lmd.mainscreen.ui.model.MyOrderCardCallbacks
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModelFactory
 
@@ -20,19 +21,21 @@ fun myPoolOrderCardItem(
     onCall: (String?) -> Unit,
 ) {
     Box(Modifier.width(dimensionResource(R.dimen.myOrders_card_width))) {
-        val updateVm: UpdateOrderStatusViewModel = viewModel(
-            factory = UpdateOrderStatusViewModelFactory(LocalContext.current.applicationContext as Application)
-        )
-
-
+        val updateVm: UpdateOrderStatusViewModel =
+            viewModel(
+                factory = UpdateOrderStatusViewModelFactory(LocalContext.current.applicationContext as Application),
+            )
         myOrderCard(
             order = order,
             isUpdating = false,
-            onDetails = { onOpenOrderDetails(order.orderNumber) },
-            onCall = { onCall(order.customerPhone)},
-            onAction = {},
-            onReassignRequested = {},
-            updateVm =updateVm ,
+            callbacks =
+                MyOrderCardCallbacks(
+                    onDetails = { onOpenOrderDetails(order.orderNumber) },
+                    onCall = { onCall(order.customerPhone) },
+                    onAction = {},
+                    onReassignRequested = {},
+                ),
+            updateVm = updateVm,
         )
     }
 }

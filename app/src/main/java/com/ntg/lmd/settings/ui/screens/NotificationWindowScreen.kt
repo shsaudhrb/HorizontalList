@@ -41,12 +41,13 @@ fun notificationWindowScreen(
     var temp by remember { mutableStateOf(ui.window) }
 
     Scaffold(
-        topBar = { NotificationTopBar(onBack) },
+        topBar = { notificationTopBar(onBack) },
     ) { padding ->
-        NotificationOptions(
-            modifier = Modifier
-                .padding(padding)
-                .padding(dimensionResource(R.dimen.mediumSpace)),
+        notificationOptions(
+            modifier =
+                Modifier
+                    .padding(padding)
+                    .padding(dimensionResource(R.dimen.mediumSpace)),
             selected = temp,
             onSelect = { temp = it },
             onApply = {
@@ -60,7 +61,7 @@ fun notificationWindowScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun NotificationTopBar(onBack: () -> Unit) {
+private fun notificationTopBar(onBack: () -> Unit) {
     TopAppBar(
         title = { Text(stringResource(R.string.notification_title)) },
         navigationIcon = {
@@ -71,16 +72,17 @@ private fun NotificationTopBar(onBack: () -> Unit) {
                 )
             }
         },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.primary,
-            titleContentColor = MaterialTheme.colorScheme.onPrimary,
-            navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
-        ),
+        colors =
+            TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+            ),
     )
 }
 
 @Composable
-private fun NotificationOptions(
+private fun notificationOptions(
     modifier: Modifier = Modifier,
     selected: NotificationWindow,
     onSelect: (NotificationWindow) -> Unit,
