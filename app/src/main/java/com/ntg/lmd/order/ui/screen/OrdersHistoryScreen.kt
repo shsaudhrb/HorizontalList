@@ -29,6 +29,7 @@ import com.ntg.lmd.order.domain.model.OrdersDialogsCallbacks
 import com.ntg.lmd.order.domain.model.OrdersDialogsState
 import com.ntg.lmd.order.domain.model.OrdersHistoryFilter
 import com.ntg.lmd.order.domain.model.OrdersHistoryUiState
+import com.ntg.lmd.order.domain.model.PagingState
 import com.ntg.lmd.order.domain.model.defaultVerticalListConfig
 import com.ntg.lmd.order.domain.model.usecase.GetOrdersUseCase
 import com.ntg.lmd.order.ui.components.OrdersHistoryEffectsConfig
@@ -200,11 +201,13 @@ private fun ordersHistoryUi(
     val listConfig =
         defaultVerticalListConfig(
             listState = listState,
-            isRefreshing = state.isRefreshing,
-            onRefresh = onRefresh,
-            isLoadingMore = state.isLoadingMore,
-            endReached = state.endReached,
-            onLoadMore = config.onLoadMore,
+            paging = PagingState(
+                isRefreshing = state.isRefreshing,
+                onRefresh = onRefresh,
+                isLoadingMore = state.isLoadingMore,
+                endReached = state.endReached,
+                onLoadMore = config.onLoadMore,
+            ),
         ).copy(
             contentPadding =
                 PaddingValues(

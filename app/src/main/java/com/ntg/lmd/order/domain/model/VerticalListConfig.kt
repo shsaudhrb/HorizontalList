@@ -25,22 +25,26 @@ data class VerticalListConfig(
     val endFooter: @Composable () -> Unit,
 )
 
+data class PagingState(
+    val isRefreshing: Boolean,
+    val isLoadingMore: Boolean,
+    val endReached: Boolean,
+    val onRefresh: () -> Unit,
+    val onLoadMore: () -> Unit,
+)
+
 @Composable
 fun defaultVerticalListConfig(
     listState: LazyListState,
-    isRefreshing: Boolean,
-    onRefresh: () -> Unit,
-    isLoadingMore: Boolean,
-    endReached: Boolean,
-    onLoadMore: () -> Unit,
+    paging: PagingState,
 ): VerticalListConfig =
     VerticalListConfig(
         listState = listState,
-        isRefreshing = isRefreshing,
-        onRefresh = onRefresh,
-        isLoadingMore = isLoadingMore,
-        endReached = endReached,
-        onLoadMore = onLoadMore,
+        isRefreshing = paging.isRefreshing,
+        onRefresh = paging.onRefresh,
+        isLoadingMore = paging.isLoadingMore,
+        endReached = paging.endReached,
+        onLoadMore = paging.onLoadMore,
         prefetchThreshold = 3,
         contentPadding =
             PaddingValues(
@@ -48,10 +52,7 @@ fun defaultVerticalListConfig(
                 end = dimensionResource(R.dimen.mediumSpace),
                 bottom = dimensionResource(R.dimen.mediumSpace),
             ),
-        verticalArrangement =
-            Arrangement.spacedBy(
-                dimensionResource(R.dimen.mediumSpace),
-            ),
+        verticalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.mediumSpace)),
         emptyContent = { customEmptyState() },
         loadingFooter = { customLoadingFooter() },
         endFooter = { customEndFooter() },

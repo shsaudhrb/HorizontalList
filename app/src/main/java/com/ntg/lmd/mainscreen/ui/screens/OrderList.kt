@@ -18,7 +18,9 @@ import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
 import com.ntg.lmd.mainscreen.ui.components.ActionDialog
 import com.ntg.lmd.mainscreen.ui.components.myOrderCard
+import com.ntg.lmd.mainscreen.ui.model.MyOrderCardCallbacks
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
+import com.ntg.lmd.order.domain.model.PagingState
 import com.ntg.lmd.order.domain.model.defaultVerticalListConfig
 import com.ntg.lmd.order.ui.components.verticalListComponent
 
@@ -53,8 +55,8 @@ fun orderList(
         updateVm.success.collect { serverOrder ->
             val movedAway =
                 myUserId != null &&
-                    serverOrder.assignedAgentId != null &&
-                    serverOrder.assignedAgentId != myUserId
+                        serverOrder.assignedAgentId != null &&
+                        serverOrder.assignedAgentId != myUserId
             val shouldHide = serverOrder.status?.isTerminal() == true || movedAway
             if (shouldHide) hiddenIds = hiddenIds + serverOrder.id
             callbacks.onRefresh()
@@ -82,6 +84,7 @@ fun orderList(
     }
 
     Box(Modifier.padding(top = 12.dp)) {
+        // applied generic list component for this screen
         verticalListComponent(
             items = filteredOrders,
             key = { it.id },
@@ -90,7 +93,7 @@ fun orderList(
                     order = order,
                     isUpdating = state.updatingIds.contains(order.id),
                     callbacks =
-                        com.ntg.lmd.mainscreen.ui.model.MyOrderCardCallbacks(
+                        MyOrderCardCallbacks(
                             onDetails = { callbacks.onDetails(order.id) },
                             onCall = { callbacks.onCall(order.id) },
                             onAction = { d -> callbacks.onAction(order.id, d) },
@@ -102,16 +105,19 @@ fun orderList(
             config =
                 defaultVerticalListConfig(
                     listState = state.listState,
-                    isRefreshing = state.isRefreshing,
-                    onRefresh = callbacks.onRefresh,
-                    isLoadingMore = state.isLoadingMore,
-                    endReached = state.endReached,
-                    onLoadMore = callbacks.onLoadMore,
+                    paging = PagingState(
+                        isRefreshing = state.isRefreshing,
+                        onRefresh = callbacks.onRefresh,
+                        isLoadingMore = state.isLoadingMore,
+                        endReached = state.endReached,
+                        onLoadMore = callbacks.onLoadMore,
+                    )
                 ),
         )
     }
 }
 
-private fun OrderStatus.isTerminal() = this == OrderStatus.CANCELED || this == OrderStatus.DELIVERY_DONE
+private fun OrderStatus.isTerminal() =
+    this == OrderStatus.CANCELED || this == OrderStatus.DELIVERY_DONE
 
 private fun OrderInfo.isMine(myUserId: String?) = myUserId != null && assignedAgentId == myUserId

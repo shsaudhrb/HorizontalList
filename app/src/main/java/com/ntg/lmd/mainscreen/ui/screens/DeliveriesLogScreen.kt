@@ -33,6 +33,7 @@ import com.ntg.lmd.mainscreen.ui.components.deliveryLogItem
 import com.ntg.lmd.mainscreen.ui.components.emptyState
 import com.ntg.lmd.mainscreen.ui.components.loadingFooter
 import com.ntg.lmd.mainscreen.ui.viewmodel.DeliveriesLogViewModel
+import com.ntg.lmd.order.domain.model.PagingState
 import com.ntg.lmd.order.domain.model.defaultVerticalListConfig
 import com.ntg.lmd.order.ui.components.verticalListComponent
 import kotlinx.coroutines.flow.combine
@@ -71,13 +72,19 @@ fun deliveriesLogScreen(
             val config =
                 defaultVerticalListConfig(
                     listState = listState,
-                    isRefreshing = ui.refreshing,
-                    onRefresh = { vm.refresh(ctx) },
-                    isLoadingMore = ui.loadingMore,
-                    endReached = ui.endReached,
-                    onLoadMore = { vm.loadMore(ctx) },
+                    paging = PagingState(
+                        isRefreshing = ui.refreshing,
+                        onRefresh = { vm.refresh(ctx) },
+                        isLoadingMore = ui.loadingMore,
+                        endReached = ui.endReached,
+                        onLoadMore = { vm.loadMore(ctx) },
+                    ),
                 ).copy(
-                    emptyContent = { emptyState(Modifier.fillMaxSize()) },
+                    emptyContent = {
+                        if (!ui.refreshing && !ui.loadingMore) {
+                            emptyState(Modifier.fillMaxSize())
+                        }
+                    },
                     loadingFooter = { loadingFooter() },
                 )
             verticalListComponent(

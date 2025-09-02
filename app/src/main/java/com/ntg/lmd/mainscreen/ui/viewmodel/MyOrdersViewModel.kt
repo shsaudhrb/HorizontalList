@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
+import com.ntg.lmd.mainscreen.domain.paging.OrdersPaging
 import com.ntg.lmd.mainscreen.domain.usecase.GetMyOrdersUseCase
 import com.ntg.lmd.mainscreen.ui.model.LocalUiOnlyStatusBus
 import com.ntg.lmd.mainscreen.ui.screens.orders.model.MyOrdersUiState
@@ -19,8 +20,6 @@ import java.net.UnknownHostException
 import kotlin.collections.take
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.min
-
-private const val PAGE_SIZE = 10
 
 class MyOrdersViewModel(
     private val getMyOrders: GetMyOrdersUseCase,
@@ -44,15 +43,21 @@ class MyOrdersViewModel(
                 page = 1
                 endReached = false
 
-                val page1 = getMyOrders(page = 1, limit = PAGE_SIZE, bypassCache = true)
+                val page1 =
+                    getMyOrders(page = 1, limit = OrdersPaging.PAGE_SIZE, bypassCache = true)
                 val first = page1.items
-                endReached = first.size < PAGE_SIZE
+                endReached = first.size < OrdersPaging.PAGE_SIZE
 
                 allOrders.clear()
                 allOrders.addAll(first)
 
                 val base = currentFilteredFor(state.value.query, allOrders)
-                _state.publishFirstPageFrom(base, PAGE_SIZE, state.value.query, endReached)
+                _state.publishFirstPageFrom(
+                    base,
+                    OrdersPaging.PAGE_SIZE,
+                    state.value.query,
+                    endReached
+                )
             } catch (ce: CancellationException) {
                 throw ce
             } catch (e: Exception) {
@@ -85,15 +90,21 @@ class MyOrdersViewModel(
                 page = 1
                 endReached = false
 
-                val page1 = getMyOrders(page = 1, limit = PAGE_SIZE, bypassCache = true)
+                val page1 =
+                    getMyOrders(page = 1, limit = OrdersPaging.PAGE_SIZE, bypassCache = true)
                 val first = page1.items
-                endReached = first.size < PAGE_SIZE
+                endReached = first.size < OrdersPaging.PAGE_SIZE
 
                 allOrders.clear()
                 allOrders.addAll(first)
 
                 val base = currentFilteredFor(state.value.query, allOrders)
-                _state.publishFirstPageFrom(base, PAGE_SIZE, state.value.query, endReached)
+                _state.publishFirstPageFrom(
+                    base,
+                    OrdersPaging.PAGE_SIZE,
+                    state.value.query,
+                    endReached
+                )
             } catch (ce: CancellationException) {
                 throw ce
             } catch (e: Exception) {
@@ -110,15 +121,21 @@ class MyOrdersViewModel(
 
         viewModelScope.launch {
             try {
-                val page1 = getMyOrders(page = 1, limit = PAGE_SIZE, bypassCache = true)
+                val page1 =
+                    getMyOrders(page = 1, limit = OrdersPaging.PAGE_SIZE, bypassCache = true)
                 val fresh = page1.items
-                endReached = fresh.size < PAGE_SIZE
+                endReached = fresh.size < OrdersPaging.PAGE_SIZE
 
                 allOrders.clear()
                 allOrders.addAll(fresh)
 
                 val base = currentFilteredFor(state.value.query, allOrders)
-                _state.publishFirstPageFrom(base, PAGE_SIZE, state.value.query, endReached)
+                _state.publishFirstPageFrom(
+                    base,
+                    OrdersPaging.PAGE_SIZE,
+                    state.value.query,
+                    endReached
+                )
             } catch (ce: CancellationException) {
                 throw ce
             } catch (e: Exception) {
@@ -138,15 +155,19 @@ class MyOrdersViewModel(
             _state.update { it.copy(isLoadingMore = true) }
             try {
                 val nextPageNum = page + 1
-                val pageRes = getMyOrders(page = nextPageNum, limit = PAGE_SIZE, bypassCache = true)
+                val pageRes = getMyOrders(
+                    page = nextPageNum,
+                    limit = OrdersPaging.PAGE_SIZE,
+                    bypassCache = true
+                )
                 val next = pageRes.items
-                endReached = next.isEmpty() || next.size < PAGE_SIZE
+                endReached = next.isEmpty() || next.size < OrdersPaging.PAGE_SIZE
 
                 page = nextPageNum
 
                 allOrders.addAll(next)
                 val base = currentFilteredFor(state.value.query, allOrders)
-                _state.publishAppendFrom(base, page, PAGE_SIZE, endReached)
+                _state.publishAppendFrom(base, page, OrdersPaging.PAGE_SIZE, endReached)
             } catch (ce: CancellationException) {
                 throw ce
             } catch (e: Exception) {
@@ -192,22 +213,22 @@ class MyOrdersViewModel(
         }
     }
 
+    // function to search for orders
     fun applySearchQuery(raw: String) {
         val q = raw.trim()
         val base = currentFilteredFor(q, allOrders)
 
-        val end = base.size <= PAGE_SIZE
+        val end = base.size <= OrdersPaging.PAGE_SIZE
         val emptyMsg =
             when {
-                base.isEmpty() && q.isBlank() -> "No active orders."
-                base.isEmpty() && q.isNotBlank() -> "No matching orders."
+                base.isEmpty() -> "No orders yet"
                 else -> null
             }
 
         _state.update {
             it.copy(
                 query = q,
-                orders = base.take(PAGE_SIZE),
+                orders = base.take(OrdersPaging.PAGE_SIZE),
                 page = 1,
                 endReached = end,
                 emptyMessage = emptyMsg,
@@ -229,8 +250,8 @@ private fun currentFilteredFor(
     if (q.isBlank()) return all
     return all.filter { o ->
         o.orderNumber.contains(q, ignoreCase = true) ||
-            o.name.contains(q, ignoreCase = true) ||
-            (o.details?.contains(q, ignoreCase = true) == true)
+                o.name.contains(q, ignoreCase = true) ||
+                (o.details?.contains(q, ignoreCase = true) == true)
     }
 }
 

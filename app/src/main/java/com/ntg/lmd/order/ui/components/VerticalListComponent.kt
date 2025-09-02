@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -45,6 +46,7 @@ fun <T> verticalListComponent(
         if (config.isLoadingMore || config.endReached) loadRequested = false
     }
 
+    // load more when scrolled near the end
     paginateOnNearEnd(
         listState = config.listState,
         prefetch = config.prefetchThreshold,
@@ -91,7 +93,7 @@ private fun <T> listContent(
 
 @Composable
 private fun paginateOnNearEnd(
-    listState: androidx.compose.foundation.lazy.LazyListState,
+    listState: LazyListState,
     prefetch: Int,
     blockLoad: Boolean,
     onTrigger: () -> Unit,

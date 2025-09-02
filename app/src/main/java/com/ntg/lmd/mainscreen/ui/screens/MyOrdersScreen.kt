@@ -39,7 +39,9 @@ import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel.OrderLogger
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModelFactory
 import com.ntg.lmd.network.core.RetrofitProvider
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,6 +49,7 @@ fun myOrdersScreen(
     navController: NavController,
     onOpenOrderDetails: (String) -> Unit,
 ) {
+
     val repo = remember { MyOrdersRepositoryImpl(RetrofitProvider.ordersApi) }
     val getUsecase = remember { GetMyOrdersUseCase(repo) }
     val ordersVm: MyOrdersViewModel = viewModel(factory = MyOrdersViewModelFactory(getUsecase))
@@ -58,7 +61,8 @@ fun myOrdersScreen(
 
     val repoUsers = remember { UsersRepositoryImpl(RetrofitProvider.usersApi) }
     val getUsers = remember { GetActiveUsersUseCase(repoUsers) }
-    val agentsVm: ActiveAgentsViewModel = viewModel(factory = ActiveAgentsViewModelFactory(getUsers))
+    val agentsVm: ActiveAgentsViewModel =
+        viewModel(factory = ActiveAgentsViewModelFactory(getUsers))
     val agentsState by agentsVm.state.collectAsState()
 
     var reassignOrderId by remember { mutableStateOf<String?>(null) }
@@ -77,6 +81,7 @@ fun myOrdersScreen(
 
     ordersEffects(ordersVm, state, listState, snack, ctx)
 
+    // When the search query changes, jump back to the top of the list
     LaunchedEffect(state.query) {
         listState.scrollToItem(0)
     }
@@ -98,6 +103,7 @@ fun myOrdersScreen(
         }
     }
 
+    // Handle search for orders
     observeOrdersSearch(navController, ordersVm)
 
     Scaffold(
@@ -142,6 +148,7 @@ fun myOrdersScreen(
     )
 }
 
+// Handle search for orders
 @Composable
 private fun observeOrdersSearch(
     navController: NavController,
@@ -149,13 +156,14 @@ private fun observeOrdersSearch(
 ) {
     val back = navController.currentBackStackEntry
 
+    // Launched Effects for Search
     LaunchedEffect(back) {
         val h = back?.savedStateHandle ?: return@LaunchedEffect
-        kotlinx.coroutines.flow
-            .combine(
-                h.getStateFlow("searching", false),
-                h.getStateFlow("search_text", ""),
-            ) { enabled, text -> if (enabled) text else "" }
+        combine(
+            h.getStateFlow("searching", false),
+            h.getStateFlow("search_text", ""),
+        ) { enabled, text -> if (enabled) text else null }
+            .filterNotNull()
             .distinctUntilChanged()
             .collect { q ->
                 vm.applySearchQuery(q)
