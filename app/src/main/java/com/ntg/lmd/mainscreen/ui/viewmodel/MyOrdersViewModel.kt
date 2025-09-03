@@ -28,7 +28,6 @@ class MyOrdersViewModel(
     private val computeDistancesUseCase: ComputeDistancesUseCase,
     initialUserId: String?,
 ) : ViewModel() {
-
     private val _state = MutableStateFlow(MyOrdersUiState(isLoading = false))
     val state: StateFlow<MyOrdersUiState> = _state.asStateFlow()
 
@@ -36,7 +35,9 @@ class MyOrdersViewModel(
     private val deviceLocation = MutableStateFlow<Location?>(null)
     private val paginator = OrdersPaginator(getMyOrders, PAGE_SIZE)
 
-    init { refreshOrders() }
+    init {
+        refreshOrders()
+    }
 
     fun updateDeviceLocation(location: Location?) {
         deviceLocation.value = location
@@ -92,6 +93,7 @@ class MyOrdersViewModel(
             }
         }
     }
+
     @Suppress("ReturnCount")
     fun loadNextPage(context: Context) {
         val s = state.value
@@ -159,7 +161,10 @@ class MyOrdersViewModel(
         _state.update { it.copy(orders = withDist) }
     }
 
-    fun updateStatusLocally(id: String, newStatus: OrderStatus) {
+    fun updateStatusLocally(
+        id: String,
+        newStatus: OrderStatus,
+    ) {
         val updated = state.value.orders.map { o -> if (o.id == id) o.copy(status = newStatus) else o }
         _state.update { it.copy(orders = updated) }
     }
@@ -169,10 +174,11 @@ class MyOrdersViewModel(
         val visible = _state.value.orders.toMutableList()
         val i = visible.indexOfFirst { it.id == updated.id }
         if (i != -1) {
-            visible[i] = visible[i].copy(
-                status = updated.status,
-                details = updated.details ?: visible[i].details,
-            )
+            visible[i] =
+                visible[i].copy(
+                    status = updated.status,
+                    details = updated.details ?: visible[i].details,
+                )
             _state.update { it.copy(orders = visible) }
         }
         // paginator snapshot

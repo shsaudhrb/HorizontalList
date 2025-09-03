@@ -38,7 +38,6 @@ class FcmService : FirebaseMessagingService() {
         private const val DEFAULT_DEEPLINK = "myapp://notifications"
     }
 
-
     // manually get and log the current FCM token
 
     fun getCurrentToken() {

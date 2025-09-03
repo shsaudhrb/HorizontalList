@@ -7,10 +7,9 @@ import com.ntg.lmd.mainscreen.data.repository.MyOrdersRepositoryImpl
 import com.ntg.lmd.mainscreen.domain.usecase.ComputeDistancesUseCase
 import com.ntg.lmd.mainscreen.domain.usecase.GetMyOrdersUseCase
 import com.ntg.lmd.network.core.RetrofitProvider
-@Suppress("UnusedPrivateProperty")
 
-class MyOrdersViewModelFactory(
-) : ViewModelProvider.Factory {
+@Suppress("UnusedPrivateProperty")
+class MyOrdersViewModelFactory : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         val api = RetrofitProvider.ordersApi

@@ -20,8 +20,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.dimensionResource
 import com.ntg.lmd.R
+import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
-import com.ntg.lmd.mainscreen.ui.components.OrderActions
 import com.ntg.lmd.mainscreen.ui.components.myOrderCard
 import com.ntg.lmd.mainscreen.ui.model.MyOrderCardCallbacks
 import com.ntg.lmd.mainscreen.ui.model.OrderListCallbacks
@@ -43,16 +43,20 @@ fun orderList(
 ) {
     val hiddenIds = rememberHiddenIds(updateVm, state.isRefreshing)
     val filteredOrders = rememberFilteredOrders(state.orders, hiddenIds)
-
     ordersLazyList(
-        filteredOrders = filteredOrders,
-        listState = state.listState,
-        isLoadingMore = state.isLoadingMore,
-        updatingIds = state.updatingIds,
+        state =
+            OrderListState(
+                orders = filteredOrders,
+                listState = state.listState,
+                isLoadingMore = state.isLoadingMore,
+                updatingIds = state.updatingIds,
+                isRefreshing = state.isRefreshing,
+            ),
         updateVm = updateVm,
         callbacks = callbacks,
     )
 }
+
 @Composable
 private fun rememberHiddenIds(
     updateVm: UpdateOrderStatusViewModel,
@@ -77,35 +81,31 @@ private fun rememberHiddenIds(
 private fun rememberFilteredOrders(
     orders: List<OrderInfo>,
     hiddenIds: Set<String>,
-): List<OrderInfo> {
-    return remember(orders, hiddenIds) {
+): List<OrderInfo> =
+    remember(orders, hiddenIds) {
         orders.filter { it.id !in hiddenIds } // VM already filtered by user/status
     }
-}
 
 @Composable
 private fun ordersLazyList(
-    filteredOrders: List<OrderInfo>,
-    listState: LazyListState,
-    isLoadingMore: Boolean,
-    updatingIds: Set<String>,
+    state: OrderListState,
     updateVm: UpdateOrderStatusViewModel,
     callbacks: OrderListCallbacks,
 ) {
     LazyColumn(
-        state = listState,
+        state = state.listState,
         contentPadding = PaddingValues(dimensionResource(R.dimen.mediumSpace)),
         verticalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.mediumSpace)),
     ) {
-        items(items = filteredOrders, key = { it.id }) { order ->
+        items(items = state.orders, key = { it.id }) { order ->
             myOrderCard(
                 order = order,
-                isUpdating = updatingIds.contains(order.id),
+                isUpdating = state.updatingIds.contains(order.id),
                 callbacks = toCardCallbacks(order.id, callbacks),
                 updateVm = updateVm,
             )
         }
-        if (isLoadingMore) {
+        if (state.isLoadingMore) {
             item {
                 Box(
                     Modifier.fillMaxWidth().padding(dimensionResource(R.dimen.mediumSpace)),

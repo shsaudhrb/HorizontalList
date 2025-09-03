@@ -99,41 +99,15 @@ private fun myOrderCardPrimaryRow(
 ) {
     Row(horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.smallerSpace))) {
         detailsButton(isUpdating, onDetails)
-
-        actionForStatus(status)?.let { (labelRes, dialog) ->
-            myOrderCardPrimaryAction(labelRes, isUpdating) { setDialog(dialog) }
-        }
+        primaryActionForStatus(status, isUpdating, setDialog)
     }
 }
 
 @Composable
 private fun RowScope.detailsButton(
     isUpdating: Boolean,
-    onClick: () -> Unit,
+    onDetails: () -> Unit,
 ) {
-    OutlinedButton(
-        onClick = onClick,
-        enabled = !isUpdating,
-        modifier = Modifier.weight(DETAILS_BUTTON_WEIGHT),
-        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
-        border = BorderStroke(OUTLINE_STROKE, MaterialTheme.colorScheme.primary),
-        shape = RoundedCornerShape(dimensionResource(R.dimen.mediumSpace)),
-    ) {
-        Spacer(Modifier.width(dimensionResource(R.dimen.smallerSpace)))
-        Text(
-            text = stringResource(R.string.order_details),
-            style = MaterialTheme.typography.titleSmall,
-            maxLines = 1,
-        )
-
-}/*
-        DetailsButton(isUpdating = isUpdating, onDetails = onDetails)
-        PrimaryActionForStatus(status = status, isUpdating = isUpdating, setDialog = setDialog)
-    }
-}
-
-@Composable
-private fun RowScope.DetailsButton(isUpdating: Boolean, onDetails: () -> Unit) {
     OutlinedButton(
         onClick = onDetails,
         enabled = !isUpdating,
@@ -149,34 +123,34 @@ private fun RowScope.DetailsButton(isUpdating: Boolean, onDetails: () -> Unit) {
             maxLines = 1,
         )
     }
-}*/
 }
-private fun actionForStatus(status: OrderStatus?): Pair<Int, OrderActions>? =
-    when (status) {
-        OrderStatus.ADDED -> R.string.confirm_order to OrderActions.Confirm
-        OrderStatus.CONFIRMED -> R.string.pick_order to OrderActions.PickUp
-        OrderStatus.PICKUP -> R.string.start_delivery to OrderActions.Start
-        OrderStatus.START_DELIVERY -> R.string.deliver_order to OrderActions.Deliver
-        else -> null
-/*
+
 @Composable
-private fun RowScope.PrimaryActionForStatus(
+private fun RowScope.primaryActionForStatus(
     status: OrderStatus?,
     isUpdating: Boolean,
     setDialog: (OrderActions) -> Unit,
 ) {
     when (status) {
         OrderStatus.ADDED ->
-            myOrderCardPrimaryAction(R.string.confirm_order, isUpdating) { setDialog(OrderActions.Confirm) }
+            myOrderCardPrimaryAction(R.string.confirm_order, isUpdating) {
+                setDialog(OrderActions.Confirm)
+            }
         OrderStatus.CONFIRMED ->
-            myOrderCardPrimaryAction(R.string.pick_order, isUpdating) { setDialog(OrderActions.PickUp) }
+            myOrderCardPrimaryAction(R.string.pick_order, isUpdating) {
+                setDialog(OrderActions.PickUp)
+            }
         OrderStatus.PICKUP ->
-            myOrderCardPrimaryAction(R.string.start_delivery, isUpdating) { setDialog(OrderActions.Start) }
+            myOrderCardPrimaryAction(R.string.start_delivery, isUpdating) {
+                setDialog(OrderActions.Start)
+            }
         OrderStatus.START_DELIVERY ->
-            myOrderCardPrimaryAction(R.string.deliver_order, isUpdating) { setDialog(OrderActions.Deliver) }
+            myOrderCardPrimaryAction(R.string.deliver_order, isUpdating) {
+                setDialog(OrderActions.Deliver)
+            }
         else -> Unit
     }
-*/
+}
 
 @Composable
 private fun RowScope.myOrderCardPrimaryAction(
@@ -190,22 +164,6 @@ private fun RowScope.myOrderCardPrimaryAction(
         enabled = !isUpdating,
         onClick = onClick,
     )
-}
-
-@Composable
-private fun myOrderCardFailIfNeeded(
-    status: OrderStatus?,
-    isUpdating: Boolean,
-    onFail: () -> Unit,
-) {
-    if (status == OrderStatus.PICKUP || status == OrderStatus.START_DELIVERY) {
-        OutlinedButton(
-            onClick = onFail,
-            enabled = !isUpdating,
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(dimensionResource(R.dimen.mediumSpace)),
-        ) { Text(stringResource(R.string.delivery_failed)) }
-    }
 }
 
 @Composable
@@ -253,6 +211,22 @@ private fun myOrderCardDialogsHost(
                 onDismiss = onDismiss,
             ) { onConfirmForward(OrderActions.Fail) }
         null -> Unit
+    }
+}
+
+@Composable
+private fun myOrderCardFailIfNeeded(
+    status: OrderStatus?,
+    isUpdating: Boolean,
+    onFail: () -> Unit,
+) {
+    if (status == OrderStatus.PICKUP || status == OrderStatus.START_DELIVERY) {
+        OutlinedButton(
+            onClick = onFail,
+            enabled = !isUpdating,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(dimensionResource(R.dimen.mediumSpace)),
+        ) { Text(stringResource(R.string.delivery_failed)) }
     }
 }
 
