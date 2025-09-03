@@ -1,4 +1,4 @@
-package com.ntg.lmd.mainscreen.ui.screens.orders.model
+package com.ntg.lmd.mainscreen.ui.model
 
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 
