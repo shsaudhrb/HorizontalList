@@ -1,9 +1,9 @@
 package com.ntg.lmd.mainscreen.ui.model
 
+import com.ntg.lmd.mainscreen.ui.components.OrderActions
 import android.content.Context
 import androidx.compose.foundation.lazy.LazyListState
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
-import com.ntg.lmd.mainscreen.ui.components.OrderActions
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyOrdersViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel.OrderLogger

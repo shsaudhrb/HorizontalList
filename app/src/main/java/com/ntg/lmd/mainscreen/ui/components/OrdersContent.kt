@@ -18,98 +18,125 @@ import com.ntg.lmd.mainscreen.ui.model.OrderListState
 import com.ntg.lmd.mainscreen.ui.model.OrdersContentParams
 import com.ntg.lmd.mainscreen.ui.screens.orderList
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
+data class OrdersContentParams(
+    val ordersVm: MyOrdersViewModel,
+    val updateVm: UpdateOrderStatusViewModel,
+    val listState: LazyListState,
+    val updatingIds: Set<String>,
+    val onOpenOrderDetails: (String) -> Unit,
+    val onReassignRequested: (String) -> Unit,
+)
 
-/*
-private val AutoHideOnSuccessStatuses = setOf(
-    OrderStatus.DELIVERY_DONE,
-    OrderStatus.DELIVERY_FAILED,
-    OrderStatus.REASSIGNED,
-)*/
 @Composable
 fun ordersContent(params: OrdersContentParams) {
     val uiState by params.ordersVm.state.collectAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current
 
+    OrdersContentBody(
+        uiState = uiState,
+        params = params,
+        context = context,
+    )
+}
+
+@Composable
+private fun OrdersContentBody(
+    uiState: MyOrdersUiState,
+    params: OrdersContentParams,
+    context: android.content.Context,
+) {
     Column(Modifier.fillMaxSize()) {
         when {
-            params.state.isLoading && params.state.orders.isEmpty() -> loadingView()
-            params.state.errorMessage != null ->
-                errorView(params.state.errorMessage!!) { params.ordersVm.retry(params.context) }
+            uiState.isLoading && uiState.orders.isEmpty() ->
+                loadingView()
 
-            params.state.emptyMessage != null -> emptyView(params.state.emptyMessage!!)
-            else -> showOrderList(uiState, params)
+            uiState.errorMessage != null ->
+                errorView(uiState.errorMessage!!) { params.ordersVm.loadOrders(context) }
+
+            uiState.emptyMessage != null ->
+                emptyView(uiState.emptyMessage!!)
+
+            else ->
+                OrderListHost(uiState = uiState, params = params, context = context)
         }
     }
 }
 
 @Composable
-private fun showOrderList(
+private fun OrderListHost(
     uiState: MyOrdersUiState,
     params: OrdersContentParams,
+    context: android.content.Context,
 ) {
     orderList(
-        state =
-            OrderListState(
-                orders = uiState.orders,
-                listState = params.listState,
-                isLoadingMore = uiState.isLoadingMore,
-                updatingIds = params.updatingIds,
-                isRefreshing = uiState.isRefreshing,
-            ),
+        state = OrderListState(
+            orders = uiState.orders,
+            listState = params.listState,
+            isLoadingMore = uiState.isLoadingMore,
+            updatingIds = params.updatingIds,
+            isRefreshing = uiState.isRefreshing,
+        ),
         updateVm = params.updateVm,
-        callbacks =
-            OrderListCallbacks(
-                onDetails = params.onOpenOrderDetails,
-                onReassignRequested = params.onReassignRequested,
-                onCall = { id -> handleCallClick(id, uiState, params.context) },
-                onAction = { orderId, dialog ->
-                    handleOrderAction(orderId, dialog, uiState, params.updateVm)
-                },
-                onRefresh = { params.ordersVm.refreshOrders() },
-            ),
+        callbacks = makeOrderListCallbacks(
+            uiState = uiState,
+            params = params,
+            context = context,
+        ),
     )
 }
 
-private fun handleCallClick(
-    id: String,
+private fun makeOrderListCallbacks(
     uiState: MyOrdersUiState,
-    context: Context,
+    params: OrdersContentParams,
+    context: android.content.Context,
+): OrderListCallbacks {
+    return OrderListCallbacks(
+        onDetails = params.onOpenOrderDetails,
+        onReassignRequested = params.onReassignRequested,
+        onCall = { id -> dialOrNotify(id, uiState, context) },
+        onAction = actionHandler(uiState, params.updateVm),
+        onRefresh = { params.ordersVm.refreshOrders() },
+    )
+}
+
+private fun dialOrNotify(
+    orderId: String,
+    uiState: MyOrdersUiState,
+    context: android.content.Context,
 ) {
-    val order = uiState.orders.firstOrNull { it.id == id }
+    val order = uiState.orders.firstOrNull { it.id == orderId }
     val phone = order?.customerPhone
     if (!phone.isNullOrBlank()) {
-        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))
+        val intent = android.content.Intent(
+            android.content.Intent.ACTION_DIAL,
+            android.net.Uri.parse("tel:$phone"),
+        )
         context.startActivity(intent)
     } else {
-        LocalUiOnlyStatusBus.errorEvents.tryEmit(context.getString(R.string.phone_missing) to null)
+        LocalUiOnlyStatusBus.errorEvents
+            .tryEmit(context.getString(R.string.phone_missing) to null)
     }
 }
 
-private fun handleOrderAction(
-    orderId: String,
-    dialog: OrderActions,
+private fun actionHandler(
     uiState: MyOrdersUiState,
     updateVm: UpdateOrderStatusViewModel,
-) {
+): (String, OrderActions) -> Unit = { orderId, dialog ->
     val order = uiState.orders.firstOrNull { it.id == orderId }
-    val label =
-        when (dialog) {
-            OrderActions.Confirm -> "Confirm"
-            OrderActions.PickUp -> "PickUp"
-            OrderActions.Start -> "StartDelivery"
-            OrderActions.Deliver -> "Deliver"
-            OrderActions.Fail -> "DeliveryFailed"
-        }
+    val (label, status) = dialogToLabelAndStatus(dialog)
 
-    UpdateOrderStatusViewModel.OrderLogger.uiTap(orderId, order?.orderNumber, label)
-
-    val status =
-        when (dialog) {
-            OrderActions.Confirm -> OrderStatus.CONFIRMED
-            OrderActions.PickUp -> OrderStatus.PICKUP
-            OrderActions.Start -> OrderStatus.START_DELIVERY
-            OrderActions.Deliver -> OrderStatus.DELIVERY_DONE
-            OrderActions.Fail -> OrderStatus.DELIVERY_FAILED
-        }
+    UpdateOrderStatusViewModel.OrderLogger
+        .uiTap(orderId, order?.orderNumber, label)
 
     updateVm.update(orderId, status)
 }
+
+private fun dialogToLabelAndStatus(dialog: OrderActions): Pair<String, OrderStatus> =
+    when (dialog) {
+        OrderActions.Confirm -> "Confirm" to OrderStatus.CONFIRMED
+        OrderActions.PickUp  -> "PickUp"  to OrderStatus.PICKUP
+        OrderActions.Start   -> "StartDelivery" to OrderStatus.START_DELIVERY
+        OrderActions.Deliver -> "Deliver" to OrderStatus.DELIVERY_DONE
+        OrderActions.Fail    -> "DeliveryFailed" to OrderStatus.DELIVERY_FAILED
+    }
+

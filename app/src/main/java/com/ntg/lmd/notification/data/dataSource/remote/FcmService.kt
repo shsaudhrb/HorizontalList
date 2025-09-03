@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.content.ContentValues
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
@@ -37,11 +38,6 @@ class FcmService : FirebaseMessagingService() {
         private const val DEFAULT_DEEPLINK = "myapp://notifications"
     }
 
-    override fun onNewToken(token: String) {
-        super.onNewToken(token)
-
-        Log.i(TAG, "New FCM token generated: $token")
-    }
 
     // manually get and log the current FCM token
 
@@ -132,6 +128,12 @@ class FcmService : FirebaseMessagingService() {
                 ),
             )
         }
+    }
+
+    override fun onNewToken(token: String) {
+        super.onNewToken(token)
+
+        Log.i(ContentValues.TAG, "New FCM token generated: $token")
     }
 
     @RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)

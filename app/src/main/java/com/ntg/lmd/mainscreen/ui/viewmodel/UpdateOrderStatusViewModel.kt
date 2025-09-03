@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.coroutines.cancellation.CancellationException
 
 class UpdateOrderStatusViewModel(
     private val updateStatus: UpdateOrderStatusUseCase,
@@ -42,16 +43,17 @@ class UpdateOrderStatusViewModel(
         viewModelScope.launch {
             try {
                 OrderLogger.postStart(orderId, targetStatus)
-                val serverOrder = updateStatus(orderId, targetStatus.toApiId(), assignedAgentId)
-                OrderLogger.postSuccess(orderId, serverOrder.status)
-                _success.emit(serverOrder)
-            } catch (t: Throwable) {
-                OrderLogger.postError(orderId, targetStatus, t)
-                _error.emit(
-                    (t.message ?: "Failed to update status") to {
-                        update(orderId, targetStatus, assignedAgentId)
-                    },
-                )
+
+                runCatching { updateStatus(orderId, targetStatus.toApiId(), assignedAgentId) }
+                    .onSuccess { serverOrder ->
+                        OrderLogger.postSuccess(orderId, serverOrder.status)
+                        _success.emit(serverOrder)
+                    }
+                    .onFailure { e ->
+                        if (e is CancellationException) throw e
+                        OrderLogger.postError(orderId, targetStatus, e)
+                        _error.emit(e.toUserMessage() to { update(orderId, targetStatus, assignedAgentId) })
+                    }
             } finally {
                 _updatingIds.update { it - orderId }
             }

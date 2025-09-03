@@ -125,9 +125,32 @@ private fun RowScope.detailsButton(
             style = MaterialTheme.typography.titleSmall,
             maxLines = 1,
         )
+
+}/*
+        DetailsButton(isUpdating = isUpdating, onDetails = onDetails)
+        PrimaryActionForStatus(status = status, isUpdating = isUpdating, setDialog = setDialog)
     }
 }
 
+@Composable
+private fun RowScope.DetailsButton(isUpdating: Boolean, onDetails: () -> Unit) {
+    OutlinedButton(
+        onClick = onDetails,
+        enabled = !isUpdating,
+        modifier = Modifier.weight(DETAILS_BUTTON_WEIGHT),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
+        border = BorderStroke(OUTLINE_STROKE, MaterialTheme.colorScheme.primary),
+        shape = RoundedCornerShape(dimensionResource(R.dimen.mediumSpace)),
+    ) {
+        Spacer(Modifier.width(dimensionResource(R.dimen.smallerSpace)))
+        Text(
+            text = stringResource(R.string.order_details),
+            style = MaterialTheme.typography.titleSmall,
+            maxLines = 1,
+        )
+    }
+}*/
+}
 private fun actionForStatus(status: OrderStatus?): Pair<Int, OrderActions>? =
     when (status) {
         OrderStatus.ADDED -> R.string.confirm_order to OrderActions.Confirm
@@ -135,7 +158,25 @@ private fun actionForStatus(status: OrderStatus?): Pair<Int, OrderActions>? =
         OrderStatus.PICKUP -> R.string.start_delivery to OrderActions.Start
         OrderStatus.START_DELIVERY -> R.string.deliver_order to OrderActions.Deliver
         else -> null
+/*
+@Composable
+private fun RowScope.PrimaryActionForStatus(
+    status: OrderStatus?,
+    isUpdating: Boolean,
+    setDialog: (OrderActions) -> Unit,
+) {
+    when (status) {
+        OrderStatus.ADDED ->
+            myOrderCardPrimaryAction(R.string.confirm_order, isUpdating) { setDialog(OrderActions.Confirm) }
+        OrderStatus.CONFIRMED ->
+            myOrderCardPrimaryAction(R.string.pick_order, isUpdating) { setDialog(OrderActions.PickUp) }
+        OrderStatus.PICKUP ->
+            myOrderCardPrimaryAction(R.string.start_delivery, isUpdating) { setDialog(OrderActions.Start) }
+        OrderStatus.START_DELIVERY ->
+            myOrderCardPrimaryAction(R.string.deliver_order, isUpdating) { setDialog(OrderActions.Deliver) }
+        else -> Unit
     }
+*/
 
 @Composable
 private fun RowScope.myOrderCardPrimaryAction(
