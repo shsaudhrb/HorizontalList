@@ -8,13 +8,13 @@ import com.ntg.lmd.mainscreen.domain.usecase.GetActiveUsersUseCase
 import com.ntg.lmd.network.core.RetrofitProvider
 
 class ActiveAgentsViewModelFactory(
-    private val application: Application
+    private val application: Application,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
-    override fun <T :ViewModel> create(modelClass: Class<T>): T {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
         val api = RetrofitProvider.usersApi
         val repo = UsersRepositoryImpl(api)
-        val usecase= GetActiveUsersUseCase(repo)
+        val usecase = GetActiveUsersUseCase(repo)
         return ActiveAgentsViewModel(usecase) as T
     }
 }
