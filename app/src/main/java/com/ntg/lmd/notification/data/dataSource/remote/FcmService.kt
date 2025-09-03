@@ -45,21 +45,6 @@ class FcmService : FirebaseMessagingService() {
     }
 
  
-     // manually get and log the current FCM token
-   
-    fun getCurrentToken() {
-        com.google.firebase.messaging.FirebaseMessaging.getInstance().token
-            .addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    val token = task.result
-                    Log.d(TAG, "Current FCM Token: $token")
-                    Log.i(TAG, "Successfully retrieved current FCM token")
-                } else {
-                    Log.e(TAG, "Failed to get FCM token", task.exception)
-                }
-            }
-    }
-
 
 
     override fun onMessageReceived(msg: RemoteMessage) {
