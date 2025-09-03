@@ -21,10 +21,9 @@ fun myPoolOrderCardItem(
     onCall: (String?) -> Unit,
 ) {
     Box(Modifier.width(dimensionResource(R.dimen.myOrders_card_width))) {
-        val updateVm: UpdateOrderStatusViewModel =
-            viewModel(
-                factory = UpdateOrderStatusViewModelFactory(LocalContext.current.applicationContext as Application),
-            )
+        val updateVm: UpdateOrderStatusViewModel = viewModel(
+            factory = UpdateOrderStatusViewModelFactory(LocalContext.current.applicationContext as Application)
+        )
         myOrderCard(
             order = order,
             isUpdating = false,
