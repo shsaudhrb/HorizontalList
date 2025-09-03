@@ -32,11 +32,13 @@ import com.ntg.lmd.R
 import com.ntg.lmd.authentication.ui.viewmodel.login.LoginViewModel
 import com.ntg.lmd.authentication.ui.viewmodel.login.LoginViewModelFactory
 import com.ntg.lmd.mainscreen.domain.model.SearchController
+import com.ntg.lmd.navigation.component.DrawerScaffoldConfig
 import com.ntg.lmd.navigation.component.appScaffoldWithDrawer
 import com.ntg.lmd.navigation.component.drawerNavGraph
 import com.ntg.lmd.navigation.component.navigateSingleTop
 import com.ntg.lmd.notification.ui.viewmodel.DeepLinkViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import com.ntg.lmd.authentication.ui.screens.login.loginScreen as LoginScreen
 import com.ntg.lmd.authentication.ui.screens.register.registerScreen as RegisterScreen
 import com.ntg.lmd.authentication.ui.screens.splash.splashScreen as SplashScreen
@@ -153,33 +155,11 @@ private fun buildRouteUiSpec(
     openOrdersHistoryMenu: (() -> Unit)?,
 ): RouteUiSpec =
     when (currentRoute) {
-        Screen.GeneralPool.route ->
-            RouteUiSpec(
-                title = stringResource(R.string.menu_general_pool),
-                showSearchIcon = true,
-                searchPlaceholder = stringResource(R.string.search_order_number_customer_name),
-                actionButtonLabel = stringResource(R.string.my_pool),
-                onActionButtonClick = { nav.navigateSingleTop(Screen.MyPool.route) },
-            )
-        Screen.MyPool.route ->
-            RouteUiSpec(
-                title = stringResource(R.string.my_pool),
-                showSearchIcon = false,
-                actionButtonLabel = stringResource(R.string.menu_general_pool),
-                onActionButtonClick = { nav.navigateSingleTop(Screen.GeneralPool.route) },
-            )
-        Screen.MyOrders.route ->
-            RouteUiSpec(
-                title = stringResource(R.string.menu_my_orders),
-                showSearchIcon = true,
-                searchPlaceholder = stringResource(R.string.search_order_number),
-            )
+        Screen.GeneralPool.route -> routeSpecGeneralPool(nav)
+        Screen.MyPool.route -> routeSpecMyPool(nav)
+        Screen.MyOrders.route -> routeSpecTitleOnly(R.string.menu_my_orders, true, R.string.search_order_number)
         Screen.DeliveriesLog.route ->
-            RouteUiSpec(
-                title = stringResource(R.string.menu_deliveries_log),
-                showSearchIcon = true,
-                searchPlaceholder = stringResource(R.string.search_order_number),
-            )
+            routeSpecTitleOnly(R.string.menu_deliveries_log, true, R.string.search_order_number)
         Screen.OrdersHistory.route ->
             RouteUiSpec(
                 title = stringResource(R.string.menu_order_history),
@@ -187,27 +167,41 @@ private fun buildRouteUiSpec(
                 actionIcon = Icons.Filled.MoreVert,
                 onActionIconClick = { openOrdersHistoryMenu?.invoke() },
             )
-        Screen.Notifications.route ->
-            RouteUiSpec(
-                title = stringResource(R.string.menu_notifications),
-                showSearchIcon = false,
-            )
-        Screen.Settings.route ->
-            RouteUiSpec(
-                title = stringResource(R.string.menu_settings),
-                showSearchIcon = false,
-            )
-        Screen.Chat.route ->
-            RouteUiSpec(
-                title = stringResource(R.string.menu_chat),
-                showSearchIcon = false,
-            )
-        else ->
-            RouteUiSpec(
-                title = stringResource(R.string.app_name),
-                showSearchIcon = false,
-            )
+        Screen.Notifications.route -> routeSpecTitleOnly(R.string.menu_notifications, false)
+        Screen.Settings.route -> routeSpecTitleOnly(R.string.menu_settings, false)
+        Screen.Chat.route -> routeSpecTitleOnly(R.string.menu_chat, false)
+        else -> routeSpecTitleOnly(R.string.app_name, false)
     }
+
+@Composable
+private fun routeSpecGeneralPool(nav: NavHostController) =
+    RouteUiSpec(
+        title = stringResource(R.string.menu_general_pool),
+        showSearchIcon = true,
+        searchPlaceholder = stringResource(R.string.search_order_number_customer_name),
+        actionButtonLabel = stringResource(R.string.my_pool),
+        onActionButtonClick = { nav.navigateSingleTop(Screen.MyPool.route) },
+    )
+
+@Composable
+private fun routeSpecMyPool(nav: NavHostController) =
+    RouteUiSpec(
+        title = stringResource(R.string.my_pool),
+        showSearchIcon = false,
+        actionButtonLabel = stringResource(R.string.menu_general_pool),
+        onActionButtonClick = { nav.navigateSingleTop(Screen.GeneralPool.route) },
+    )
+
+@Composable
+private fun routeSpecTitleOnly(
+    titleRes: Int,
+    showSearchIcon: Boolean,
+    placeholderRes: Int? = null,
+) = RouteUiSpec(
+    title = stringResource(titleRes),
+    showSearchIcon = showSearchIcon,
+    searchPlaceholder = placeholderRes?.let { stringResource(it) },
+)
 
 @Composable
 private fun drawerHost(
@@ -222,48 +216,46 @@ private fun drawerHost(
     val ctx = LocalContext.current
     val app = ctx.applicationContext as MyApp
 
-    // VM for login state (may be a different instance than the one that set the name)
-    val loginVm: LoginViewModel =
-        viewModel(
+    val loginVm =
+        viewModel<LoginViewModel>(
             factory = LoginViewModelFactory(ctx.applicationContext as Application),
         )
     val loginUi by loginVm.uiState.collectAsState()
     val effectiveUserName = loginUi.displayName ?: app.authRepo.lastLoginName
 
     var openOrdersHistoryMenu by remember { mutableStateOf<(() -> Unit)?>(null) }
+
     val spec = buildRouteUiSpec(currentRoute, drawerNavController, openOrdersHistoryMenu)
     val search = rememberSearchController(drawerNavController)
     val topBar = buildTopBar(spec, search)
-
-    val inSettingsSub by remember(backStack) {
-        backStack?.savedStateHandle?.getStateFlow("settings_in_sub", false)
-            ?: MutableStateFlow(false)
-    }.collectAsState()
-
-    val hideChrome = currentRoute.startsWith(Screen.Settings.route) && inSettingsSub
-    val showChrome = !hideChrome
+    val inSettingsSub by rememberSettingsSub(backStack).collectAsState()
+    val showChrome = !currentRoute.startsWith(Screen.Settings.route) || !inSettingsSub
 
     appScaffoldWithDrawer(
-        navConfig =
-            AppNavConfig(
-                navController = drawerNavController,
-                currentRoute = currentRoute,
-            ),
-        topBar = topBar,
-        onLogout = onLogout,
-        userName = effectiveUserName,
-        showChrome = showChrome,
-    ) {
+        config = DrawerScaffoldConfig(
+            navConfig = AppNavConfig(drawerNavController, currentRoute),
+            topBar = topBar,
+            onLogout = onLogout,
+            userName = effectiveUserName,
+            showChrome = showChrome,
+        ),
+
+    ){
         drawerNavGraph(
             navController = drawerNavController,
             startDestination = startDest,
-            registerOpenMenu = { setter -> openOrdersHistoryMenu = setter },
+            registerOpenMenu = { openOrdersHistoryMenu = it },
             onOpenOrderDetails = { id -> drawerNavController.navigate("order/$id") },
         )
     }
 }
 
-// ======================= Helpers =======================
+@Composable
+private fun rememberSettingsSub(backStack: NavBackStackEntry?): StateFlow<Boolean> =
+    remember(backStack) {
+        backStack?.savedStateHandle?.getStateFlow("settings_in_sub", false)
+            ?: MutableStateFlow(false)
+    }
 
 @Composable
 private fun rememberSearchController(navController: NavHostController): SearchController {
