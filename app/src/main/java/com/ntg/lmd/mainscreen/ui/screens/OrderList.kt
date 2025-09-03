@@ -21,7 +21,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.dimensionResource
 import com.ntg.lmd.R
-import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
 import com.ntg.lmd.mainscreen.ui.components.myOrderCard
 import com.ntg.lmd.mainscreen.ui.model.MyOrderCardCallbacks
@@ -29,26 +28,12 @@ import com.ntg.lmd.mainscreen.ui.model.OrderListCallbacks
 import com.ntg.lmd.mainscreen.ui.model.OrderListState
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
 
-data class OrderListState(
-    val orders: List<OrderInfo>,
-    val listState: LazyListState,
-    val isLoadingMore: Boolean,
-    val updatingIds: Set<String>,
-    val isRefreshing: Boolean,
-)
-
-data class OrderListCallbacks(
-    val onReassignRequested: (String) -> Unit,
-    val onDetails: (String) -> Unit,
-    val onCall: (String) -> Unit,
-    val onAction: (String, ActionDialog) -> Unit,
-    val onRefresh: () -> Unit,
-)
-private val AutoHideOnSuccessStatuses = setOf(
-    OrderStatus.DELIVERY_DONE,
-    OrderStatus.DELIVERY_FAILED,
-    OrderStatus.REASSIGNED,
-)
+private val AutoHideOnSuccessStatuses =
+    setOf(
+        OrderStatus.DELIVERY_DONE,
+        OrderStatus.DELIVERY_FAILED,
+        OrderStatus.REASSIGNED,
+    )
 
 @Composable
 fun orderList(
@@ -84,12 +69,13 @@ fun orderList(
             myOrderCard(
                 order = order,
                 isUpdating = state.updatingIds.contains(order.id),
-                callbacks = MyOrderCardCallbacks(
-                    onReassignRequested = { callbacks.onReassignRequested(order.id) },
-                    onDetails = { callbacks.onDetails(order.id) },
-                    onCall = { callbacks.onCall(order.id) },
-                    onAction = { act -> callbacks.onAction(order.id, act) },
-                ),
+                callbacks =
+                    MyOrderCardCallbacks(
+                        onReassignRequested = { callbacks.onReassignRequested(order.id) },
+                        onDetails = { callbacks.onDetails(order.id) },
+                        onCall = { callbacks.onCall(order.id) },
+                        onAction = { act -> callbacks.onAction(order.id, act) },
+                    ),
                 updateVm = updateVm,
             )
         }

@@ -89,7 +89,7 @@ fun headerRow(
 fun leftBlock(order: OrderInfo) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         distanceBadge(
-            distanceMeters = order.distanceKm,
+            distanceKm = order.distanceKm,
             modifier = Modifier.padding(end = dimensionResource(R.dimen.mediumSpace)),
         )
         Column {

@@ -19,20 +19,15 @@ import com.ntg.lmd.mainscreen.ui.model.OrdersContentParams
 import com.ntg.lmd.mainscreen.ui.screens.orderList
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
 
+/*
+private val AutoHideOnSuccessStatuses = setOf(
+    OrderStatus.DELIVERY_DONE,
+    OrderStatus.DELIVERY_FAILED,
+    OrderStatus.REASSIGNED,
+)*/
 @Composable
 fun ordersContent(params: OrdersContentParams) {
     val uiState by params.ordersVm.state.collectAsState()
-fun ordersContent(
-    ordersVm: MyOrdersViewModel,
-    updateVm: UpdateOrderStatusViewModel,
-    state: MyOrdersUiState,
-    listState: LazyListState,
-    onOpenOrderDetails: (String) -> Unit,
-    context: android.content.Context,
-    updatingIds: Set<String>,
-    onReassignRequested: (String) -> Unit,
-) {
-    val uiState by ordersVm.state.collectAsState()
 
     Column(Modifier.fillMaxSize()) {
         when {
@@ -58,6 +53,7 @@ private fun showOrderList(
                 listState = params.listState,
                 isLoadingMore = uiState.isLoadingMore,
                 updatingIds = params.updatingIds,
+                isRefreshing = uiState.isRefreshing,
             ),
         updateVm = params.updateVm,
         callbacks =
@@ -66,12 +62,7 @@ private fun showOrderList(
                 onReassignRequested = params.onReassignRequested,
                 onCall = { id -> handleCallClick(id, uiState, params.context) },
                 onAction = { orderId, dialog ->
-                    handleOrderAction(
-                        orderId,
-                        dialog,
-                        uiState,
-                        params.updateVm,
-                    )
+                    handleOrderAction(orderId, dialog, uiState, params.updateVm)
                 },
                 onRefresh = { params.ordersVm.refreshOrders() },
             ),
@@ -110,47 +101,6 @@ private fun handleOrderAction(
         }
 
     UpdateOrderStatusViewModel.OrderLogger.uiTap(orderId, order?.orderNumber, label)
-            state.isLoading && state.orders.isEmpty() -> loadingView()
-            state.errorMessage != null -> errorView(state.errorMessage!!) { ordersVm.retry(context) }
-            state.emptyMessage != null -> emptyView(state.emptyMessage!!)
-            else ->
-                orderList(
-                    state =
-                        OrderListState(
-                            orders = uiState.orders,
-                            listState = listState,
-                            isLoadingMore = uiState.isLoadingMore,
-                            updatingIds = updatingIds,
-                            isRefreshing = uiState.isRefreshing,
-                        ),
-                    updateVm = updateVm,
-                    callbacks =
-                        OrderListCallbacks(
-                            onDetails = onOpenOrderDetails,
-                            onReassignRequested = onReassignRequested,
-                            onCall = { id ->
-                                val order = uiState.orders.firstOrNull { it.id == id }
-                                val phone = order?.customerPhone
-                                if (!phone.isNullOrBlank()) {
-                                    val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))
-                                    context.startActivity(intent)
-                                } else {
-                                    LocalUiOnlyStatusBus.errorEvents.tryEmit(
-                                        context.getString(R.string.phone_missing) to null,
-                                    )
-                                }
-                            },
-                            onAction = { orderId, dialog ->
-                                val order = uiState.orders.firstOrNull { it.id == orderId }
-                                val label =
-                                    when (dialog) {
-                                        ActionDialog.Confirm -> "Confirm"
-                                        ActionDialog.PickUp -> "PickUp"
-                                        ActionDialog.Start -> "StartDelivery"
-                                        ActionDialog.Deliver -> "Deliver"
-                                        ActionDialog.Fail -> "DeliveryFailed"
-                                    }
-                                UpdateOrderStatusViewModel.OrderLogger.uiTap(orderId, order?.orderNumber, label)
 
     val status =
         when (dialog) {
@@ -159,17 +109,6 @@ private fun handleOrderAction(
             OrderActions.Start -> OrderStatus.START_DELIVERY
             OrderActions.Deliver -> OrderStatus.DELIVERY_DONE
             OrderActions.Fail -> OrderStatus.DELIVERY_FAILED
-                                when (dialog) {
-                                    ActionDialog.Confirm -> updateVm.update(orderId, OrderStatus.CONFIRMED)
-                                    ActionDialog.PickUp -> updateVm.update(orderId, OrderStatus.PICKUP)
-                                    ActionDialog.Start -> updateVm.update(orderId, OrderStatus.START_DELIVERY)
-                                    ActionDialog.Deliver -> updateVm.update(orderId, OrderStatus.DELIVERY_DONE)
-                                    ActionDialog.Fail -> updateVm.update(orderId, OrderStatus.DELIVERY_FAILED)
-                                }
-                            },
-                            onRefresh = { ordersVm.refreshOrders() },
-                        ),
-                )
         }
 
     updateVm.update(orderId, status)

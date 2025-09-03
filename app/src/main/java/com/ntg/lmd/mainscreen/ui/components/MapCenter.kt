@@ -32,6 +32,7 @@ import com.ntg.lmd.mainscreen.ui.model.MapUiState
 // screen height
 private const val TOP_OVERLAY_RATIO = 0.09f // 9% of screen height
 private const val BOTTOM_BAR_RATIO = 0.22f // 22% of screen height
+private const val INITIAL_MAP_ZOOM = 8f
 
 private data class MapChrome(
     val top: Dp,
@@ -83,7 +84,7 @@ private fun initialCenterEffect(
 ) {
     LaunchedEffect(deviceLatLng, alreadyCentered) {
         if (deviceLatLng != null && !alreadyCentered) {
-            camera.animate(CameraUpdateFactory.newLatLngZoom(deviceLatLng, 8f))
+            camera.animate(CameraUpdateFactory.newLatLngZoom(deviceLatLng, INITIAL_MAP_ZOOM))
             setCentered(true)
         }
     }

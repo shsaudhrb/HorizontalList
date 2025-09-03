@@ -38,6 +38,7 @@ data class OrderListState(
     val listState: LazyListState,
     val isLoadingMore: Boolean,
     val updatingIds: Set<String>,
+    val isRefreshing: Boolean,
 )
 
 data class OrderListCallbacks(

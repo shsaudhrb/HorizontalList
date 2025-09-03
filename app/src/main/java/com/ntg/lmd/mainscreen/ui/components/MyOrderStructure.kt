@@ -35,8 +35,6 @@ import com.ntg.lmd.mainscreen.domain.model.OrderStatus
 import com.ntg.lmd.mainscreen.ui.model.OrderMenuCallbacks
 import java.util.Locale
 
-private const val KM_DIVISOR = 1000.0
-
 @Composable
 fun distanceBadge(
     distanceKm: Double,
@@ -62,31 +60,6 @@ fun distanceBadge(
         }
     }
 }
-
-/*
-@Composable
-fun primaryActionButton(
-    text: String,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    onClick: () -> Unit,
-) {
-    Button(
-        onClick = onClick,
-        modifier = modifier,
-        enabled = enabled,
-        colors =
-            ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            ),
-        shape = RoundedCornerShape(dimensionResource(R.dimen.mediumSpace)),
-    ) {
-        Text(text = text, style = MaterialTheme.typography.titleSmall)
-    }
-}*/
 
 @Composable
 fun callButton(onCall: () -> Unit) {
@@ -185,7 +158,13 @@ fun orderMenu(
             )
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.cancel_order)) },
-                enabled = enabled && order.status in listOf(OrderStatus.ADDED, OrderStatus.CONFIRMED),
+                enabled =
+                    enabled &&
+                        order.status in
+                        listOf(
+                            OrderStatus.ADDED,
+                            OrderStatus.CONFIRMED,
+                        ),
                 onClick = callbacks.onCancel,
             )
             DropdownMenuItem(
@@ -193,113 +172,6 @@ fun orderMenu(
                 enabled = enabled,
                 onClick = callbacks.onReassign,
             )
-            }
-        }
-fun orderHeaderWithMenu(
-    order: OrderInfo,
-    enabled: Boolean = true,
-    onPickUp: () -> Unit,
-    onCancel: () -> Unit,
-    onReassign: () -> Unit,
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Top,
-    ) {
-        orderHeaderLeft(
-            order = order,
-            onPickUp = onPickUp,
-            onCancel = onCancel,
-            onReassign = onReassign,
-            enabled = enabled,
-        )
-    }}}}}
-/*
-
-@Composable
-fun orderHeaderLeft(
-    order: OrderInfo,
-    onPickUp: () -> Unit,
-    onCancel: () -> Unit,
-    onReassign: () -> Unit,
-    enabled: Boolean = true,
-) {
-    var menuExpanded by remember { mutableStateOf(false) }
-    val statusEnum = order.status
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            distanceBadge(
-                distanceKm = order.distanceKm,
-                modifier = Modifier.padding(end = dimensionResource(R.dimen.mediumSpace)),
-            )
-            Column {
-                Text(order.name, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    "#${order.orderNumber}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                    maxLines = 1,
-                )
-                Text(
-                    text = order.status.toString(),
-                    color = statusTint(order.status.toString()),
-                    style = MaterialTheme.typography.titleSmall,
-                )
-                order.details?.let {
-                    Spacer(modifier = Modifier.height(dimensionResource(R.dimen.extraSmallSpace)))
-                    Text(it, style = MaterialTheme.typography.bodySmall)
-                }
-            }
-        }
-        Column {
-            IconButton(onClick = { menuExpanded = true }, modifier = Modifier.size(24.dp)) {
-                Icon(
-                    imageVector = Icons.Filled.MoreVert,
-                    contentDescription = stringResource(R.string.more_options),
-                    tint = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-            DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-                if (statusEnum == OrderStatus.CONFIRMED) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.pick_order)) },
-                        enabled = enabled && order.status == OrderStatus.CONFIRMED,
-                        onClick = {
-                            menuExpanded = false
-                            OrderLogger.uiTap(order.id, order.orderNumber, "Menu:PickUp")
-                            onPickUp()
-                        },
-                    )
-
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.cancel_order)) },
-                        enabled = enabled && order.status in listOf(OrderStatus.ADDED, OrderStatus.CONFIRMED),
-                        onClick = {
-                            menuExpanded = false
-                            OrderLogger.uiTap(order.id, order.orderNumber, "Menu:Cancel")
-                            onCancel()
-                        },
-                    )
-
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.reassign_order)) },
-                        enabled = enabled,
-                        onClick = {
-                            menuExpanded = false
-                            OrderLogger.uiTap(order.id, order.orderNumber, "Menu:Reassign")
-                            onReassign()
-                        },
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(dimensionResource(R.dimen.smallerSpace)))
-            Text(text = order.price, style = MaterialTheme.typography.titleSmall)
         }
     }
 }
-*/

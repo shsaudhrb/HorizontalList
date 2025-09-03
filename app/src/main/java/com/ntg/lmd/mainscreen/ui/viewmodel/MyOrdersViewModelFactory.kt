@@ -1,28 +1,21 @@
 // MyOrdersViewModelFactory.kt
 package com.ntg.lmd.mainscreen.ui.viewmodel
 
-import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.ntg.lmd.mainscreen.data.repository.MyOrdersRepositoryImpl
-import com.ntg.lmd.mainscreen.data.repository.UpdateOrdersStatusRepository
-import com.ntg.lmd.mainscreen.domain.repository.MyOrdersRepository
 import com.ntg.lmd.mainscreen.domain.usecase.ComputeDistancesUseCase
 import com.ntg.lmd.mainscreen.domain.usecase.GetMyOrdersUseCase
-import com.ntg.lmd.mainscreen.domain.usecase.UpdateOrderStatusUseCase
 import com.ntg.lmd.network.core.RetrofitProvider
-import com.ntg.lmd.utils.SecureUserStore
 
-class MyOrdersViewModelFactory(
-    private val application: Application
-    ) : ViewModelProvider.Factory {
+class MyOrdersViewModelFactory : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         val api = RetrofitProvider.ordersApi
         val repo = MyOrdersRepositoryImpl(api)
-        val getMyOrders= GetMyOrdersUseCase(repo)
-        val computeDistancesUseCase= ComputeDistancesUseCase()
+        val getMyOrders = GetMyOrdersUseCase(repo)
+        val computeDistancesUseCase = ComputeDistancesUseCase()
         val uid = RetrofitProvider.userStore.getUserId()
-        return MyOrdersViewModel(getMyOrders,computeDistancesUseCase,uid) as T
+        return MyOrdersViewModel(getMyOrders, computeDistancesUseCase, uid) as T
     }
 }

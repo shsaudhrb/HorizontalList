@@ -23,12 +23,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ntg.lmd.R
-import com.ntg.lmd.mainscreen.data.repository.MyOrdersRepositoryImpl
-import com.ntg.lmd.mainscreen.data.repository.UsersRepositoryImpl
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
-import com.ntg.lmd.mainscreen.domain.usecase.GetActiveUsersUseCase
-import com.ntg.lmd.mainscreen.domain.usecase.GetMyOrdersUseCase
-import com.ntg.lmd.mainscreen.domain.usecase.UpdateOrderStatusUseCase
 import com.ntg.lmd.mainscreen.ui.components.bottomStickyButton
 import com.ntg.lmd.mainscreen.ui.components.initialCameraPositionEffect
 import com.ntg.lmd.mainscreen.ui.components.locationPermissionAndLastLocation
@@ -46,17 +41,16 @@ import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel.OrderLogger
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModelFactory
 import com.ntg.lmd.network.core.RetrofitProvider.userStore
-import com.ntg.lmd.network.core.RetrofitProvider
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun myOrdersScreen(onOpenOrderDetails: (String) -> Unit) {
     val app = LocalContext.current.applicationContext as Application
 
-    val ordersVm: MyOrdersViewModel = viewModel(factory = MyOrdersViewModelFactory(app))
+    val ordersVm: MyOrdersViewModel = viewModel(factory = MyOrdersViewModelFactory())
     val updateVm: UpdateOrderStatusViewModel = viewModel(factory = UpdateOrderStatusViewModelFactory(app))
 
-    val agentsVm: ActiveAgentsViewModel = viewModel(factory = ActiveAgentsViewModelFactory(app))
+    val agentsVm: ActiveAgentsViewModel = viewModel(factory = ActiveAgentsViewModelFactory())
     val agentsState by agentsVm.state.collectAsState()
 
     var reassignOrderId by remember { mutableStateOf<String?>(null) }
@@ -67,14 +61,15 @@ fun myOrdersScreen(onOpenOrderDetails: (String) -> Unit) {
     locationPermissionAndLastLocation(poolVm)
     val mapStates = rememberMapStates()
     initialCameraPositionEffect(poolUi.orders, poolUi.selectedOrderNumber, mapStates)
-    ForwardMyPoolLocationToMyOrders(poolVm = poolVm, ordersVm = ordersVm)
+    forwardMyPoolLocationToMyOrders(poolVm = poolVm, ordersVm = ordersVm)
     val onReassignRequested: (String) -> Unit = { orderId ->
         reassignOrderId = orderId
         agentsVm.load()
     }
-    val currentUserId: String? = remember {
-        userStore.getUserId()
-    }
+    val currentUserId: String? =
+        remember {
+            userStore.getUserId()
+        }
     LaunchedEffect(currentUserId) {
         ordersVm.setCurrentUserId(currentUserId)
     }
@@ -109,7 +104,10 @@ fun myOrdersScreen(onOpenOrderDetails: (String) -> Unit) {
         bottomBar = { bottomStickyButton(text = stringResource(R.string.order_pool)) {} },
     ) { innerPadding ->
         PullToRefreshBox(
-            isRefreshing = ordersVm.state.collectAsState().value.isRefreshing,
+            isRefreshing =
+                ordersVm.state
+                    .collectAsState()
+                    .value.isRefreshing,
             onRefresh = { ordersVm.refresh(ctx) },
             state = pullState,
             modifier = Modifier.fillMaxSize().padding(innerPadding),
@@ -139,7 +137,7 @@ fun myOrdersScreen(onOpenOrderDetails: (String) -> Unit) {
             OrderLogger.uiTap(
                 orderId,
                 state.orders.firstOrNull { it.id == orderId }?.orderNumber,
-                "Menu:Reassign→${user.name}"
+                "Menu:Reassign→${user.name}",
             )
             updateVm.update(orderId, OrderStatus.REASSIGNED, assignedAgentId = user.id)
             reassignOrderId = null
@@ -147,9 +145,8 @@ fun myOrdersScreen(onOpenOrderDetails: (String) -> Unit) {
     )
 }
 
-
 @Composable
-private fun ForwardMyPoolLocationToMyOrders(
+private fun forwardMyPoolLocationToMyOrders(
     poolVm: MyPoolViewModel,
     ordersVm: MyOrdersViewModel,
 ) {
@@ -158,4 +155,3 @@ private fun ForwardMyPoolLocationToMyOrders(
         ordersVm.updateDeviceLocation(lastLoc)
     }
 }
-
