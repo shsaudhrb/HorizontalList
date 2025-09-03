@@ -15,10 +15,12 @@ import androidx.annotation.RequiresPermission
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.ntg.lmd.MainActivity
 import com.ntg.lmd.R
+import com.ntg.lmd.network.core.RetrofitProvider.userStore
 import com.ntg.lmd.notification.data.model.FCMServiceLocator
 import com.ntg.lmd.notification.domain.model.AgentNotification
 import kotlinx.coroutines.CoroutineScope
@@ -28,6 +30,8 @@ import kotlin.random.Random
 import com.ntg.lmd.notification.data.model.NotificationPayload as Payload
 
 class FcmService : FirebaseMessagingService() {
+    private fun isLoggedIn(): Boolean =
+        userStore.getUserId()?.isNotBlank() == true
     companion object {
         private const val CHANNEL_ID = "agent_updates"
         private const val CHANNEL_NAME = "Agent Updates"
@@ -39,20 +43,32 @@ class FcmService : FirebaseMessagingService() {
     }
 
     override fun onNewToken(token: String) {
+        val autoInit = FirebaseMessaging.getInstance().isAutoInitEnabled
+        val loggedIn = isLoggedIn()
+        Log.d(TAG, "onNewToken called; loggedIn=$loggedIn autoInit=$autoInit")
+
+        if (!loggedIn || !autoInit) {
+            Log.w(TAG, "IGNORED new token (loggedIn=$loggedIn autoInit=$autoInit)")
+            return
+        }
         super.onNewToken(token)
-        
-        Log.i(TAG, "New FCM token generated: $token")
-        
+        Log.i(TAG, "Accepted FCM token: $token")
     }
-
- 
-
 
     override fun onMessageReceived(msg: RemoteMessage) {
         Log.d(TAG, "FCM message received: ${msg.messageId}")
         Log.d(TAG, "Message data: ${msg.data}")
         Log.d(TAG, "Message notification: ${msg.notification}")
-        
+
+        val loggedIn = isLoggedIn()
+        val autoInit = FirebaseMessaging.getInstance().isAutoInitEnabled
+        Log.d(TAG, "onMessageReceived id=${msg.messageId} loggedIn=$loggedIn autoInit=$autoInit")
+
+        if (!loggedIn) {
+            Log.w(TAG, "IGNORED push (logged out)")
+            return
+        }
+
         val notif = msg.notification
         val data = msg.data
         if (notif == null && data.isNullOrEmpty()) {
@@ -122,11 +138,11 @@ class FcmService : FirebaseMessagingService() {
         }
     }
 
-    override fun onNewToken(token: String) {
-        super.onNewToken(token)
-
-        Log.i(ContentValues.TAG, "New FCM token generated: $token")
-    }
+//    override fun onNewToken(token: String) {
+//        super.onNewToken(token)
+//
+//        Log.i(ContentValues.TAG, "New FCM token generated: $token")
+//    }
 
     @RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
     private fun showLocalNotification(
