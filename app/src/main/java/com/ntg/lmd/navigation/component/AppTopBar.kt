@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
@@ -31,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.ntg.lmd.R
+import com.ntg.lmd.mainscreen.domain.model.SearchController
 import com.ntg.lmd.navigation.TopBarConfigWithTitle
 
 private const val FADE_ANIMATION_DURATION_MS = 280
@@ -61,38 +63,66 @@ fun appTopBar(
     TopAppBar(
         colors = colors,
         navigationIcon = {
-            if (!search.searching.value) {
-                IconButton(onClick = onOpenDrawer, modifier = Modifier.padding(start = 8.dp)) {
-                    Icon(Icons.Filled.Menu, contentDescription = stringResource(R.string.open_menu))
-                }
-            } else {
-                Icon(
-                    imageVector = Icons.Filled.Menu,
-                    contentDescription = null, // decorative when searching
-                    tint = MaterialTheme.colorScheme.primary, // keep space, de-emphasize
-                    modifier = Modifier.padding(start = 8.dp),
-                )
-            }
+            appTopBarNavigationIcon(
+                isSearching = search.searching.value,
+                onOpenDrawer = onOpenDrawer,
+            )
         },
         title = {
-            topBarTitle(
-                title = config.title,
-                showTitle = !search.searching.value,
+            appTopBarTitleSection(
+                config = config,
+                search = search,
                 fadeSpec = fadeSpec,
+                focusRequester = focusRequester,
+                focusManager = focusManager,
             )
-            if (config.showSearchIcon && search.searching.value) {
-                searchTextField(
-                    search = search,
-                    placeholder =
-                        config.searchPlaceholder
-                            ?: stringResource(R.string.search_order_number_customer_name),
-                    focusRequester = focusRequester,
-                    focusManager = focusManager,
-                )
-            }
         },
         actions = { topBarActions(config = config, searching = search.searching.value) },
     )
+}
+
+@Composable
+private fun appTopBarNavigationIcon(
+    isSearching: Boolean,
+    onOpenDrawer: () -> Unit,
+) {
+    if (!isSearching) {
+        IconButton(onClick = onOpenDrawer, modifier = Modifier.padding(start = 8.dp)) {
+            Icon(Icons.Filled.Menu, contentDescription = stringResource(R.string.open_menu))
+        }
+    } else {
+        Icon(
+            imageVector = Icons.Filled.Menu,
+            contentDescription = null, // decorative when searching
+            tint = MaterialTheme.colorScheme.primary, // keep space, de-emphasize
+            modifier = Modifier.padding(start = 8.dp),
+        )
+    }
+}
+
+@Composable
+private fun appTopBarTitleSection(
+    config: TopBarConfigWithTitle,
+    search: SearchController, // adjust type to your actual search config
+    fadeSpec: FiniteAnimationSpec<Float>,
+    focusRequester: FocusRequester,
+    focusManager: FocusManager,
+) {
+    topBarTitle(
+        title = config.title,
+        showTitle = !search.searching.value,
+        fadeSpec = fadeSpec,
+    )
+    if (config.showSearchIcon && search.searching.value) {
+        searchTextField(
+            search = search,
+            placeholder =
+                config.searchPlaceholder
+                    ?: stringResource(R.string.search_order_number_customer_name),
+            focusRequester = focusRequester,
+            focusManager = focusManager,
+        )
+    }
 }
 
 @Composable

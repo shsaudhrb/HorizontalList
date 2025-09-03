@@ -49,7 +49,6 @@ fun distanceBadge(
 ) {
     val bg = MaterialTheme.colorScheme.primary
     val fg = MaterialTheme.colorScheme.onPrimary
-    //  val value = distanceMeters?.div(KM_DIVISOR)
     Box(
         modifier =
             modifier

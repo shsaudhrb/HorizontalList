@@ -36,36 +36,57 @@ fun searchResultsDropdown(
             color = MaterialTheme.colorScheme.primaryContainer,
             tonalElevation = 2.dp,
         ) {
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-            ) {
-                if (orders.isEmpty()) {
-                    Text(
-                        text = stringResource(R.string.no_orders),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                    )
-                } else {
-                    orders.forEach { order ->
-                        Row(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .clickable { onPick(order) }
-                                    .padding(horizontal = 16.dp, vertical = 10.dp),
-                        ) {
-                            Text(
-                                text = "${order.orderNumber} • ${order.name}",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onBackground,
-                            )
-                        }
-                    }
-                }
+            dropdownContent(orders = orders, onPick = onPick)
+        }
+    }
+}
+
+@Composable
+private fun dropdownContent(
+    orders: List<OrderInfo>,
+    onPick: (OrderInfo) -> Unit,
+) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+    ) {
+        if (orders.isEmpty()) {
+            noResultsView()
+        } else {
+            orders.forEach { order ->
+                searchResultItem(order = order, onPick = onPick)
             }
         }
+    }
+}
+
+@Composable
+private fun noResultsView() {
+    Text(
+        text = stringResource(R.string.no_orders),
+        style = MaterialTheme.typography.bodyLarge,
+        color = MaterialTheme.colorScheme.onBackground,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+    )
+}
+
+@Composable
+private fun searchResultItem(
+    order: OrderInfo,
+    onPick: (OrderInfo) -> Unit,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable { onPick(order) }
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+    ) {
+        Text(
+            text = "${order.orderNumber} • ${order.name}",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
     }
 }

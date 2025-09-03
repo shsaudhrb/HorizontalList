@@ -8,6 +8,7 @@ import com.ntg.lmd.mainscreen.domain.usecase.ComputeDistancesUseCase
 import com.ntg.lmd.mainscreen.domain.usecase.GetMyOrdersUseCase
 import com.ntg.lmd.network.core.RetrofitProvider
 
+@Suppress("UnusedPrivateProperty")
 class MyOrdersViewModelFactory(
     private val application: Application
 ) : ViewModelProvider.Factory {

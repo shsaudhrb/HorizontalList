@@ -24,6 +24,7 @@ import okhttp3.WebSocket
 private const val WS_CLOSE_NORMAL = 1000
 private const val HTTP_UNAUTHORIZED = 401
 private const val DEFAULT_RETRY_DELAY_MS = 3000L
+private const val HEARTBEAT_INTERVAL_MS = 28_000L // every ~28s (before Phoenix’s 30s timeout)
 
 class SocketIntegration(
     private val baseWsUrl: String,
@@ -192,7 +193,6 @@ class SocketIntegration(
         }
     }
 
-    // keep the WebSocket connection alive
     private fun startHeartbeat() {
         hbJob?.cancel()
         hbJob =
@@ -201,7 +201,7 @@ class SocketIntegration(
                     val json =
                         """{"topic":"phoenix","event":"heartbeat","payload":{},"ref":"${refCounter++}"}"""
                     ws?.send(json)
-                    delay(28_000) // every ~28s (before Phoenix’s 30s timeout)
+                    delay(HEARTBEAT_INTERVAL_MS)
                 }
             }
     }

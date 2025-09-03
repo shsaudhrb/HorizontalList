@@ -51,7 +51,6 @@ fun ordersHorizontalList(
         Box(Modifier.align(Alignment.BottomCenter)) {
             generalHorizontalList(
                 orders = ui.mapOrders,
-                selectedOrderNumber = ui.selected?.orderNumber,
                 callbacks =
                     HorizontalListCallbacks(
                         onCenteredOrderChange = { order, _ ->

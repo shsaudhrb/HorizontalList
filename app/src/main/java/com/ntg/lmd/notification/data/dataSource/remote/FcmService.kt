@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.content.ContentValues
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
@@ -37,21 +38,28 @@ class FcmService : FirebaseMessagingService() {
         private const val DEFAULT_DEEPLINK = "myapp://notifications"
     }
 
-    override fun onNewToken(token: String) {
-        super.onNewToken(token)
-        
-        Log.i(TAG, "New FCM token generated: $token")
-        
+    // manually get and log the current FCM token
+
+    fun getCurrentToken() {
+        com.google.firebase.messaging.FirebaseMessaging
+            .getInstance()
+            .token
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    val token = task.result
+                    Log.d(TAG, "Current FCM Token: $token")
+                    Log.i(TAG, "Successfully retrieved current FCM token")
+                } else {
+                    Log.e(TAG, "Failed to get FCM token", task.exception)
+                }
+            }
     }
-
- 
-
 
     override fun onMessageReceived(msg: RemoteMessage) {
         Log.d(TAG, "FCM message received: ${msg.messageId}")
         Log.d(TAG, "Message data: ${msg.data}")
         Log.d(TAG, "Message notification: ${msg.notification}")
-        
+
         val notif = msg.notification
         val data = msg.data
         if (notif == null && data.isNullOrEmpty()) {
@@ -119,6 +127,12 @@ class FcmService : FirebaseMessagingService() {
                 ),
             )
         }
+    }
+
+    override fun onNewToken(token: String) {
+        super.onNewToken(token)
+
+        Log.i(ContentValues.TAG, "New FCM token generated: $token")
     }
 
     @RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)

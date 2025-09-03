@@ -1,6 +1,5 @@
 package com.ntg.lmd.mainscreen.data.model
 
-// data/datasource/remote/UpdateOrderStatusDto.kt
 import com.google.gson.annotations.SerializedName
 
 data class UpdateOrderStatusRequest(
