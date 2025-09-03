@@ -13,7 +13,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,7 +23,7 @@ import androidx.compose.ui.res.dimensionResource
 import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
-import com.ntg.lmd.mainscreen.ui.components.ActionDialog
+import com.ntg.lmd.mainscreen.ui.components.OrderActions
 import com.ntg.lmd.mainscreen.ui.components.myOrderCard
 import com.ntg.lmd.mainscreen.ui.model.MyOrderCardCallbacks
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
@@ -41,14 +40,16 @@ data class OrderListCallbacks(
     val onReassignRequested: (String) -> Unit,
     val onDetails: (String) -> Unit,
     val onCall: (String) -> Unit,
-    val onAction: (String, ActionDialog) -> Unit,
+    val onAction: (String, OrderActions) -> Unit,
     val onRefresh: () -> Unit,
 )
-private val AutoHideOnSuccessStatuses = setOf(
-    OrderStatus.DELIVERY_DONE,
-    OrderStatus.DELIVERY_FAILED,
-    OrderStatus.REASSIGNED,
-)
+
+private val AutoHideOnSuccessStatuses =
+    setOf(
+        OrderStatus.DELIVERY_DONE,
+        OrderStatus.DELIVERY_FAILED,
+        OrderStatus.REASSIGNED,
+    )
 
 @Composable
 fun orderList(
@@ -56,6 +57,23 @@ fun orderList(
     updateVm: UpdateOrderStatusViewModel,
     callbacks: OrderListCallbacks,
 ) {
+    val hiddenIds = rememberHiddenIds(updateVm, state.isRefreshing)
+    val filteredOrders = rememberFilteredOrders(state.orders, hiddenIds)
+
+    ordersLazyList(
+        filteredOrders = filteredOrders,
+        listState = state.listState,
+        isLoadingMore = state.isLoadingMore,
+        updatingIds = state.updatingIds,
+        updateVm = updateVm,
+        callbacks = callbacks,
+    )
+}
+@Composable
+private fun rememberHiddenIds(
+    updateVm: UpdateOrderStatusViewModel,
+    isRefreshing: Boolean,
+): Set<String> {
     var hiddenIds by remember { mutableStateOf(emptySet<String>()) }
 
     LaunchedEffect(updateVm) {
@@ -65,35 +83,45 @@ fun orderList(
             }
         }
     }
-    LaunchedEffect(state.isRefreshing) {
-        if (!state.isRefreshing) hiddenIds = emptySet()
+    LaunchedEffect(isRefreshing) {
+        if (!isRefreshing) hiddenIds = emptySet()
     }
+    return hiddenIds
+}
 
-    val filteredOrders by remember(state.orders, hiddenIds) {
-        derivedStateOf {
-            // VM already filtered by status + user
-            state.orders.filter { it.id !in hiddenIds }
-        }
+@Composable
+private fun rememberFilteredOrders(
+    orders: List<OrderInfo>,
+    hiddenIds: Set<String>,
+): List<OrderInfo> {
+    return remember(orders, hiddenIds) {
+        orders.filter { it.id !in hiddenIds } // VM already filtered by user/status
     }
+}
+
+@Composable
+private fun ordersLazyList(
+    filteredOrders: List<OrderInfo>,
+    listState: LazyListState,
+    isLoadingMore: Boolean,
+    updatingIds: Set<String>,
+    updateVm: UpdateOrderStatusViewModel,
+    callbacks: OrderListCallbacks,
+) {
     LazyColumn(
-        state = state.listState,
+        state = listState,
         contentPadding = PaddingValues(dimensionResource(R.dimen.mediumSpace)),
         verticalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.mediumSpace)),
     ) {
         items(items = filteredOrders, key = { it.id }) { order ->
             myOrderCard(
                 order = order,
-                isUpdating = state.updatingIds.contains(order.id),
-                callbacks = MyOrderCardCallbacks(
-                    onReassignRequested = { callbacks.onReassignRequested(order.id) },
-                    onDetails = { callbacks.onDetails(order.id) },
-                    onCall = { callbacks.onCall(order.id) },
-                    onAction = { act -> callbacks.onAction(order.id, act) },
-                ),
+                isUpdating = updatingIds.contains(order.id),
+                callbacks = toCardCallbacks(order.id, callbacks),
                 updateVm = updateVm,
             )
         }
-        if (state.isLoadingMore) {
+        if (isLoadingMore) {
             item {
                 Box(
                     Modifier.fillMaxWidth().padding(dimensionResource(R.dimen.mediumSpace)),
@@ -104,3 +132,13 @@ fun orderList(
         item { Spacer(modifier = Modifier.height(dimensionResource(R.dimen.extraSmallSpace))) }
     }
 }
+
+private fun toCardCallbacks(
+    orderId: String,
+    callbacks: OrderListCallbacks,
+) = MyOrderCardCallbacks(
+    onReassignRequested = { callbacks.onReassignRequested(orderId) },
+    onDetails = { callbacks.onDetails(orderId) },
+    onCall = { callbacks.onCall(orderId) },
+    onAction = { act -> callbacks.onAction(orderId, act) },
+)
