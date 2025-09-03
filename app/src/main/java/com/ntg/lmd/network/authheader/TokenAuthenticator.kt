@@ -16,96 +16,81 @@ import java.io.IOException
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicReference
 
+private const val MAX_RETRY_ATTEMPTS = 1
+private const val HTTP_UNAUTHORIZED = 401
+
 class TokenAuthenticator(
     private val store: SecureTokenStore,
     private val refreshApi: AuthApi,
 ) : Authenticator {
     private val mutex = Mutex()
 
-    private inline fun <T> runBlockingNotMain(crossinline block: suspend () -> T): T {
-        if (Looper.myLooper() != Looper.getMainLooper()) {
-            return runBlocking(Dispatchers.IO) { block() }
-        }
-        val out = AtomicReference<T>()
-        val err = AtomicReference<Throwable?>()
-        val latch = CountDownLatch(1)
-        Thread {
-            try {
-                out.set(runBlocking(Dispatchers.IO) { block() })
-            } catch (e: IOException) {
-                err.set(e)
-            } finally {
-                latch.countDown()
-            }
-        }.start()
-        latch.await()
-        err.get()?.let { throw it }
-        @Suppress("UNCHECKED_CAST")
-        return out.get()
-    }
-
     override fun authenticate(
         route: Route?,
         response: Response,
     ): Request? {
-        val hadAuthHeader = response.request.header("Authorization") != null
-        if (!hadAuthHeader || response.code != 401 || responseCount(response) > 1) return null
+        val shouldAttemptAuth = shouldAuthenticate(response)
+        val payload = if (shouldAttemptAuth) tryRefreshToken(extractAccessToken(response)) else null
 
-        val failedAccess =
+        return payload?.accessToken?.let {
             response.request
-                .header("Authorization")
-                ?.removePrefix("Bearer ")
-                ?.trim()
-
-        // Do all token logic under a single lock
-        val payload: LoginData? =
-            try {
-                runBlockingNotMain {
-                    mutex.withLock {
-                        val currentAccess = store.getAccessToken()
-                        // If another request already refreshed while we were waiting, reuse it.
-                        if (!currentAccess.isNullOrBlank() && currentAccess != failedAccess) {
-                            return@withLock LoginData(
-                                user = null,
-                                accessToken = currentAccess,
-                                refreshToken = store.getRefreshToken(),
-                                expiresAt = store.getAccessExpiryIso(),
-                                refreshExpiresAt = store.getRefreshExpiryIso(),
-                            )
-                        }
-
-                        // Otherwise refresh now, using the *latest* refresh token from the store
-                        val rt = store.getRefreshToken() ?: return@withLock null
-                        val res = refreshApi.refreshToken(RefreshTokenRequest(refresh_token = rt))
-                        val data = if (res.success) res.data else null
-
-                        if (data?.accessToken.isNullOrBlank()) {
-                            // hard-fail: clear tokens so app can force re-login
-                            store.clear()
-                            return@withLock null
-                        }
-
-                        // Save inside the lock to avoid races
-                        store.saveFromPayload(
-                            access = data!!.accessToken,
-                            refresh = data.refreshToken,
-                            expiresAt = data.expiresAt,
-                            refreshExpiresAt = data.refreshExpiresAt,
-                        )
-                        data
-                    }
-                }
-            } catch (_: Throwable) {
-                null
-            }
-
-        if (payload?.accessToken.isNullOrBlank()) return null
-
-        return response.request
-            .newBuilder()
-            .header("Authorization", "Bearer ${payload.accessToken}")
-            .build()
+                .newBuilder()
+                .header("Authorization", "Bearer $it")
+                .build()
+        }
     }
+
+    private fun shouldAuthenticate(response: Response): Boolean {
+        val hadAuthHeader = response.request.header("Authorization") != null
+        return hadAuthHeader && response.code == HTTP_UNAUTHORIZED && responseCount(response) <= MAX_RETRY_ATTEMPTS
+    }
+
+    private fun extractAccessToken(response: Response): String? =
+        response.request
+            .header("Authorization")
+            ?.removePrefix("Bearer ")
+            ?.trim()
+
+    private fun tryRefreshToken(failedAccess: String?): LoginData? {
+        return try {
+            runBlockingNotMain {
+                mutex.withLock {
+                    val currentAccess = store.getAccessToken()
+                    if (!currentAccess.isNullOrBlank() && currentAccess != failedAccess) {
+                        return@withLock cachedPayload(currentAccess)
+                    }
+
+                    val rt = store.getRefreshToken() ?: return@withLock null
+                    val res = refreshApi.refreshToken(RefreshTokenRequest(refreshToken = rt))
+                    val data = if (res.success) res.data else null
+
+                    if (data?.accessToken.isNullOrBlank()) {
+                        store.clear()
+                        return@withLock null
+                    }
+
+                    store.saveFromPayload(
+                        access = data.accessToken,
+                        refresh = data.refreshToken,
+                        expiresAt = data.expiresAt,
+                        refreshExpiresAt = data.refreshExpiresAt,
+                    )
+                    data
+                }
+            }
+        } catch (_: Throwable) {
+            null
+        }
+    }
+
+    private fun cachedPayload(access: String): LoginData =
+        LoginData(
+            user = null,
+            accessToken = access,
+            refreshToken = store.getRefreshToken(),
+            expiresAt = store.getAccessExpiryIso(),
+            refreshExpiresAt = store.getRefreshExpiryIso(),
+        )
 
     private fun responseCount(r: Response): Int {
         var resp: Response? = r
@@ -115,5 +100,30 @@ class TokenAuthenticator(
             resp = resp.priorResponse
         }
         return count
+    }
+
+    private inline fun <T> runBlockingNotMain(crossinline block: suspend () -> T): T {
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            return runBlocking(Dispatchers.IO) { block() }
+        }
+
+        val out = AtomicReference<T>()
+        val err = AtomicReference<Throwable?>()
+        val latch = CountDownLatch(1)
+
+        Thread {
+            try {
+                out.set(runBlocking(Dispatchers.IO) { block() })
+            } catch (e: IOException) {
+                err.set(e)
+            } finally {
+                latch.countDown()
+            }
+        }.start()
+
+        latch.await()
+        err.get()?.let { throw it }
+        @Suppress("UNCHECKED_CAST")
+        return out.get()
     }
 }

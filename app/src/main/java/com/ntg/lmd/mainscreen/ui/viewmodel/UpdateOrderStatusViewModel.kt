@@ -48,8 +48,7 @@ class UpdateOrderStatusViewModel(
                     .onSuccess { serverOrder ->
                         OrderLogger.postSuccess(orderId, serverOrder.status)
                         _success.emit(serverOrder)
-                    }
-                    .onFailure { e ->
+                    }.onFailure { e ->
                         if (e is CancellationException) throw e
                         OrderLogger.postError(orderId, targetStatus, e)
                         _error.emit(e.toUserMessage() to { update(orderId, targetStatus, assignedAgentId) })

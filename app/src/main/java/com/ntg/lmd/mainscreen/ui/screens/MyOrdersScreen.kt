@@ -1,8 +1,10 @@
 package com.ntg.lmd.mainscreen.ui.screens
 
 import android.app.Application
+import android.content.Context
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
@@ -10,6 +12,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshState
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -23,16 +26,19 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ntg.lmd.R
+import com.ntg.lmd.mainscreen.domain.model.ActiveUser
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
-import com.ntg.lmd.mainscreen.ui.components.OrdersContentParams
 import com.ntg.lmd.mainscreen.ui.components.bottomStickyButton
 import com.ntg.lmd.mainscreen.ui.components.initialCameraPositionEffect
 import com.ntg.lmd.mainscreen.ui.components.locationPermissionAndLastLocation
 import com.ntg.lmd.mainscreen.ui.components.ordersContent
 import com.ntg.lmd.mainscreen.ui.components.ordersEffects
 import com.ntg.lmd.mainscreen.ui.components.reassignBottomSheet
+import com.ntg.lmd.mainscreen.ui.model.MyOrdersUiState
+import com.ntg.lmd.mainscreen.ui.model.OrdersContentParams
 import com.ntg.lmd.mainscreen.ui.viewmodel.ActiveAgentsViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.ActiveAgentsViewModelFactory
+import com.ntg.lmd.mainscreen.ui.viewmodel.AgentsState
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyOrdersViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyOrdersViewModelFactory
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyPoolVMFactory
@@ -46,9 +52,9 @@ import com.ntg.lmd.network.core.RetrofitProvider.userStore
 fun myOrdersScreen(onOpenOrderDetails: (String) -> Unit) {
     val app = LocalContext.current.applicationContext as Application
 
-    val ordersVm: MyOrdersViewModel = viewModel(factory = MyOrdersViewModelFactory(app))
+    val ordersVm: MyOrdersViewModel = viewModel(factory = MyOrdersViewModelFactory())
     val updateVm: UpdateOrderStatusViewModel = viewModel(factory = UpdateOrderStatusViewModelFactory(app))
-    val agentsVm: ActiveAgentsViewModel = viewModel(factory = ActiveAgentsViewModelFactory(app))
+    val agentsVm: ActiveAgentsViewModel = viewModel(factory = ActiveAgentsViewModelFactory())
     val poolVm: MyPoolViewModel = viewModel(factory = MyPoolVMFactory())
 
     myOrdersScreenInner(
@@ -59,6 +65,7 @@ fun myOrdersScreen(onOpenOrderDetails: (String) -> Unit) {
         onOpenOrderDetails = onOpenOrderDetails,
     )
 }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun myOrdersScreenInner(
@@ -96,14 +103,15 @@ private fun myOrdersScreenInner(
                     onOpenOrderDetails = onOpenOrderDetails,
                     updatingIds = updatingIds,
                     onReassignRequested = onReassignRequested,
-                )
+                ),
             )
         }
     }
 }
+
 @Composable
 private fun reassignHost(
-    ui: com.ntg.lmd.mainscreen.ui.screens.orders.model.MyOrdersUiState,
+    ui: MyOrdersUiState,
     agentsVm: ActiveAgentsViewModel,
     updateVm: UpdateOrderStatusViewModel,
     content: @Composable (onReassignRequested: (String) -> Unit) -> Unit,
@@ -136,7 +144,10 @@ private fun reassignHost(
 }
 
 @Composable
-private fun setupMapAndLocation(poolVm: MyPoolViewModel, ordersVm: MyOrdersViewModel) {
+private fun setupMapAndLocation(
+    poolVm: MyPoolViewModel,
+    ordersVm: MyOrdersViewModel,
+) {
     locationPermissionAndLastLocation(poolVm)
     val mapStates = rememberMapStates()
     val poolUi by poolVm.ui.collectAsState()
@@ -153,10 +164,10 @@ private fun connectCurrentUserToOrders(ordersVm: MyOrdersViewModel) {
 @Composable
 private fun ordersEffectsHost(
     ordersVm: MyOrdersViewModel,
-    state: com.ntg.lmd.mainscreen.ui.screens.orders.model.MyOrdersUiState,
-    listState: androidx.compose.foundation.lazy.LazyListState,
+    state: MyOrdersUiState,
+    listState: LazyListState,
     snack: SnackbarHostState,
-    ctx: android.content.Context,
+    ctx: Context,
 ) {
     ordersEffects(ordersVm, state, listState, snack, ctx)
 }
@@ -166,16 +177,17 @@ private fun updateVmCollectors(
     updateVm: UpdateOrderStatusViewModel,
     ordersVm: MyOrdersViewModel,
     snack: SnackbarHostState,
-    ctx: android.content.Context,
+    ctx: Context,
 ) {
     LaunchedEffect(Unit) { updateVm.success.collect { ordersVm.applyServerPatch(it) } }
     LaunchedEffect(Unit) {
         updateVm.error.collect { (msg, retry) ->
-            val res = snack.showSnackbar(
-                message = msg,
-                actionLabel = ctx.getString(R.string.retry),
-                withDismissAction = true,
-            )
+            val res =
+                snack.showSnackbar(
+                    message = msg,
+                    actionLabel = ctx.getString(R.string.retry),
+                    withDismissAction = true,
+                )
             if (res == SnackbarResult.ActionPerformed) retry()
         }
     }
@@ -186,7 +198,7 @@ private fun updateVmCollectors(
 private fun ordersScaffold(
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
-    pullState: androidx.compose.material3.pulltorefresh.PullToRefreshState,
+    pullState: PullToRefreshState,
     snack: SnackbarHostState,
     content: @Composable () -> Unit,
 ) {
@@ -206,10 +218,10 @@ private fun ordersScaffold(
 @Composable
 private fun reassignBottomSheetHost(
     open: Boolean,
-    agentsState: com.ntg.lmd.mainscreen.ui.viewmodel.AgentsState,
+    agentsState: AgentsState,
     onDismiss: () -> Unit,
     onRetry: () -> Unit,
-    onSelect: (com.ntg.lmd.mainscreen.domain.model.ActiveUser) -> Unit,
+    onSelect: (ActiveUser) -> Unit,
 ) {
     reassignBottomSheet(
         open = open,

@@ -1,8 +1,10 @@
 package com.ntg.lmd.mainscreen.ui.components
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -10,27 +12,19 @@ import androidx.compose.ui.Modifier
 import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
 import com.ntg.lmd.mainscreen.ui.model.LocalUiOnlyStatusBus
-import com.ntg.lmd.mainscreen.ui.screens.OrderListCallbacks
-import com.ntg.lmd.mainscreen.ui.screens.OrderListState
+import com.ntg.lmd.mainscreen.ui.model.MyOrdersUiState
+import com.ntg.lmd.mainscreen.ui.model.OrderListCallbacks
+import com.ntg.lmd.mainscreen.ui.model.OrderListState
+import com.ntg.lmd.mainscreen.ui.model.OrdersContentParams
 import com.ntg.lmd.mainscreen.ui.screens.orderList
-import com.ntg.lmd.mainscreen.ui.screens.orders.model.MyOrdersUiState
-import com.ntg.lmd.mainscreen.ui.viewmodel.MyOrdersViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
-data class OrdersContentParams(
-    val ordersVm: MyOrdersViewModel,
-    val updateVm: UpdateOrderStatusViewModel,
-    val listState: LazyListState,
-    val updatingIds: Set<String>,
-    val onOpenOrderDetails: (String) -> Unit,
-    val onReassignRequested: (String) -> Unit,
-)
 
 @Composable
 fun ordersContent(params: OrdersContentParams) {
     val uiState by params.ordersVm.state.collectAsState()
     val context = androidx.compose.ui.platform.LocalContext.current
 
-    OrdersContentBody(
+    ordersContentBody(
         uiState = uiState,
         params = params,
         context = context,
@@ -38,7 +32,7 @@ fun ordersContent(params: OrdersContentParams) {
 }
 
 @Composable
-private fun OrdersContentBody(
+private fun ordersContentBody(
     uiState: MyOrdersUiState,
     params: OrdersContentParams,
     context: android.content.Context,
@@ -55,47 +49,48 @@ private fun OrdersContentBody(
                 emptyView(uiState.emptyMessage!!)
 
             else ->
-                OrderListHost(uiState = uiState, params = params, context = context)
+                orderListHost(uiState = uiState, params = params, context = context)
         }
     }
 }
 
 @Composable
-private fun OrderListHost(
+private fun orderListHost(
     uiState: MyOrdersUiState,
     params: OrdersContentParams,
-    context: android.content.Context,
+    context: Context,
 ) {
     orderList(
-        state = OrderListState(
-            orders = uiState.orders,
-            listState = params.listState,
-            isLoadingMore = uiState.isLoadingMore,
-            updatingIds = params.updatingIds,
-            isRefreshing = uiState.isRefreshing,
-        ),
+        state =
+            OrderListState(
+                orders = uiState.orders,
+                listState = params.listState,
+                isLoadingMore = uiState.isLoadingMore,
+                updatingIds = params.updatingIds,
+                isRefreshing = uiState.isRefreshing,
+            ),
         updateVm = params.updateVm,
-        callbacks = makeOrderListCallbacks(
-            uiState = uiState,
-            params = params,
-            context = context,
-        ),
+        callbacks =
+            makeOrderListCallbacks(
+                uiState = uiState,
+                params = params,
+                context = context,
+            ),
     )
 }
 
 private fun makeOrderListCallbacks(
     uiState: MyOrdersUiState,
     params: OrdersContentParams,
-    context: android.content.Context,
-): OrderListCallbacks {
-    return OrderListCallbacks(
+    context: Context,
+): OrderListCallbacks =
+    OrderListCallbacks(
         onDetails = params.onOpenOrderDetails,
         onReassignRequested = params.onReassignRequested,
         onCall = { id -> dialOrNotify(id, uiState, context) },
         onAction = actionHandler(uiState, params.updateVm),
         onRefresh = { params.ordersVm.refreshOrders() },
     )
-}
 
 private fun dialOrNotify(
     orderId: String,
@@ -105,10 +100,11 @@ private fun dialOrNotify(
     val order = uiState.orders.firstOrNull { it.id == orderId }
     val phone = order?.customerPhone
     if (!phone.isNullOrBlank()) {
-        val intent = android.content.Intent(
-            android.content.Intent.ACTION_DIAL,
-            android.net.Uri.parse("tel:$phone"),
-        )
+        val intent =
+            android.content.Intent(
+                android.content.Intent.ACTION_DIAL,
+                android.net.Uri.parse("tel:$phone"),
+            )
         context.startActivity(intent)
     } else {
         LocalUiOnlyStatusBus.errorEvents
@@ -119,22 +115,22 @@ private fun dialOrNotify(
 private fun actionHandler(
     uiState: MyOrdersUiState,
     updateVm: UpdateOrderStatusViewModel,
-): (String, OrderActions) -> Unit = { orderId, dialog ->
-    val order = uiState.orders.firstOrNull { it.id == orderId }
-    val (label, status) = dialogToLabelAndStatus(dialog)
+): (String, OrderActions) -> Unit =
+    { orderId, dialog ->
+        val order = uiState.orders.firstOrNull { it.id == orderId }
+        val (label, status) = dialogToLabelAndStatus(dialog)
 
-    UpdateOrderStatusViewModel.OrderLogger
-        .uiTap(orderId, order?.orderNumber, label)
+        UpdateOrderStatusViewModel.OrderLogger
+            .uiTap(orderId, order?.orderNumber, label)
 
-    updateVm.update(orderId, status)
-}
+        updateVm.update(orderId, status)
+    }
 
 private fun dialogToLabelAndStatus(dialog: OrderActions): Pair<String, OrderStatus> =
     when (dialog) {
         OrderActions.Confirm -> "Confirm" to OrderStatus.CONFIRMED
-        OrderActions.PickUp  -> "PickUp"  to OrderStatus.PICKUP
-        OrderActions.Start   -> "StartDelivery" to OrderStatus.START_DELIVERY
+        OrderActions.PickUp -> "PickUp" to OrderStatus.PICKUP
+        OrderActions.Start -> "StartDelivery" to OrderStatus.START_DELIVERY
         OrderActions.Deliver -> "Deliver" to OrderStatus.DELIVERY_DONE
-        OrderActions.Fail    -> "DeliveryFailed" to OrderStatus.DELIVERY_FAILED
+        OrderActions.Fail -> "DeliveryFailed" to OrderStatus.DELIVERY_FAILED
     }
-

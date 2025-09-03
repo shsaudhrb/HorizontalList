@@ -21,10 +21,11 @@ import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 
+private const val NEAR_END_THRESHOLD = 3
+
 @Composable
 fun generalHorizontalList(
     orders: List<OrderInfo>,
-    selectedOrderNumber: String?,
     modifier: Modifier = Modifier,
     callbacks: HorizontalListCallbacks = HorizontalListCallbacks(),
     cardContent: @Composable (OrderInfo, Int) -> Unit,
@@ -92,7 +93,7 @@ private fun observeNearEnd(
                 ?.index ?: -1
         }.distinctUntilChanged()
             .collect { lastVisible ->
-                if (lastVisible >= orders.size - 3) {
+                if (lastVisible >= orders.size - NEAR_END_THRESHOLD) {
                     onNearEnd(lastVisible)
                 }
             }

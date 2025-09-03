@@ -2,7 +2,6 @@ package com.ntg.lmd.mainscreen.data.model
 
 import com.google.gson.annotations.SerializedName
 
-// Renad
 data class OrdersEnvelope(
     val success: Boolean,
     val data: OrdersData? = null,
@@ -80,27 +79,3 @@ data class UserDto(
     @SerializedName("full_name")
     val fullName: String?,
 )
-// data class OrderDto(
-//    @SerializedName("order_id") val orderId: String?,
-//    @SerializedName("order_number") val orderNumber: String,
-//    @SerializedName("customer_name") val customerName: String?,
-//    @SerializedName("address") val address: String?,
-//    @SerializedName("status_id") val statusId: Int?,
-//    @SerializedName("order_date") val orderDate: String?,
-//    @SerializedName("delivery_time") val deliveryTime: String?,
-//    @SerializedName("last_updated") val lastUpdated: String?,
-//    @SerializedName("coordinates") val coordinates: Coordinates,
-//    @SerializedName("distance_km") val distanceKm: Double?,                 // ← add this
-//    @SerializedName("orderstatuses") val orderstatuses: StatusBlockDto?     // ← and this
-// )
-//
-// data class CoordinatesDto(
-//    @SerializedName("latitude") val latitude: Double?,
-//    @SerializedName("longitude") val longitude: Double?
-// )
-//
-// data class StatusBlockDto(
-//    @SerializedName("status_name") val statusName: String?,
-//    @SerializedName("color_code") val colorHex: String?,
-//    @SerializedName("font_color_code") val fontColorHex: String?
-// )

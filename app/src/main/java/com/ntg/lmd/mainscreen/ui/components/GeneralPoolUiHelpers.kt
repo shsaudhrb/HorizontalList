@@ -22,13 +22,13 @@ fun poolBottomContent(
     focusOnOrder: (OrderInfo, Boolean) -> Unit,
 ) {
     when {
-        ui.isLoading -> LoadingText()
+        ui.isLoading -> loadingText()
         ui.mapOrders.isNotEmpty() -> ordersHorizontalList(ui, viewModel, focusOnOrder)
     }
 }
 
 @Composable
-fun LoadingText() {
+fun loadingText() {
     Box(Modifier.fillMaxSize()) {
         Text(
             text = stringResource(R.string.loading_text),
@@ -51,7 +51,6 @@ fun ordersHorizontalList(
         Box(Modifier.align(Alignment.BottomCenter)) {
             generalHorizontalList(
                 orders = ui.mapOrders,
-                selectedOrderNumber = ui.selected?.orderNumber,
                 callbacks =
                     HorizontalListCallbacks(
                         onCenteredOrderChange = { order, _ ->
