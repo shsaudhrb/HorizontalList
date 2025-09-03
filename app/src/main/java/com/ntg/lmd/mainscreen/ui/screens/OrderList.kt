@@ -1,7 +1,5 @@
 package com.ntg.lmd.mainscreen.ui.screens
 
-import android.util.Log
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListState
@@ -16,7 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
-import com.ntg.lmd.mainscreen.ui.components.ActionDialog
+import com.ntg.lmd.mainscreen.ui.components.OrderActions
 import com.ntg.lmd.mainscreen.ui.components.myOrderCard
 import com.ntg.lmd.mainscreen.ui.model.MyOrderCardCallbacks
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
@@ -37,7 +35,7 @@ data class OrderListCallbacks(
     val onReassignRequested: (String) -> Unit,
     val onDetails: (String) -> Unit,
     val onCall: (String) -> Unit,
-    val onAction: (String, ActionDialog) -> Unit,
+    val onAction: (String, OrderActions) -> Unit,
     val onRefresh: () -> Unit,
     val onLoadMore: () -> Unit,
 )
@@ -89,7 +87,9 @@ fun orderList(
                         onReassignRequested = { callbacks.onReassignRequested(order.id) },
                         onDetails = { callbacks.onDetails(order.id) },
                         onCall = { callbacks.onCall(order.id) },
-                        onAction = { act -> callbacks.onAction(order.id, act) },
+                        onAction = { act: OrderActions ->
+                            callbacks.onAction(order.id, act)
+                        }
                     ),
                     updateVm = updateVm,
                 )

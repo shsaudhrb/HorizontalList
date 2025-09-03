@@ -74,11 +74,11 @@ fun ordersContent(
                                 val order = uiState.orders.firstOrNull { it.id == orderId }
                                 val label =
                                     when (dialog) {
-                                        ActionDialog.Confirm -> "Confirm"
-                                        ActionDialog.PickUp -> "PickUp"
-                                        ActionDialog.Start -> "StartDelivery"
-                                        ActionDialog.Deliver -> "Deliver"
-                                        ActionDialog.Fail -> "DeliveryFailed"
+                                        OrderActions.Confirm -> "Confirm"
+                                        OrderActions.PickUp -> "PickUp"
+                                        OrderActions.Start -> "StartDelivery"
+                                        OrderActions.Deliver -> "Deliver"
+                                        OrderActions.Fail -> "DeliveryFailed"
                                     }
                                 UpdateOrderStatusViewModel.OrderLogger.uiTap(
                                     orderId,
@@ -87,31 +87,31 @@ fun ordersContent(
                                 )
 
                                 when (dialog) {
-                                    ActionDialog.Confirm ->
+                                    OrderActions.Confirm ->
                                         updateVm.update(
                                             orderId,
                                             OrderStatus.CONFIRMED,
                                         )
 
-                                    ActionDialog.PickUp ->
+                                    OrderActions.PickUp ->
                                         updateVm.update(
                                             orderId,
                                             OrderStatus.PICKUP,
                                         )
 
-                                    ActionDialog.Start ->
+                                    OrderActions.Start ->
                                         updateVm.update(
                                             orderId,
                                             OrderStatus.START_DELIVERY,
                                         )
 
-                                    ActionDialog.Deliver ->
+                                    OrderActions.Deliver ->
                                         updateVm.update(
                                             orderId,
                                             OrderStatus.DELIVERY_DONE,
                                         )
 
-                                    ActionDialog.Fail ->
+                                    OrderActions.Fail ->
                                         updateVm.update(
                                             orderId,
                                             OrderStatus.DELIVERY_FAILED,
