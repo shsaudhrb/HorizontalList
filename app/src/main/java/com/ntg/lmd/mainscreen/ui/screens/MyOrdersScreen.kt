@@ -24,11 +24,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.ntg.lmd.R
-import com.ntg.lmd.mainscreen.data.repository.MyOrdersRepositoryImpl
-import com.ntg.lmd.mainscreen.data.repository.UsersRepositoryImpl
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
-import com.ntg.lmd.mainscreen.domain.usecase.GetActiveUsersUseCase
-import com.ntg.lmd.mainscreen.domain.usecase.GetMyOrdersUseCase
 import com.ntg.lmd.mainscreen.ui.components.bottomStickyButton
 import com.ntg.lmd.mainscreen.ui.components.initialCameraPositionEffect
 import com.ntg.lmd.mainscreen.ui.components.locationPermissionAndLastLocation
@@ -58,7 +54,8 @@ fun myOrdersScreen(
 ) {
     val app = LocalContext.current.applicationContext as Application
     val ordersVm: MyOrdersViewModel = viewModel(factory = MyOrdersViewModelFactory(app))
-    val updateVm: UpdateOrderStatusViewModel = viewModel(factory = UpdateOrderStatusViewModelFactory(app))
+    val updateVm: UpdateOrderStatusViewModel =
+        viewModel(factory = UpdateOrderStatusViewModelFactory(app))
     val agentsVm: ActiveAgentsViewModel = viewModel(factory = ActiveAgentsViewModelFactory(app))
     val agentsState by agentsVm.state.collectAsState()
     var reassignOrderId by remember { mutableStateOf<String?>(null) }
@@ -66,6 +63,7 @@ fun myOrdersScreen(
     val poolVm: MyPoolViewModel = viewModel(factory = MyPoolVMFactory())
     val poolUi by poolVm.ui.collectAsState()
 
+    // Location + map camera
     locationPermissionAndLastLocation(poolVm)
     val mapStates = rememberMapStates()
     initialCameraPositionEffect(poolUi.orders, poolUi.selectedOrderNumber, mapStates)
@@ -76,31 +74,37 @@ fun myOrdersScreen(
         agentsVm.load()
     }
 
-    val currentUserId: String? = remember {
-        userStore.getUserId()
-    }
+    // Current user
+    val currentUserId: String? = remember { userStore.getUserId() }
     LaunchedEffect(currentUserId) {
-        ordersVm.setCurrentUserId(currentUserId)
+        ordersVm.listVM.setCurrentUserId(currentUserId)
     }
 
-    val state by ordersVm.state.collectAsState()
+    // State
+    val uiState by ordersVm.uiState.collectAsState()
     val updatingIds by updateVm.updatingIds.collectAsState()
     val ctx = LocalContext.current
     val snack = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
 
-    ordersEffects(ordersVm, state, listState, snack, ctx)
+    ordersEffects(
+        vm = ordersVm,
+        listState = listState,
+        snackbarHostState = snack,
+        context = ctx
+    )
 
     // When the search query changes, jump back to the top of the list
-    LaunchedEffect(state.query) {
+    LaunchedEffect(uiState.query) {
         listState.scrollToItem(0)
     }
 
     LaunchedEffect(Unit) {
         updateVm.success.collect { updated ->
-            ordersVm.applyServerPatch(updated)
+            ordersVm.statusVM.applyServerPatch(updated)
         }
     }
+
     LaunchedEffect(Unit) {
         updateVm.error.collect { (msg, retry) ->
             val res =
@@ -124,7 +128,7 @@ fun myOrdersScreen(
         ordersContent(
             ordersVm = ordersVm,
             updateVm = updateVm,
-            state = state,
+            state = uiState,
             listState = listState,
             onOpenOrderDetails = onOpenOrderDetails,
             context = ctx,
@@ -146,7 +150,7 @@ fun myOrdersScreen(
             val orderId = reassignOrderId ?: return@reassignBottomSheet
             OrderLogger.uiTap(
                 orderId,
-                state.orders.firstOrNull { it.id == orderId }?.orderNumber,
+                uiState.orders.firstOrNull { it.id == orderId }?.orderNumber,
                 "Menu:Reassign→${user.name}"
             )
             updateVm.update(orderId, OrderStatus.REASSIGNED, assignedAgentId = user.id)
@@ -163,7 +167,7 @@ private fun ForwardMyPoolLocationToMyOrders(
 ) {
     val lastLoc by poolVm.lastLocation.collectAsState(initial = null)
     LaunchedEffect(lastLoc) {
-        ordersVm.updateDeviceLocation(lastLoc)
+        ordersVm.listVM.updateDeviceLocation(lastLoc)
     }
 }
 
@@ -185,7 +189,7 @@ private fun observeOrdersSearch(
             .filterNotNull()
             .distinctUntilChanged()
             .collect { q ->
-                vm.applySearchQuery(q)
+                vm.searchVM.applySearchQuery(q)
             }
     }
 
@@ -193,7 +197,7 @@ private fun observeOrdersSearch(
         val h = back?.savedStateHandle ?: return@LaunchedEffect
         h.getStateFlow("search_submit", "").collect { submitted ->
             if (submitted.isNotEmpty()) {
-                vm.applySearchQuery(submitted)
+                vm.searchVM.applySearchQuery(submitted)
                 h["search_submit"] = ""
             }
         }

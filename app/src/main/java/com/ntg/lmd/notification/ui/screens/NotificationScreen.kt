@@ -62,6 +62,7 @@ import com.ntg.lmd.order.domain.model.PagingState
 import com.ntg.lmd.order.domain.model.defaultVerticalListConfig
 import com.ntg.lmd.order.ui.components.verticalListComponent
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 private const val MILLIS_PER_MINUTE = 60_000L
@@ -323,7 +324,7 @@ private fun emptySection() {
 private fun rememberNowMillis(tickMillis: Long): Long {
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(tickMillis) {
-        while (true) {
+        while (isActive) { // will stop when effect is cancelled
             delay(tickMillis)
             now = System.currentTimeMillis()
         }

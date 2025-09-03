@@ -31,24 +31,28 @@ fun ordersContent(
     onReassignRequested: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val uiState by ordersVm.state.collectAsState()
+    val uiState by ordersVm.uiState.collectAsState()
 
     Column(Modifier.fillMaxSize()) {
         when {
-            state.isLoading && state.orders.isEmpty() -> loadingView()
-            state.errorMessage != null -> errorView(state.errorMessage!!) { ordersVm.retry(context) }
-            state.emptyMessage != null -> emptyView(state.emptyMessage!!)
+            uiState.isLoading && uiState.orders.isEmpty() -> loadingView()
+            uiState.errorMessage != null -> errorView(uiState.errorMessage!!) {
+                ordersVm.listVM.retry(
+                    context
+                )
+            }
+
+            uiState.emptyMessage != null -> emptyView(uiState.emptyMessage!!)
             else -> {
                 orderList(
-                    state =
-                        OrderListState(
-                            orders = uiState.orders,
-                            listState = listState,
-                            isLoadingMore = uiState.isLoadingMore,
-                            updatingIds = updatingIds,
-                            isRefreshing = ordersVm.state.collectAsState().value.isRefreshing,
-                            endReached = uiState.endReached,
-                        ),
+                    state = OrderListState(
+                        orders = uiState.orders,
+                        listState = listState,
+                        isLoadingMore = uiState.isLoadingMore,
+                        updatingIds = updatingIds,
+                        isRefreshing = uiState.isRefreshing,
+                        endReached = uiState.endReached,
+                    ),
                     updateVm = updateVm,
                     callbacks =
                         OrderListCallbacks(
@@ -114,8 +118,8 @@ fun ordersContent(
                                         )
                                 }
                             },
-                            onRefresh = { ordersVm.refresh(context) },
-                            onLoadMore = { ordersVm.loadNextPage(context) },
+                            onRefresh = { ordersVm.listVM.refresh(context) },
+                            onLoadMore = { ordersVm.listVM.loadNextPage(context) },
                         ),
                 )
             }
