@@ -4,16 +4,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import com.ntg.lmd.ui.theme.SuccessGreen
 
-sealed class ActionDialog {
-    data object Confirm : ActionDialog()
+sealed class OrderActions {
+    data object Confirm : OrderActions()
 
-    data object PickUp : ActionDialog()
+    data object PickUp : OrderActions()
 
-    data object Start : ActionDialog()
+    data object Start : OrderActions()
 
-    data object Deliver : ActionDialog()
+    data object Deliver : OrderActions()
 
-    data object Fail : ActionDialog()
+    data object Fail : OrderActions()
 }
 
 @Composable

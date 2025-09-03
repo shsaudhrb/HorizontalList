@@ -5,8 +5,7 @@ import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus.Companion.fromId
 import com.ntg.lmd.utils.AppDefaults
 
-private fun Double?.toKmOrDefault(default: Double): Double =
-    if (this != null && this.isFinite() && this >= 0.0) this / 1000.0 else default
+private fun Double?.toKmOrDefault(default: Double): Double = if (this != null && this.isFinite() && this >= 0.0) this / 1000.0 else default
 
 fun OrderDto.toDomain(): OrderInfo =
     OrderInfo(

@@ -1,4 +1,3 @@
-// MyOrdersViewModelFactory.kt
 package com.ntg.lmd.mainscreen.ui.viewmodel
 
 import android.app.Application
