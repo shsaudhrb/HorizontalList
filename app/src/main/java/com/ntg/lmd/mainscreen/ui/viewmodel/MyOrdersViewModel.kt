@@ -1,15 +1,18 @@
 package com.ntg.lmd.mainscreen.ui.viewmodel
 
 import android.content.Context
+import android.location.Location
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
+import com.ntg.lmd.mainscreen.domain.usecase.ComputeDistancesUseCase
 import com.ntg.lmd.mainscreen.domain.usecase.GetMyOrdersUseCase
 import com.ntg.lmd.mainscreen.ui.model.LocalUiOnlyStatusBus
 import com.ntg.lmd.mainscreen.ui.model.MyOrdersUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
@@ -24,19 +27,33 @@ private const val PAGE_SIZE = 10
 
 class MyOrdersViewModel(
     private val getMyOrders: GetMyOrdersUseCase,
+    private val computeDistancesUseCase: ComputeDistancesUseCase,
+    initialUserId: String?
 ) : ViewModel() {
     private val _state = MutableStateFlow(MyOrdersUiState(isLoading = false))
-    val state: StateFlow<MyOrdersUiState> = _state
+    val state: StateFlow<MyOrdersUiState> = _state.asStateFlow()
 
+    private val currentUserId = MutableStateFlow<String?>(initialUserId)
     private val allOrders: MutableList<OrderInfo> = mutableListOf()
     private var page = 1
     private var endReached = false
+    private val deviceLocation = MutableStateFlow<Location?>(null)
 
-    init {
-        refreshOrders()
+    init { refreshOrders() }
+    fun updateDeviceLocation(location: Location?) {
+        deviceLocation.value = location
+        if (location != null && _state.value.orders.isNotEmpty()) {
+            val computed = computeDistancesUseCase(location, _state.value.orders)
+            _state.update { it.copy(orders = computed) }
+        }
     }
 
-    /** Simple refresh (pull first page fresh) */
+    private fun withDistances(list: List<OrderInfo>): List<OrderInfo> {
+        val loc = deviceLocation.value
+        return if (loc != null) computeDistancesUseCase(loc, list) else list
+    }
+
+
     fun refreshOrders() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, errorMessage = null) }
@@ -44,15 +61,20 @@ class MyOrdersViewModel(
                 page = 1
                 endReached = false
 
-                val page1 = getMyOrders(page = 1, limit = PAGE_SIZE, bypassCache = true)
-                val first: List<OrderInfo> = page1.items
+                val uid = currentUserId.value
+                val page1 = getMyOrders(
+                    page = 1,
+                    limit = PAGE_SIZE,
+                    bypassCache = true,
+                    assignedAgentId = uid,
+                    userOrdersOnly = true
+                )
+                allOrders.clear()
+                allOrders.addAll(page1.items)
                 endReached = page1.rawCount < PAGE_SIZE
 
-                allOrders.clear()
-                allOrders.addAll(first)
-
-                val base = currentFilteredFor(state.value.query, allOrders)
-                _state.publishFirstPageFrom(base, PAGE_SIZE, state.value.query)
+                val withDist = withDistances(applyDisplayFilter(allOrders))
+                _state.publishFirstPageFrom(withDist, PAGE_SIZE, state.value.query)
             } catch (ce: CancellationException) {
                 throw ce
             } catch (e: Exception) {
@@ -61,11 +83,9 @@ class MyOrdersViewModel(
         }
     }
 
-    /** Initial page (with banners & retry) */
     fun loadOrders(context: Context) {
         val alreadyHasData = _state.value.orders.isNotEmpty()
         if (_state.value.isLoading) return
-
         _state.update { it.copy(isLoading = !alreadyHasData, errorMessage = null, emptyMessage = null) }
 
         viewModelScope.launch {
@@ -73,26 +93,55 @@ class MyOrdersViewModel(
                 page = 1
                 endReached = false
 
-                val page1 = getMyOrders(page = 1, limit = PAGE_SIZE, bypassCache = true)
-                val first = page1.items
+                val uid = currentUserId.value
+                val page1 = getMyOrders(
+                    page = 1,
+                    limit = PAGE_SIZE,
+                    bypassCache = true,
+                    assignedAgentId = uid,
+                    userOrdersOnly = true
+                )
+                allOrders.clear()
+                allOrders.addAll(page1.items)
                 endReached = page1.rawCount < PAGE_SIZE
 
-                allOrders.clear()
-                allOrders.addAll(first)
-
-                val base = currentFilteredFor(state.value.query, allOrders)
-                _state.publishFirstPageFrom(base, PAGE_SIZE, state.value.query)
-            } catch (
-                ce: CancellationException,
-            ) {
-                throw ce
+                val withDist = withDistances(applyDisplayFilter(allOrders))
+                _state.publishFirstPageFrom(withDist, PAGE_SIZE, state.value.query)
             } catch (e: Exception) {
                 handleInitialLoadError(e, alreadyHasData, context, _state, ::loadOrders)
             }
         }
     }
+    fun loadNextPage(context: Context) {
+        val s = state.value
+        if (s.isLoading || s.isLoadingMore || endReached) return
 
-    /** Pull-to-refresh with banner */
+        viewModelScope.launch {
+            _state.update { it.copy(isLoadingMore = true) }
+            try {
+                val nextPageNum = page + 1
+                val uid = currentUserId.value
+                val pageRes = getMyOrders(
+                    page = nextPageNum,
+                    limit = PAGE_SIZE,
+                    bypassCache = true,
+                    assignedAgentId = uid,
+                    userOrdersOnly = true
+                )
+                val next = pageRes.items
+                endReached = pageRes.rawCount < PAGE_SIZE || next.isEmpty()
+                page = nextPageNum
+
+                allOrders.addAll(next)
+                val withDist = withDistances(applyDisplayFilter(allOrders))
+                _state.publishAppendFrom(withDist, page, PAGE_SIZE)
+            } catch (e: Exception) {
+                LocalUiOnlyStatusBus.errorEvents.tryEmit(messageFor(e) to { loadNextPage(context) })
+                _state.update { it.copy(isLoadingMore = false) }
+            }
+        }
+    }
+
     fun refresh(context: Context) {
         val s = _state.value
         if (s.isRefreshing) return
@@ -100,15 +149,22 @@ class MyOrdersViewModel(
 
         viewModelScope.launch {
             try {
-                val page1 = getMyOrders(page = 1, limit = PAGE_SIZE, bypassCache = true)
+                val uid = currentUserId.value
+                val page1 = getMyOrders(
+                    page = 1,
+                    limit = PAGE_SIZE,
+                    bypassCache = true,
+                    assignedAgentId = uid,
+                    userOrdersOnly = true
+                )
                 val fresh = page1.items
                 endReached = page1.rawCount < PAGE_SIZE
 
                 allOrders.clear()
                 allOrders.addAll(fresh)
 
-                val base = currentFilteredFor(state.value.query, allOrders)
-                _state.publishFirstPageFrom(base, PAGE_SIZE, state.value.query)
+                val withDist = withDistances(applyDisplayFilter(allOrders))
+                _state.publishFirstPageFrom(withDist, PAGE_SIZE, state.value.query)
             } catch (ce: CancellationException) {
                 throw ce
             } catch (e: Exception) {
@@ -119,44 +175,43 @@ class MyOrdersViewModel(
         }
     }
 
-    /** Infinite scroll. Error -> snackbar, keep existing list. */
-    fun loadNextPage(context: Context) {
-        val s = state.value
-        if (s.isLoading || s.isLoadingMore || endReached) return
-
-        viewModelScope.launch {
-            _state.update { it.copy(isLoadingMore = true) }
-            try {
-                val nextPageNum = page + 1
-                val pageRes = getMyOrders(page = nextPageNum, limit = PAGE_SIZE, bypassCache = true)
-                val next = pageRes.items
-                endReached = pageRes.rawCount < PAGE_SIZE || next.isEmpty()
-                page = nextPageNum
-
-                allOrders.addAll(next)
-                val base = currentFilteredFor(state.value.query, allOrders)
-                _state.publishAppendFrom(base, page, PAGE_SIZE)
-            } catch (ce: CancellationException) {
-                throw ce
-            } catch (e: Exception) {
-                LocalUiOnlyStatusBus.errorEvents.tryEmit(messageFor(e) to { loadNextPage(context) })
-                _state.update { it.copy(isLoadingMore = false) }
-            }
-        }
+    fun setCurrentUserId(id: String?) {
+        currentUserId.value = id
+        val display = applyDisplayFilter(allOrders)
+        val withDist = withDistances(display)
+        _state.update { it.copy(orders = withDist) }
     }
 
+    private val allowedStatuses = setOf(
+        OrderStatus.ADDED,
+        OrderStatus.CONFIRMED,
+        OrderStatus.REASSIGNED,
+        OrderStatus.CANCELED,
+        OrderStatus.PICKUP,
+        OrderStatus.START_DELIVERY,
+    )
+
+    private fun applyDisplayFilter(list: List<OrderInfo>): List<OrderInfo> {
+        val q = state.value.query.trim()
+        val uid = currentUserId.value
+
+        // 1) text query
+        val afterQuery = if (q.isBlank()) list else list.filter { o ->
+            o.orderNumber.contains(q, ignoreCase = true) ||
+                    o.name.contains(q, ignoreCase = true) ||
+                    (o.details?.contains(q, ignoreCase = true) == true)
+        }
+        val afterStatus = afterQuery.filter { it.status in allowedStatuses }
+
+        return if (uid.isNullOrBlank()) afterStatus else afterStatus.filter { it.assignedAgentId == uid }
+    }
     fun retry(context: Context) = loadOrders(context)
 
-    /** Local-only status change (for UI). */
-    fun updateStatusLocally(
-        id: String,
-        newStatus: OrderStatus,
-    ) {
+    fun updateStatusLocally(id: String, newStatus: OrderStatus) {
         val updated = state.value.orders.map { o -> if (o.id == id) o.copy(status = newStatus) else o }
         _state.update { it.copy(orders = updated) }
     }
 
-    /** Apply server patch into lists (keep item visible when needed). */
     fun applyServerPatch(updated: OrderInfo) {
         // visible list
         val visible = _state.value.orders.toMutableList()
@@ -169,7 +224,6 @@ class MyOrdersViewModel(
                 )
             _state.update { it.copy(orders = visible) }
         }
-        // backing list
         val j = allOrders.indexOfFirst { it.id == updated.id }
         if (j != -1) {
             allOrders[j] =
@@ -179,22 +233,7 @@ class MyOrdersViewModel(
                 )
         }
     }
-}
 
-// ---- File-level helpers ----
-
-private fun currentFilteredFor(
-    queryRaw: String,
-    all: List<OrderInfo>,
-): List<OrderInfo> {
-    val q = queryRaw.trim()
-    if (q.isBlank()) return all
-    return all.filter { o ->
-        o.orderNumber.contains(q, ignoreCase = true) ||
-            o.name.contains(q, ignoreCase = true) ||
-            (o.details?.contains(q, ignoreCase = true) == true)
-    }
-}
 
 private fun MutableStateFlow<MyOrdersUiState>.publishFirstPageFrom(
     base: List<OrderInfo>,
@@ -229,30 +268,30 @@ private fun MutableStateFlow<MyOrdersUiState>.publishAppendFrom(
     update { it.copy(isLoadingMore = false, orders = base.take(visibleCount)) }
 }
 
-private fun handleInitialLoadError(
-    e: Exception,
-    alreadyHasData: Boolean,
-    context: Context,
-    state: MutableStateFlow<MyOrdersUiState>,
-    retry: (Context) -> Unit,
-) {
-    val msg = messageFor(e)
-    state.update {
-        it.copy(
-            isLoading = false,
-            errorMessage = if (!alreadyHasData) msg else null,
-        )
+    private fun handleInitialLoadError(
+        e: Exception,
+        alreadyHasData: Boolean,
+        context: Context,
+        state: MutableStateFlow<MyOrdersUiState>,
+        retry: (Context) -> Unit,
+    ) {
+        val msg = messageFor(e)
+        state.update {
+            it.copy(
+                isLoading = false,
+                errorMessage = if (!alreadyHasData) msg else null,
+            )
+        }
+        if (alreadyHasData) {
+            LocalUiOnlyStatusBus.errorEvents.tryEmit(msg to { retry(context) })
+        }
     }
-    if (alreadyHasData) {
-        LocalUiOnlyStatusBus.errorEvents.tryEmit(msg to { retry(context) })
-    }
-}
 
-private fun messageFor(e: Exception): String =
-    when (e) {
+    private fun messageFor(e: Exception): String = when (e) {
         is HttpException -> "HTTP ${e.code()}"
         is UnknownHostException -> "No internet connection"
         is SocketTimeoutException -> "Request timed out"
         is IOException -> "Network error"
         else -> e.message ?: "Unknown error"
     }
+}

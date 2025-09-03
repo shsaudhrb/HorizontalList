@@ -9,6 +9,7 @@ import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresPermission
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -30,17 +31,51 @@ class FcmService : FirebaseMessagingService() {
         private const val CHANNEL_ID = "agent_updates"
         private const val CHANNEL_NAME = "Agent Updates"
         private const val CHANNEL_DESC = "Notifications about agent updates and orders"
+        private const val TAG = "FcmService"
 
         private const val REQUEST_CODE_CONTENT = 2001
         private const val DEFAULT_DEEPLINK = "myapp://notifications"
     }
 
+    override fun onNewToken(token: String) {
+        super.onNewToken(token)
+        
+        Log.i(TAG, "New FCM token generated: $token")
+        
+    }
+
+ 
+     // manually get and log the current FCM token
+   
+    fun getCurrentToken() {
+        com.google.firebase.messaging.FirebaseMessaging.getInstance().token
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    val token = task.result
+                    Log.d(TAG, "Current FCM Token: $token")
+                    Log.i(TAG, "Successfully retrieved current FCM token")
+                } else {
+                    Log.e(TAG, "Failed to get FCM token", task.exception)
+                }
+            }
+    }
+
+
+
     override fun onMessageReceived(msg: RemoteMessage) {
+        Log.d(TAG, "FCM message received: ${msg.messageId}")
+        Log.d(TAG, "Message data: ${msg.data}")
+        Log.d(TAG, "Message notification: ${msg.notification}")
+        
         val notif = msg.notification
         val data = msg.data
-        if (notif == null && data.isNullOrEmpty()) return
+        if (notif == null && data.isNullOrEmpty()) {
+            Log.w(TAG, "Message received but no notification or data found")
+            return
+        }
 
         val payload = parsePayload(notif, data) ?: return
+        Log.d(TAG, "Parsed payload: title=${payload.title}, body=${payload.body}, type=${payload.type}")
 
         // Save to repository
         persistAgentNotification(payload.type, payload.body)
@@ -54,8 +89,12 @@ class FcmService : FirebaseMessagingService() {
                         body = payload.body,
                         deepLink = payload.deepLink,
                     )
-                } catch (_: SecurityException) {
+                    Log.d(TAG, "Local notification shown successfully")
+                } catch (e: SecurityException) {
+                    Log.e(TAG, "Failed to show local notification due to security exception", e)
                 }
+            } else {
+                Log.w(TAG, "Cannot post notifications - permission denied or disabled")
             }
         }
     }
