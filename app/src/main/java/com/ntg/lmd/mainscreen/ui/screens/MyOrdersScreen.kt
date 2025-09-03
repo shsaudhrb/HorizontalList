@@ -28,7 +28,10 @@ import com.ntg.lmd.mainscreen.data.repository.UsersRepositoryImpl
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
 import com.ntg.lmd.mainscreen.domain.usecase.GetActiveUsersUseCase
 import com.ntg.lmd.mainscreen.domain.usecase.GetMyOrdersUseCase
+import com.ntg.lmd.mainscreen.domain.usecase.UpdateOrderStatusUseCase
 import com.ntg.lmd.mainscreen.ui.components.bottomStickyButton
+import com.ntg.lmd.mainscreen.ui.components.initialCameraPositionEffect
+import com.ntg.lmd.mainscreen.ui.components.locationPermissionAndLastLocation
 import com.ntg.lmd.mainscreen.ui.components.ordersContent
 import com.ntg.lmd.mainscreen.ui.components.ordersEffects
 import com.ntg.lmd.mainscreen.ui.components.reassignBottomSheet
@@ -36,35 +39,43 @@ import com.ntg.lmd.mainscreen.ui.viewmodel.ActiveAgentsViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.ActiveAgentsViewModelFactory
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyOrdersViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyOrdersViewModelFactory
+import com.ntg.lmd.mainscreen.ui.viewmodel.MyPoolVMFactory
+import com.ntg.lmd.mainscreen.ui.viewmodel.MyPoolViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel.OrderLogger
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModelFactory
+import com.ntg.lmd.network.core.RetrofitProvider.userStore
 import com.ntg.lmd.network.core.RetrofitProvider
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun myOrdersScreen(onOpenOrderDetails: (String) -> Unit) {
-    val repo = remember { MyOrdersRepositoryImpl(RetrofitProvider.ordersApi) }
+    val app = LocalContext.current.applicationContext as Application
 
-    val getUsecase = remember { GetMyOrdersUseCase(repo) }
+    val ordersVm: MyOrdersViewModel = viewModel(factory = MyOrdersViewModelFactory(app))
+    val updateVm: UpdateOrderStatusViewModel = viewModel(factory = UpdateOrderStatusViewModelFactory(app))
 
-    val ordersVm: MyOrdersViewModel = viewModel(factory = MyOrdersViewModelFactory(getUsecase))
-    val updateVm: UpdateOrderStatusViewModel =
-        viewModel(
-            factory = UpdateOrderStatusViewModelFactory(LocalContext.current.applicationContext as Application),
-        )
-
-    val repoUsers = remember { UsersRepositoryImpl(RetrofitProvider.usersApi) }
-    val getUsers = remember { GetActiveUsersUseCase(repoUsers) }
-    val agentsVm: ActiveAgentsViewModel = viewModel(factory = ActiveAgentsViewModelFactory(getUsers))
+    val agentsVm: ActiveAgentsViewModel = viewModel(factory = ActiveAgentsViewModelFactory(app))
     val agentsState by agentsVm.state.collectAsState()
 
     var reassignOrderId by remember { mutableStateOf<String?>(null) }
 
-    // --- pass a lambda to open sheet from card:
+    val poolVm: MyPoolViewModel = viewModel(factory = MyPoolVMFactory())
+    val poolUi by poolVm.ui.collectAsState()
+
+    locationPermissionAndLastLocation(poolVm)
+    val mapStates = rememberMapStates()
+    initialCameraPositionEffect(poolUi.orders, poolUi.selectedOrderNumber, mapStates)
+    ForwardMyPoolLocationToMyOrders(poolVm = poolVm, ordersVm = ordersVm)
     val onReassignRequested: (String) -> Unit = { orderId ->
         reassignOrderId = orderId
         agentsVm.load()
+    }
+    val currentUserId: String? = remember {
+        userStore.getUserId()
+    }
+    LaunchedEffect(currentUserId) {
+        ordersVm.setCurrentUserId(currentUserId)
     }
     val state by ordersVm.state.collectAsState()
     val updatingIds by updateVm.updatingIds.collectAsState()
@@ -97,13 +108,10 @@ fun myOrdersScreen(onOpenOrderDetails: (String) -> Unit) {
         bottomBar = { bottomStickyButton(text = stringResource(R.string.order_pool)) {} },
     ) { innerPadding ->
         PullToRefreshBox(
-            isRefreshing = state.isRefreshing,
+            isRefreshing = ordersVm.state.collectAsState().value.isRefreshing,
             onRefresh = { ordersVm.refresh(ctx) },
             state = pullState,
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
+            modifier = Modifier.fillMaxSize().padding(innerPadding),
         ) {
             ordersContent(
                 ordersVm = ordersVm,
@@ -117,6 +125,7 @@ fun myOrdersScreen(onOpenOrderDetails: (String) -> Unit) {
             )
         }
     }
+
     reassignBottomSheet(
         open = reassignOrderId != null,
         state = agentsState,
@@ -126,14 +135,24 @@ fun myOrdersScreen(onOpenOrderDetails: (String) -> Unit) {
             val orderId = reassignOrderId ?: return@reassignBottomSheet
             OrderLogger.uiTap(
                 orderId,
-                state.orders
-                    .firstOrNull
-                    { it.id == orderId }
-                    ?.orderNumber,
-                "Menu:Reassign→${user.name}",
+                state.orders.firstOrNull { it.id == orderId }?.orderNumber,
+                "Menu:Reassign→${user.name}"
             )
             updateVm.update(orderId, OrderStatus.REASSIGNED, assignedAgentId = user.id)
             reassignOrderId = null
         },
     )
 }
+
+
+@Composable
+private fun ForwardMyPoolLocationToMyOrders(
+    poolVm: MyPoolViewModel,
+    ordersVm: MyOrdersViewModel,
+) {
+    val lastLoc by poolVm.lastLocation.collectAsState(initial = null)
+    LaunchedEffect(lastLoc) {
+        ordersVm.updateDeviceLocation(lastLoc)
+    }
+}
+

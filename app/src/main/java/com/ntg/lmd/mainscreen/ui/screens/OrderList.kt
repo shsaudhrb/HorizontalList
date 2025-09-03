@@ -1,6 +1,5 @@
 package com.ntg.lmd.mainscreen.ui.screens
 
-import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -14,7 +13,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,6 +34,7 @@ data class OrderListState(
     val listState: LazyListState,
     val isLoadingMore: Boolean,
     val updatingIds: Set<String>,
+    val isRefreshing: Boolean,
 )
 
 data class OrderListCallbacks(
@@ -45,6 +44,11 @@ data class OrderListCallbacks(
     val onAction: (String, ActionDialog) -> Unit,
     val onRefresh: () -> Unit,
 )
+private val AutoHideOnSuccessStatuses = setOf(
+    OrderStatus.DELIVERY_DONE,
+    OrderStatus.DELIVERY_FAILED,
+    OrderStatus.REASSIGNED,
+)
 
 @Composable
 fun orderList(
@@ -52,42 +56,25 @@ fun orderList(
     updateVm: UpdateOrderStatusViewModel,
     callbacks: OrderListCallbacks,
 ) {
-    val myUserId by updateVm.currentUserId.collectAsState()
     var hiddenIds by remember { mutableStateOf(emptySet<String>()) }
-    LaunchedEffect(updateVm, myUserId) {
+
+    LaunchedEffect(updateVm) {
         updateVm.success.collect { serverOrder ->
-            val movedAway =
-                myUserId != null &&
-                    serverOrder.assignedAgentId != null &&
-                    serverOrder.assignedAgentId != myUserId
-
-            val shouldHide = serverOrder.status?.isTerminal() == true || movedAway
-            if (shouldHide) hiddenIds = hiddenIds + serverOrder.id
-            callbacks.onRefresh()
+            if (serverOrder.status in AutoHideOnSuccessStatuses) {
+                hiddenIds = hiddenIds + serverOrder.id
+            }
         }
     }
+    LaunchedEffect(state.isRefreshing) {
+        if (!state.isRefreshing) hiddenIds = emptySet()
+    }
 
-    val filteredOrders by remember(state.orders, myUserId, hiddenIds) {
+    val filteredOrders by remember(state.orders, hiddenIds) {
         derivedStateOf {
-            state.orders
-                .asSequence()
-                .filter { it.id !in hiddenIds }
-                .filter { order -> !order.status?.isTerminal()!! && order.isMine(myUserId) }
-                .toList()
+            // VM already filtered by status + user
+            state.orders.filter { it.id !in hiddenIds }
         }
     }
-
-    LaunchedEffect(state.orders, myUserId, hiddenIds, filteredOrders) {
-        Log.d(
-            "OrderListFilter",
-            "me=$myUserId total=${state.orders.size}" +
-                " hidden=${hiddenIds.size} filtered=${filteredOrders.size}",
-        )
-        filteredOrders.take(5).forEach { o ->
-            Log.d("OrderListFilter", "id=${o.id} status=${o.status} assigned=${o.assignedAgentId}")
-        }
-    }
-
     LazyColumn(
         state = state.listState,
         contentPadding = PaddingValues(dimensionResource(R.dimen.mediumSpace)),
@@ -97,24 +84,19 @@ fun orderList(
             myOrderCard(
                 order = order,
                 isUpdating = state.updatingIds.contains(order.id),
-                callbacks =
-                    MyOrderCardCallbacks(
-                        onDetails = { callbacks.onDetails(order.id) },
-                        onCall = { callbacks.onCall(order.id) },
-                        onAction = { d -> callbacks.onAction(order.id, d) },
-                        onReassignRequested = {
-                            callbacks.onReassignRequested(order.id)
-                        },
-                    ),
+                callbacks = MyOrderCardCallbacks(
+                    onReassignRequested = { callbacks.onReassignRequested(order.id) },
+                    onDetails = { callbacks.onDetails(order.id) },
+                    onCall = { callbacks.onCall(order.id) },
+                    onAction = { act -> callbacks.onAction(order.id, act) },
+                ),
                 updateVm = updateVm,
             )
         }
         if (state.isLoadingMore) {
             item {
                 Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(dimensionResource(R.dimen.mediumSpace)),
+                    Modifier.fillMaxWidth().padding(dimensionResource(R.dimen.mediumSpace)),
                     contentAlignment = Alignment.Center,
                 ) { CircularProgressIndicator() }
             }
@@ -122,7 +104,3 @@ fun orderList(
         item { Spacer(modifier = Modifier.height(dimensionResource(R.dimen.extraSmallSpace))) }
     }
 }
-
-private fun OrderStatus.isTerminal() = this == OrderStatus.CANCELED || this == OrderStatus.DELIVERY_DONE
-
-private fun OrderInfo.isMine(myUserId: String?) = myUserId != null && assignedAgentId == myUserId

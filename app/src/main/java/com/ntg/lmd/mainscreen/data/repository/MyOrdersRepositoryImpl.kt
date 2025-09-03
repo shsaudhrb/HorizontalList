@@ -37,12 +37,17 @@ class MyOrdersRepositoryImpl(
         page: Int,
         limit: Int,
         bypassCache: Boolean,
+        assignedAgentId: String?,
+        userOrdersOnly: Boolean?
     ): OrdersPage {
         if (isCacheValid(page, limit, bypassCache)) {
             return cachedPageData!!
         }
-
-        val env = api.getOrders(page = page, limit = limit)
+        val env = api.getOrders( page = page,
+            limit = limit,
+            assignedAgentId = assignedAgentId,
+            userOrdersOnly = userOrdersOnly
+        )
         if (!env.success) error(env.error ?: "Unknown error from orders-list")
 
         val raw = env.data?.orders.orEmpty()

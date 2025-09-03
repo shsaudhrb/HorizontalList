@@ -30,7 +30,6 @@ fun ordersContent(
     updatingIds: Set<String>,
     onReassignRequested: (String) -> Unit,
 ) {
-    // Collect once to avoid multiple recompositions in params
     val uiState by ordersVm.state.collectAsState()
 
     Column(Modifier.fillMaxSize()) {
@@ -46,6 +45,7 @@ fun ordersContent(
                             listState = listState,
                             isLoadingMore = uiState.isLoadingMore,
                             updatingIds = updatingIds,
+                            isRefreshing = uiState.isRefreshing,
                         ),
                     updateVm = updateVm,
                     callbacks =
@@ -84,7 +84,7 @@ fun ordersContent(
                                     ActionDialog.Fail -> updateVm.update(orderId, OrderStatus.DELIVERY_FAILED)
                                 }
                             },
-                            onRefresh = { ordersVm.refreshOrders() }, // IMPORTANT: real reload
+                            onRefresh = { ordersVm.refreshOrders() },
                         ),
                 )
         }

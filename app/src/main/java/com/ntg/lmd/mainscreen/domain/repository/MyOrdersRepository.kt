@@ -7,5 +7,7 @@ interface MyOrdersRepository {
         page: Int,
         limit: Int,
         bypassCache: Boolean,
+        assignedAgentId: String? = null,
+        userOrdersOnly: Boolean? = null,
     ): OrdersPage
 }

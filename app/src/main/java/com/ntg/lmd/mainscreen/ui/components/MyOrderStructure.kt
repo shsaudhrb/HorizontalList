@@ -44,22 +44,18 @@ private const val KM_DIVISOR = 1000.0
 
 @Composable
 fun distanceBadge(
-    distanceMeters: Double?,
+    distanceKm: Double,
     modifier: Modifier = Modifier,
 ) {
     val bg = MaterialTheme.colorScheme.primary
     val fg = MaterialTheme.colorScheme.onPrimary
-    val value = distanceMeters?.div(KM_DIVISOR)
     Box(
-        modifier =
-            modifier
-                .size(56.dp)
-                .background(bg, CircleShape),
+        modifier = modifier.size(56.dp).background(bg, CircleShape),
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = value?.let { String.format(Locale.getDefault(), "%.2f", it) } ?: "--",
+                text = distanceKm.let { String.format(Locale.getDefault(), "%.2f", it) },
                 style = MaterialTheme.typography.labelSmall,
                 color = fg,
             )
@@ -71,6 +67,7 @@ fun distanceBadge(
         }
     }
 }
+
 
 @Composable
 fun primaryActionButton(
@@ -177,146 +174,80 @@ fun orderHeaderLeft(
     onReassign: () -> Unit,
     enabled: Boolean = true,
 ) {
-    headerRow(
-        order = order,
-        enabled = enabled,
-        onPickUp = onPickUp,
-        onCancel = onCancel,
-        onReassign = onReassign,
-    )
-}
-
-// ----------------- helpers (≤30 lines each) -----------------
-
-@Composable
-private fun headerRow(
-    order: OrderInfo,
-    enabled: Boolean,
-    onPickUp: () -> Unit,
-    onCancel: () -> Unit,
-    onReassign: () -> Unit,
-) {
+    var menuExpanded by remember { mutableStateOf(false) }
+    val statusEnum = order.status
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        leftBlock(order)
-        rightMenuBlock(
-            order = order,
-            enabled = enabled,
-            onPickUp = onPickUp,
-            onCancel = onCancel,
-            onReassign = onReassign,
-        )
-    }
-}
-
-@Composable
-private fun leftBlock(order: OrderInfo) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        distanceBadge(
-            distanceMeters = order.distanceKm, // kept as-is to avoid behavior change
-            modifier = Modifier.padding(end = dimensionResource(R.dimen.mediumSpace)),
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            distanceBadge(
+                distanceKm = order.distanceKm,
+                modifier = Modifier.padding(end = dimensionResource(R.dimen.mediumSpace)),
+            )
+            Column {
+                Text(order.name, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "#${order.orderNumber}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    maxLines = 1,
+                )
+                Text(
+                    text = order.status.toString(),
+                    color = statusTint(order.status.toString()),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                order.details?.let {
+                    Spacer(modifier = Modifier.height(dimensionResource(R.dimen.extraSmallSpace)))
+                    Text(it, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
         Column {
-            Text(order.name, style = MaterialTheme.typography.titleMedium)
-            Text(
-                "#${order.orderNumber}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                maxLines = 1,
-            )
-            Text(
-                text = order.status.toString(),
-                color = statusTint(order.status.toString()),
-                style = MaterialTheme.typography.titleSmall,
-            )
-            orderDetails(order.details)
-        }
-    }
-}
+            IconButton(onClick = { menuExpanded = true }, modifier = Modifier.size(24.dp)) {
+                Icon(
+                    imageVector = Icons.Filled.MoreVert,
+                    contentDescription = stringResource(R.string.more_options),
+                    tint = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+            DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                if (statusEnum == OrderStatus.CONFIRMED) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.pick_order)) },
+                        enabled = enabled && order.status == OrderStatus.CONFIRMED,
+                        onClick = {
+                            menuExpanded = false
+                            OrderLogger.uiTap(order.id, order.orderNumber, "Menu:PickUp")
+                            onPickUp()
+                        },
+                    )
 
-@Composable
-private fun orderDetails(details: String?) {
-    details ?: return
-    Spacer(modifier = Modifier.height(dimensionResource(R.dimen.extraSmallSpace)))
-    Text(details, style = MaterialTheme.typography.bodySmall)
-}
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.cancel_order)) },
+                        enabled = enabled && order.status in listOf(OrderStatus.ADDED, OrderStatus.CONFIRMED),
+                        onClick = {
+                            menuExpanded = false
+                            OrderLogger.uiTap(order.id, order.orderNumber, "Menu:Cancel")
+                            onCancel()
+                        },
+                    )
 
-@Composable
-private fun rightMenuBlock(
-    order: OrderInfo,
-    enabled: Boolean,
-    onPickUp: () -> Unit,
-    onCancel: () -> Unit,
-    onReassign: () -> Unit,
-) {
-    var menuExpanded by remember { mutableStateOf(false) }
-
-    Column(horizontalAlignment = Alignment.End) {
-        IconButton(onClick = { menuExpanded = true }, modifier = Modifier.size(24.dp)) {
-            Icon(
-                imageVector = Icons.Filled.MoreVert,
-                contentDescription = stringResource(R.string.more_options),
-                tint = MaterialTheme.colorScheme.onSurface,
-            )
-        }
-
-        orderMenu(
-            expanded = menuExpanded,
-            order = order,
-            enabled = enabled,
-            onDismiss = { menuExpanded = false },
-            onPickUp = {
-                menuExpanded = false
-                OrderLogger.uiTap(order.id, order.orderNumber, "Menu:PickUp")
-                onPickUp()
-            },
-            onCancel = {
-                menuExpanded = false
-                OrderLogger.uiTap(order.id, order.orderNumber, "Menu:Cancel")
-                onCancel()
-            },
-            onReassign = {
-                menuExpanded = false
-                OrderLogger.uiTap(order.id, order.orderNumber, "Menu:Reassign")
-                onReassign()
-            },
-        )
-
-        Spacer(modifier = Modifier.height(dimensionResource(R.dimen.smallerSpace)))
-        Text(text = order.price, style = MaterialTheme.typography.titleSmall)
-    }
-}
-
-@Composable
-private fun orderMenu(
-    expanded: Boolean,
-    order: OrderInfo,
-    enabled: Boolean,
-    onDismiss: () -> Unit,
-    onPickUp: () -> Unit,
-    onCancel: () -> Unit,
-    onReassign: () -> Unit,
-) {
-    DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
-        if (order.status == OrderStatus.CONFIRMED) {
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.pick_order)) },
-                enabled = enabled && order.status == OrderStatus.CONFIRMED,
-                onClick = onPickUp,
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.cancel_order)) },
-                enabled = enabled && order.status in listOf(OrderStatus.ADDED, OrderStatus.CONFIRMED),
-                onClick = onCancel,
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.reassign_order)) },
-                enabled = enabled,
-                onClick = onReassign,
-            )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.reassign_order)) },
+                        enabled = enabled,
+                        onClick = {
+                            menuExpanded = false
+                            OrderLogger.uiTap(order.id, order.orderNumber, "Menu:Reassign")
+                            onReassign()
+                        },
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(dimensionResource(R.dimen.smallerSpace)))
+            Text(text = order.price, style = MaterialTheme.typography.titleSmall)
         }
     }
 }
