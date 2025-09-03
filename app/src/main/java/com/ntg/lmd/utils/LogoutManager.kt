@@ -28,12 +28,14 @@ class LogoutManager(
             .onSuccess { Log.i(TAG, "FCM: unsubscribed from general") }
             .onFailure { Log.w(TAG, "FCM: unsubscribe general failed", it) }
 
-         val userId = com.ntg.lmd.network.core.RetrofitProvider.userStore.getUserId()
-         if (!userId.isNullOrBlank()) {
-             runCatching { FirebaseMessaging.getInstance().unsubscribeFromTopic("user_$userId").await() }
-                 .onSuccess { Log.i(TAG, "FCM: unsubscribed from user_$userId") }
-                 .onFailure { Log.w(TAG, "FCM: unsubscribe user_$userId failed", it) }
-         }
+        val userId =
+            com.ntg.lmd.network.core.RetrofitProvider.userStore
+                .getUserId()
+        if (!userId.isNullOrBlank()) {
+            runCatching { FirebaseMessaging.getInstance().unsubscribeFromTopic("user_$userId").await() }
+                .onSuccess { Log.i(TAG, "FCM: unsubscribed from user_$userId") }
+                .onFailure { Log.w(TAG, "FCM: unsubscribe user_$userId failed", it) }
+        }
 
         Log.i(TAG, "FCM: deleting token…")
         runCatching { FirebaseMessaging.getInstance().deleteToken().await() }
@@ -46,21 +48,22 @@ class LogoutManager(
             .onFailure { Log.w(TAG, "FCM: delete installation FAILED", it) }
     }
 
-    suspend fun logout() = withContext(Dispatchers.IO) {
-        Log.i(TAG, "Logout started")
-        wipePushState()
+    suspend fun logout() =
+        withContext(Dispatchers.IO) {
+            Log.i(TAG, "Logout started")
+            wipePushState()
 
-        runCatching { socket?.disconnect() }
-            .onSuccess { Log.i(TAG, "Socket disconnected") }
-            .onFailure { Log.w(TAG, "Socket disconnect failed", it) }
+            runCatching { socket?.disconnect() }
+                .onSuccess { Log.i(TAG, "Socket disconnected") }
+                .onFailure { Log.w(TAG, "Socket disconnect failed", it) }
 
-        runCatching { db?.clearAllTables() }
-            .onSuccess { Log.i(TAG, "DB cleared") }
-            .onFailure { Log.w(TAG, "DB clear failed", it) }
+            runCatching { db?.clearAllTables() }
+                .onSuccess { Log.i(TAG, "DB cleared") }
+                .onFailure { Log.w(TAG, "DB clear failed", it) }
 
-        tokenStore.clear()
-        Log.i(TAG, "Token store cleared")
+            tokenStore.clear()
+            Log.i(TAG, "Token store cleared")
 
-        Log.i(TAG, "Logout finished")
-    }
+            Log.i(TAG, "Logout finished")
+        }
 }
