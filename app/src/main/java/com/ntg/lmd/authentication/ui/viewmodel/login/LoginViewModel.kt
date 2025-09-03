@@ -1,7 +1,9 @@
 package com.ntg.lmd.authentication.ui.viewmodel.login
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.messaging.FirebaseMessaging
 import com.ntg.lmd.R
 import com.ntg.lmd.authentication.data.repositoryImp.AuthRepositoryImp
 import com.ntg.lmd.authentication.ui.model.LoginUiState
@@ -74,6 +76,15 @@ class LoginViewModel(
                             null
                         } ?: username
                     _uiState.handleSuccess(displayName)
+
+                    FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                        if (task.isSuccessful) {
+                            val fcmToken = task.result
+                            Log.d("FCM", "Token: $fcmToken")
+
+                            // authRepo.saveUserToken(fcmToken)
+                        }
+                    }
                     onResult(true)
                 }
                 is NetworkResult.Error -> {
