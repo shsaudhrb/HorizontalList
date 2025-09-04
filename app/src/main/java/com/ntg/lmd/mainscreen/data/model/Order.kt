@@ -10,6 +10,8 @@ data class Order(
     @SerializedName("address") val address: String? = null,
     @SerializedName("status_id") val statusId: Int? = null,
     @SerializedName("assigned_agent_id") val assignedAgentId: String? = null,
+    @SerializedName("price") val price: String?,
+    @SerializedName("phone") val phone: String?,
     @SerializedName("partner_id") val partnerId: String? = null,
     @SerializedName("dc_id") val dcId: String? = null,
     @SerializedName(value = "order_date", alternate = ["orderDate"]) val orderDate: String? = null,
