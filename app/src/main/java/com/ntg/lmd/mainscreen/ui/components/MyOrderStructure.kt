@@ -234,7 +234,7 @@ private fun headerRightInfo(
     Column(horizontalAlignment = Alignment.End) {
         moreMenu(order = order, enabled = enabled, menuState = menuState)
         Spacer(Modifier.height(dimensionResource(R.dimen.smallerSpace)))
-        Text(order.price, style = MaterialTheme.typography.titleSmall)
+        order.price?.let { Text(it, style = MaterialTheme.typography.titleSmall) }
     }
 }
 

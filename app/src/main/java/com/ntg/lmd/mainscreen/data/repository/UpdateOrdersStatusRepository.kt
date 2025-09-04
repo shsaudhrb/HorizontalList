@@ -14,11 +14,13 @@ class UpdateOrdersStatusRepository(
         orderId: String,
         statusId: Int,
         assignedAgentId: String?,
-    ): OrderInfo =
-        api.updateOrderStatus(buildRequest(orderId, statusId, assignedAgentId)).let { env ->
-            require(env.success) { env.message ?: "Failed to update order status" }
-            mapToOrderInfo(env.data, orderId, assignedAgentId)
-        }
+    ): OrderInfo {
+        val req = buildRequest(orderId, statusId, assignedAgentId)
+        android.util.Log.d("OrderAction", "POST body = $req") // will print the data class
+        val env = api.updateOrderStatus(req)
+        require(env.success) { env.message ?: "Failed to update order status" }
+        return mapToOrderInfo(env.data, orderId, assignedAgentId)
+    }
 
     private fun buildRequest(
         orderId: String,
