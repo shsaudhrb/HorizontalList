@@ -16,13 +16,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.unit.dp
+import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 
 private const val NEAR_END_THRESHOLD = 3
-
 @Composable
 fun generalHorizontalList(
     orders: List<OrderInfo>,
@@ -40,7 +41,7 @@ fun generalHorizontalList(
         modifier =
             modifier
                 .fillMaxWidth()
-                .height(220.dp)
+                .height(dimensionResource(R.dimen.myOrders_card_height))
                 .background(MaterialTheme.colorScheme.primary),
         contentAlignment = Alignment.Center,
     ) {
