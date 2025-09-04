@@ -40,7 +40,7 @@ import com.ntg.lmd.mainscreen.domain.model.OrderStatus
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel.OrderLogger
 import java.util.Locale
 
-private const val KM_DIVISOR = 1000.0
+// private const val KM_DIVISOR = 1000.0
 
 @Composable
 fun distanceBadge(
@@ -70,7 +70,6 @@ fun distanceBadge(
         }
     }
 }
-
 
 @Composable
 fun primaryActionButton(
@@ -177,15 +176,12 @@ fun orderHeaderLeft(
     onReassign: () -> Unit,
     enabled: Boolean = true,
 ) {
-
     var menuExpanded by remember { mutableStateOf(false) }
-    val statusEnum = order.status
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-
         Row(verticalAlignment = Alignment.CenterVertically) {
             distanceBadge(
                 distanceKm = order.distanceKm,
@@ -205,56 +201,88 @@ fun orderHeaderLeft(
                     style = MaterialTheme.typography.titleSmall,
                 )
                 order.details?.let {
-                    Spacer(modifier = Modifier.height(dimensionResource(R.dimen.extraSmallSpace)))
+                    Spacer(Modifier.height(dimensionResource(R.dimen.extraSmallSpace)))
                     Text(it, style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
-        Column {
-            IconButton(onClick = { menuExpanded = true }, modifier = Modifier.size(24.dp)) {
-                Icon(
-                    imageVector = Icons.Filled.MoreVert,
-                    contentDescription = stringResource(R.string.more_options),
-                    tint = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-            DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-                if (statusEnum == OrderStatus.CONFIRMED) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.pick_order)) },
-                        enabled = enabled && order.status == OrderStatus.CONFIRMED,
-                        onClick = {
-                            menuExpanded = false
-                            OrderLogger.uiTap(order.id, order.orderNumber, "Menu:PickUp")
-                            onPickUp()
-                        },
-                    )
+        Column(horizontalAlignment = Alignment.End) {
+            moreMenu(
+                order = order,
+                enabled = enabled,
+                menuState =
+                    MenuState(
+                        expanded = menuExpanded,
+                        onExpand = { menuExpanded = true },
+                        onDismiss = { menuExpanded = false },
+                        onPickUp = onPickUp,
+                        onCancel = onCancel,
+                        onReassign = onReassign,
+                    ),
+            )
+            Spacer(Modifier.height(dimensionResource(R.dimen.smallerSpace)))
+            Text(order.price, style = MaterialTheme.typography.titleSmall)
+        }
+    }
+}
 
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.cancel_order)) },
-                        enabled = enabled && order.status in listOf(
+data class MenuState(
+    val expanded: Boolean,
+    val onExpand: () -> Unit,
+    val onDismiss: () -> Unit,
+    val onPickUp: () -> Unit,
+    val onCancel: () -> Unit,
+    val onReassign: () -> Unit,
+)
+
+@Composable
+private fun moreMenu(
+    order: OrderInfo,
+    enabled: Boolean,
+    menuState: MenuState,
+) {
+    IconButton(onClick = menuState.onExpand, modifier = Modifier.size(24.dp)) {
+        Icon(
+            imageVector = Icons.Filled.MoreVert,
+            contentDescription = stringResource(R.string.more_options),
+            tint = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+    DropdownMenu(expanded = menuState.expanded, onDismissRequest = menuState.onDismiss) {
+        if (order.status == OrderStatus.CONFIRMED) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.pick_order)) },
+                enabled = enabled,
+                onClick = {
+                    menuState.onDismiss()
+                    OrderLogger.uiTap(order.id, order.orderNumber, "Menu:PickUp")
+                    menuState.onPickUp()
+                },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.cancel_order)) },
+                enabled =
+                    enabled &&
+                        order.status in
+                        listOf(
                             OrderStatus.ADDED,
-                            OrderStatus.CONFIRMED
+                            OrderStatus.CONFIRMED,
                         ),
-                        onClick = {
-                            menuExpanded = false
-                            OrderLogger.uiTap(order.id, order.orderNumber, "Menu:Cancel")
-                            onCancel()
-                        },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.reassign_order)) },
-                        enabled = enabled,
-                        onClick = {
-                            menuExpanded = false
-                            OrderLogger.uiTap(order.id, order.orderNumber, "Menu:Reassign")
-                            onReassign()
-                        },
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(dimensionResource(R.dimen.smallerSpace)))
-            Text(text = order.price, style = MaterialTheme.typography.titleSmall)
+                onClick = {
+                    menuState.onDismiss()
+                    OrderLogger.uiTap(order.id, order.orderNumber, "Menu:Cancel")
+                    menuState.onCancel()
+                },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.reassign_order)) },
+                enabled = enabled,
+                onClick = {
+                    menuState.onDismiss()
+                    OrderLogger.uiTap(order.id, order.orderNumber, "Menu:Reassign")
+                    menuState.onReassign()
+                },
+            )
         }
     }
 }

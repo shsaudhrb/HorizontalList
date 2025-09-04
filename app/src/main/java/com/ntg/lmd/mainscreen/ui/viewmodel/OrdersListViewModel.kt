@@ -1,10 +1,10 @@
 package com.ntg.lmd.mainscreen.ui.viewmodel
 
-import androidx.lifecycle.ViewModel
 import android.content.Context
 import android.location.Location
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
@@ -12,22 +12,21 @@ import com.ntg.lmd.mainscreen.domain.paging.OrdersPaging
 import com.ntg.lmd.mainscreen.domain.usecase.ComputeDistancesUseCase
 import com.ntg.lmd.mainscreen.domain.usecase.GetMyOrdersUseCase
 import com.ntg.lmd.mainscreen.ui.model.LocalUiOnlyStatusBus
-import com.ntg.lmd.mainscreen.ui.screens.orders.model.MyOrdersUiState
+import com.ntg.lmd.mainscreen.ui.model.MyOrdersUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.IOException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
-import kotlin.math.min
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.math.min
 
 class OrdersListViewModel(
     private val store: OrdersStore,
     private val getMyOrders: GetMyOrdersUseCase,
     private val computeDistancesUseCase: ComputeDistancesUseCase,
 ) : ViewModel() {
-
     private val state get() = store.state
     private val currentUserId get() = store.currentUserId
     private val deviceLocation get() = store.deviceLocation
@@ -50,13 +49,14 @@ class OrdersListViewModel(
                 store.endReached = false
 
                 val uid = currentUserId.value
-                val page1 = getMyOrders(
-                    page = 1,
-                    limit = OrdersPaging.PAGE_SIZE,
-                    bypassCache = true,
-                    assignedAgentId = uid,
-                    userOrdersOnly = true
-                )
+                val page1 =
+                    getMyOrders(
+                        page = 1,
+                        limit = OrdersPaging.PAGE_SIZE,
+                        bypassCache = true,
+                        assignedAgentId = uid,
+                        userOrdersOnly = true,
+                    )
 
                 allOrders.clear()
                 allOrders.addAll(page1.items)
@@ -67,7 +67,7 @@ class OrdersListViewModel(
                     withDist,
                     OrdersPaging.PAGE_SIZE,
                     state.value.query,
-                    store.endReached
+                    store.endReached,
                 )
             } catch (ce: CancellationException) {
                 throw ce
@@ -88,11 +88,7 @@ class OrdersListViewModel(
         if (state.value.isLoading) return
 
         state.update {
-            it.copy(
-                isLoading = !alreadyHasData,
-                errorMessage = null,
-                emptyMessage = null,
-            )
+            it.copy(isLoading = !alreadyHasData, errorMessage = null, emptyMessage = null)
         }
 
         viewModelScope.launch {
@@ -101,13 +97,14 @@ class OrdersListViewModel(
                 store.endReached = false
 
                 val uid = currentUserId.value
-                val page1 = getMyOrders(
-                    page = 1,
-                    limit = OrdersPaging.PAGE_SIZE,
-                    bypassCache = true,
-                    assignedAgentId = uid,
-                    userOrdersOnly = true
-                )
+                val page1 =
+                    getMyOrders(
+                        page = 1,
+                        limit = OrdersPaging.PAGE_SIZE,
+                        bypassCache = true,
+                        assignedAgentId = uid,
+                        userOrdersOnly = true,
+                    )
 
                 allOrders.clear()
                 allOrders.addAll(page1.items)
@@ -118,11 +115,12 @@ class OrdersListViewModel(
                     withDist,
                     OrdersPaging.PAGE_SIZE,
                     state.value.query,
-                    store.endReached
+                    store.endReached,
                 )
-
             } catch (ce: CancellationException) {
                 throw ce
+            } catch (e: IOException) {
+                handleInitialLoadError(e, alreadyHasData, context, state, ::loadOrders)
             } catch (e: Exception) {
                 handleInitialLoadError(e, alreadyHasData, context, state, ::loadOrders)
             }
@@ -139,13 +137,14 @@ class OrdersListViewModel(
         viewModelScope.launch {
             try {
                 val uid = currentUserId.value
-                val page1 = getMyOrders(
-                    page = 1,
-                    limit = OrdersPaging.PAGE_SIZE,
-                    bypassCache = true,
-                    assignedAgentId = uid,
-                    userOrdersOnly = true
-                )
+                val page1 =
+                    getMyOrders(
+                        page = 1,
+                        limit = OrdersPaging.PAGE_SIZE,
+                        bypassCache = true,
+                        assignedAgentId = uid,
+                        userOrdersOnly = true,
+                    )
 
                 val fresh = page1.items
                 store.endReached = page1.rawCount < OrdersPaging.PAGE_SIZE
@@ -158,13 +157,16 @@ class OrdersListViewModel(
                     withDist,
                     OrdersPaging.PAGE_SIZE,
                     state.value.query,
-                    store.endReached
+                    store.endReached,
                 )
-
             } catch (ce: CancellationException) {
                 throw ce
-            } catch (e: Exception) {
+            } catch (e: SocketTimeoutException) {
                 LocalUiOnlyStatusBus.errorEvents.tryEmit(messageFor(e) to { refresh(context) })
+            } catch (e: Exception) {
+                LocalUiOnlyStatusBus.errorEvents.tryEmit(
+                    (e.message ?: "Unexpected error") to { refresh(context) },
+                )
             } finally {
                 state.update { it.copy(isRefreshing = false) }
             }
@@ -179,13 +181,14 @@ class OrdersListViewModel(
             try {
                 val nextPageNum = store.page + 1
                 val uid = currentUserId.value
-                val pageRes = getMyOrders(
-                    page = nextPageNum,
-                    limit = OrdersPaging.PAGE_SIZE,
-                    bypassCache = true,
-                    assignedAgentId = uid,
-                    userOrdersOnly = true
-                )
+                val pageRes =
+                    getMyOrders(
+                        page = nextPageNum,
+                        limit = OrdersPaging.PAGE_SIZE,
+                        bypassCache = true,
+                        assignedAgentId = uid,
+                        userOrdersOnly = true,
+                    )
                 val next = pageRes.items
                 store.endReached = pageRes.rawCount < OrdersPaging.PAGE_SIZE || next.isEmpty()
                 store.page = nextPageNum
@@ -196,13 +199,26 @@ class OrdersListViewModel(
                     withDist,
                     store.page,
                     OrdersPaging.PAGE_SIZE,
-                    store.endReached
+                    store.endReached,
                 )
-            } catch (e: Exception) {
-                LocalUiOnlyStatusBus.errorEvents.tryEmit(messageFor(e) to { loadNextPage(context) })
-                state.update { it.copy(isLoadingMore = false) }
+            } catch (ce: CancellationException) {
+                throw ce
+            } catch (e: UnknownHostException) {
+                handlePagingError(messageFor(e), context)
+            } catch (e: retrofit2.HttpException) {
+                handlePagingError(messageFor(e), context)
+            } catch (e: IOException) {
+                handlePagingError(messageFor(e), context)
             }
         }
+    }
+
+    private fun handlePagingError(
+        msg: String,
+        context: Context,
+    ) {
+        LocalUiOnlyStatusBus.errorEvents.tryEmit(msg to { loadNextPage(context) })
+        state.update { it.copy(isLoadingMore = false) }
     }
 
     fun setCurrentUserId(id: String?) {
@@ -212,24 +228,30 @@ class OrdersListViewModel(
         state.update { it.copy(orders = withDist) }
     }
 
-    private val allowedStatuses = setOf(
-        OrderStatus.ADDED,
-        OrderStatus.CONFIRMED,
-        OrderStatus.REASSIGNED,
-        OrderStatus.CANCELED,
-        OrderStatus.PICKUP,
-        OrderStatus.START_DELIVERY,
-    )
+    private val allowedStatuses =
+        setOf(
+            OrderStatus.ADDED,
+            OrderStatus.CONFIRMED,
+            OrderStatus.REASSIGNED,
+            OrderStatus.CANCELED,
+            OrderStatus.PICKUP,
+            OrderStatus.START_DELIVERY,
+        )
 
     private fun applyDisplayFilter(list: List<OrderInfo>): List<OrderInfo> {
         val q = state.value.query.trim()
         val uid = store.currentUserId.value
 
-        val afterQuery = if (q.isBlank()) list else list.filter { o ->
-            o.orderNumber.contains(q, ignoreCase = true) ||
-                    o.name.contains(q, ignoreCase = true) ||
-                    (o.details?.contains(q, ignoreCase = true) == true)
-        }
+        val afterQuery =
+            if (q.isBlank()) {
+                list
+            } else {
+                list.filter { o ->
+                    o.orderNumber.contains(q, ignoreCase = true) ||
+                        o.name.contains(q, ignoreCase = true) ||
+                        (o.details?.contains(q, ignoreCase = true) == true)
+                }
+            }
         val afterStatus = afterQuery.filter { it.status in allowedStatuses }
         return if (uid.isNullOrBlank()) afterStatus else afterStatus.filter { it.assignedAgentId == uid }
     }
@@ -258,13 +280,14 @@ class OrdersListViewModel(
         }
     }
 
-    private fun messageFor(e: Exception): String = when (e) {
-        is retrofit2.HttpException -> "HTTP ${e.code()}"
-        is UnknownHostException -> "No internet connection"
-        is SocketTimeoutException -> "Request timed out"
-        is IOException -> "Network error"
-        else -> e.message ?: "Unknown error"
-    }
+    private fun messageFor(e: Exception): String =
+        when (e) {
+            is retrofit2.HttpException -> "HTTP ${e.code()}"
+            is UnknownHostException -> "No internet connection"
+            is SocketTimeoutException -> "Request timed out"
+            is IOException -> "Network error"
+            else -> e.message ?: "Unknown error"
+        }
 
     private fun MutableStateFlow<MyOrdersUiState>.publishFirstPageFrom(
         base: List<OrderInfo>,

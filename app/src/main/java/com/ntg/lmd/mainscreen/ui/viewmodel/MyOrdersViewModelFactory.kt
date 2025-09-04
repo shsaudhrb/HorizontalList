@@ -10,7 +10,7 @@ import com.ntg.lmd.network.core.RetrofitProvider
 
 @Suppress("UnusedPrivateProperty")
 class MyOrdersViewModelFactory(
-    private val application: Application
+    private val application: Application,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {

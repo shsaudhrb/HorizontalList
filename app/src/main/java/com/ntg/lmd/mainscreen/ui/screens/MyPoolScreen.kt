@@ -60,8 +60,7 @@ private data class MapOverlayCallbacks(
 )
 
 @Composable
-fun rememberMapStates(): MapStates =
-    remember { MapStates(CameraPositionState(), MarkerState(ZERO_LATLNG)) }
+fun rememberMapStates(): MapStates = remember { MapStates(CameraPositionState(), MarkerState(ZERO_LATLNG)) }
 
 @Composable
 fun myPoolScreen(

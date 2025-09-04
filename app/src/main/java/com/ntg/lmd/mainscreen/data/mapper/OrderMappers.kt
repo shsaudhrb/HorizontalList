@@ -5,7 +5,12 @@ import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus.Companion.fromId
 import com.ntg.lmd.utils.AppDefaults
 
-private fun Double?.toKmOrDefault(default: Double): Double = if (this != null && this.isFinite() && this >= 0.0) this / 1000.0 else default
+private const val METERS_PER_KILOMETER = 1_000.0
+
+private fun Double?.toKmOrDefault(default: Double): Double {
+    val meters = this ?: return default
+    return if (meters.isFinite() && meters >= 0.0) meters / METERS_PER_KILOMETER else default
+}
 
 fun OrderDto.toDomain(): OrderInfo =
     OrderInfo(

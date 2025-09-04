@@ -9,7 +9,6 @@ class OrdersSearchViewModel(
     private val store: OrdersStore,
     private val pageSize: Int = OrdersPaging.PAGE_SIZE,
 ) : ViewModel() {
-
     fun applySearchQuery(raw: String) {
         val q = raw.trim()
         val base = currentFilteredFor(q, store.allOrders)
@@ -39,8 +38,8 @@ class OrdersSearchViewModel(
         if (q.isBlank()) return all
         return all.filter { o ->
             o.orderNumber.contains(q, ignoreCase = true) ||
-                    o.name.contains(q, ignoreCase = true) ||
-                    (o.details?.contains(q, ignoreCase = true) == true)
+                o.name.contains(q, ignoreCase = true) ||
+                (o.details?.contains(q, ignoreCase = true) == true)
         }
     }
 }

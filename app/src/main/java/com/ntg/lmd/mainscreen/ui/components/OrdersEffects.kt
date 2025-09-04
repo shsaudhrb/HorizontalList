@@ -23,7 +23,6 @@ fun ordersEffects(
     snackbarHostState: SnackbarHostState,
     context: Context,
 ) {
-
     val uiState by vm.uiState.collectAsState()
 
     LaunchedEffect(Unit) {
@@ -38,18 +37,22 @@ fun ordersEffects(
 
     LaunchedEffect(Unit) {
         LocalUiOnlyStatusBus.errorEvents.collectLatest { (msg, retry) ->
-            val result = snackbarHostState.showSnackbar(
-                message = msg,
-                actionLabel = retry?.let { context.getString(R.string.retry) },
-                withDismissAction = true,
-            )
+            val result =
+                snackbarHostState.showSnackbar(
+                    message = msg,
+                    actionLabel = retry?.let { context.getString(R.string.retry) },
+                    withDismissAction = true,
+                )
             if (result == SnackbarResult.ActionPerformed) retry?.invoke()
         }
     }
 
     val shouldLoadMore by remember {
         derivedStateOf {
-            val last = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
+            val last =
+                listState.layoutInfo.visibleItemsInfo
+                    .lastOrNull()
+                    ?.index ?: -1
             val total = listState.layoutInfo.totalItemsCount
             total > 0 && last >= total - VISIBLE_THRESHOLD
         }

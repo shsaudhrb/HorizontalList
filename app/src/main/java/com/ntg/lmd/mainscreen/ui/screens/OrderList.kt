@@ -40,11 +40,12 @@ data class OrderListCallbacks(
     val onLoadMore: () -> Unit,
 )
 
-private val AutoHideOnSuccessStatuses = setOf(
-    OrderStatus.DELIVERY_DONE,
-    OrderStatus.DELIVERY_FAILED,
-    OrderStatus.REASSIGNED,
-)
+private val AutoHideOnSuccessStatuses =
+    setOf(
+        OrderStatus.DELIVERY_DONE,
+        OrderStatus.DELIVERY_FAILED,
+        OrderStatus.REASSIGNED,
+    )
 
 @Composable
 fun orderList(
@@ -53,7 +54,6 @@ fun orderList(
     callbacks: OrderListCallbacks,
 ) {
     var hiddenIds by remember { mutableStateOf(emptySet<String>()) }
-
 
     LaunchedEffect(updateVm) {
         updateVm.success.collect { serverOrder ->
@@ -83,27 +83,29 @@ fun orderList(
                 myOrderCard(
                     order = order,
                     isUpdating = state.updatingIds.contains(order.id),
-                    callbacks = MyOrderCardCallbacks(
-                        onReassignRequested = { callbacks.onReassignRequested(order.id) },
-                        onDetails = { callbacks.onDetails(order.id) },
-                        onCall = { callbacks.onCall(order.id) },
-                        onAction = { act: OrderActions ->
-                            callbacks.onAction(order.id, act)
-                        }
-                    ),
+                    callbacks =
+                        MyOrderCardCallbacks(
+                            onReassignRequested = { callbacks.onReassignRequested(order.id) },
+                            onDetails = { callbacks.onDetails(order.id) },
+                            onCall = { callbacks.onCall(order.id) },
+                            onAction = { act: OrderActions ->
+                                callbacks.onAction(order.id, act)
+                            },
+                        ),
                     updateVm = updateVm,
                 )
             },
             config =
                 defaultVerticalListConfig(
                     listState = state.listState,
-                    paging = PagingState(
-                        isRefreshing = state.isRefreshing,
-                        onRefresh = callbacks.onRefresh,
-                        isLoadingMore = state.isLoadingMore,
-                        endReached = state.endReached,
-                        onLoadMore = callbacks.onLoadMore,
-                    )
+                    paging =
+                        PagingState(
+                            isRefreshing = state.isRefreshing,
+                            onRefresh = callbacks.onRefresh,
+                            isLoadingMore = state.isLoadingMore,
+                            endReached = state.endReached,
+                            onLoadMore = callbacks.onLoadMore,
+                        ),
                 ),
         )
     }

@@ -1,6 +1,7 @@
 package com.ntg.lmd.mainscreen.ui.screens
 
 import android.content.Context
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -34,6 +36,7 @@ import com.ntg.lmd.mainscreen.ui.components.emptyState
 import com.ntg.lmd.mainscreen.ui.components.loadingFooter
 import com.ntg.lmd.mainscreen.ui.viewmodel.DeliveriesLogViewModel
 import com.ntg.lmd.order.domain.model.PagingState
+import com.ntg.lmd.order.domain.model.VerticalListConfig
 import com.ntg.lmd.order.domain.model.defaultVerticalListConfig
 import com.ntg.lmd.order.ui.components.verticalListComponent
 import kotlinx.coroutines.flow.combine
@@ -41,23 +44,16 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-@Suppress("UNUSED_PARAMETER")
 fun deliveriesLogScreen(
     navController: NavController,
     vm: DeliveriesLogViewModel = viewModel(),
 ) {
     val ctx = LocalContext.current
-
-    // initial load
     LaunchedEffect(Unit) { vm.load(ctx) }
-
-    // keep your existing search wiring
     observeSearch(navController, vm, ctx)
 
-    // collect UI state
     val ui = rememberLogsUi(vm)
-
-    val listState = rememberLazyListState()
+    val bundle = rememberLogListBundle(ui, vm, ctx)
 
     Column(
         Modifier
@@ -67,35 +63,55 @@ fun deliveriesLogScreen(
     ) {
         headerRow()
         HorizontalDivider()
-
         Box(Modifier.weight(1f)) {
-            val config =
-                defaultVerticalListConfig(
-                    listState = listState,
-                    paging = PagingState(
-                        isRefreshing = ui.refreshing,
-                        onRefresh = { vm.refresh(ctx) },
-                        isLoadingMore = ui.loadingMore,
-                        endReached = ui.endReached,
-                        onLoadMore = { vm.loadMore(ctx) },
-                    ),
-                ).copy(
-                    emptyContent = {
-                        if (!ui.refreshing && !ui.loadingMore) {
-                            emptyState(Modifier.fillMaxSize())
-                        }
-                    },
-                    loadingFooter = { loadingFooter() },
-                )
             verticalListComponent(
                 items = ui.logs,
                 key = { it.orderId },
                 itemContent = { deliveryLogItem(it) },
-                config = config,
+                config = bundle.config,
             )
         }
     }
 }
+
+@Composable
+private fun rememberLogListBundle(
+    ui: LogsUi,
+    vm: DeliveriesLogViewModel,
+    ctx: Context,
+): LogListBundle {
+    val listState = rememberLazyListState()
+
+    // Only remember the non-composable PagingState
+    val paging =
+        remember(ui.refreshing, ui.loadingMore, ui.endReached) {
+            PagingState(
+                isRefreshing = ui.refreshing,
+                onRefresh = { vm.refresh(ctx) },
+                isLoadingMore = ui.loadingMore,
+                endReached = ui.endReached,
+                onLoadMore = { vm.loadMore(ctx) },
+            )
+        }
+
+    // Call the composable function outside of remember
+    val config =
+        defaultVerticalListConfig(
+            listState = listState,
+            paging = paging,
+        ).copy(
+            emptyContent = {
+                if (!ui.refreshing && !ui.loadingMore) emptyState(Modifier.fillMaxSize())
+            },
+            loadingFooter = { loadingFooter() },
+        )
+
+    return LogListBundle(config)
+}
+
+private data class LogListBundle(
+    val config: VerticalListConfig,
+)
 
 @Composable
 private fun observeSearch(
@@ -155,7 +171,7 @@ private fun headerRow() {
 
 @Composable
 private fun headerText(
-    @androidx.annotation.StringRes textRes: Int,
+    @StringRes textRes: Int,
 ) {
     Text(
         text = stringResource(textRes),

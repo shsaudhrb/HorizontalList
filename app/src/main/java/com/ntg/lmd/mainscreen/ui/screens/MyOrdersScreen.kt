@@ -25,6 +25,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
+import com.ntg.lmd.mainscreen.ui.components.OrdersContentCallbacks
+import com.ntg.lmd.mainscreen.ui.components.OrdersContentDeps
 import com.ntg.lmd.mainscreen.ui.components.bottomStickyButton
 import com.ntg.lmd.mainscreen.ui.components.initialCameraPositionEffect
 import com.ntg.lmd.mainscreen.ui.components.locationPermissionAndLastLocation
@@ -67,7 +69,7 @@ fun myOrdersScreen(
     locationPermissionAndLastLocation(poolVm)
     val mapStates = rememberMapStates()
     initialCameraPositionEffect(poolUi.orders, poolUi.selectedOrderNumber, mapStates)
-    ForwardMyPoolLocationToMyOrders(poolVm = poolVm, ordersVm = ordersVm)
+    forwardMyPoolLocationToMyOrders(poolVm = poolVm, ordersVm = ordersVm)
 
     val onReassignRequested: (String) -> Unit = { orderId ->
         reassignOrderId = orderId
@@ -91,7 +93,7 @@ fun myOrdersScreen(
         vm = ordersVm,
         listState = listState,
         snackbarHostState = snack,
-        context = ctx
+        context = ctx,
     )
 
     // When the search query changes, jump back to the top of the list
@@ -127,13 +129,17 @@ fun myOrdersScreen(
 
         ordersContent(
             ordersVm = ordersVm,
-            updateVm = updateVm,
-            state = uiState,
-            listState = listState,
-            onOpenOrderDetails = onOpenOrderDetails,
-            context = ctx,
-            updatingIds = updatingIds,
-            onReassignRequested = onReassignRequested,
+            deps =
+                OrdersContentDeps(
+                    updateVm = updateVm,
+                    listState = listState,
+                    updatingIds = updatingIds,
+                ),
+            cbs =
+                OrdersContentCallbacks(
+                    onOpenOrderDetails = onOpenOrderDetails,
+                    onReassignRequested = onReassignRequested,
+                ),
             modifier =
                 Modifier
                     .fillMaxSize()
@@ -151,7 +157,7 @@ fun myOrdersScreen(
             OrderLogger.uiTap(
                 orderId,
                 uiState.orders.firstOrNull { it.id == orderId }?.orderNumber,
-                "Menu:Reassign→${user.name}"
+                "Menu:Reassign→${user.name}",
             )
             updateVm.update(orderId, OrderStatus.REASSIGNED, assignedAgentId = user.id)
             reassignOrderId = null
@@ -161,7 +167,7 @@ fun myOrdersScreen(
 
 @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
 @Composable
-private fun ForwardMyPoolLocationToMyOrders(
+private fun forwardMyPoolLocationToMyOrders(
     poolVm: MyPoolViewModel,
     ordersVm: MyOrdersViewModel,
 ) {
@@ -203,4 +209,3 @@ private fun observeOrdersSearch(
         }
     }
 }
-

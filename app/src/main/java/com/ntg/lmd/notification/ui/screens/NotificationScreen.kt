@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,9 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AttachMoney
 import androidx.compose.material.icons.outlined.LocalShipping
 import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -42,6 +39,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -72,65 +71,32 @@ private const val MILLIS_PER_MINUTE = 60_000L
 fun notificationScreen(viewModel: NotificationsViewModel = viewModel(factory = NotificationsVMFactory())) {
     val filter by viewModel.filter.collectAsState()
     val lazyPagingItems = viewModel.pagingDataFlow.collectAsLazyPagingItems()
-
-    // Seed once
     seedNotificationsOnce()
 
-    val isRefreshing = lazyPagingItems.loadState.refresh is LoadState.Loading
-    val isLoadingMore = lazyPagingItems.loadState.append is LoadState.Loading
-    val endReached =
-        (lazyPagingItems.loadState.append as? LoadState.NotLoading)
-            ?.endOfPaginationReached == true
-    val items: List<NotificationUi> =
-        remember(
-            lazyPagingItems.itemCount,
-            lazyPagingItems.loadState,
-        ) { List(lazyPagingItems.itemCount) { i -> lazyPagingItems[i] }.filterNotNull() }
-    val topId = items.firstOrNull()?.id ?: -1L
-    val listState = remember(topId) { LazyListState(0, 0) }
-    val scope = rememberCoroutineScope()
-
-    LaunchedEffect(isRefreshing) {
-        if (isRefreshing) listState.scrollToItem(0)
-    }
+    val bundle =
+        rememberListAndPaging(lazyPagingItems) {
+            viewModel.addDummyAndRefresh()
+            lazyPagingItems.refresh()
+        }
 
     Column(
         Modifier
             .fillMaxSize()
             .padding(horizontal = dimensionResource(R.dimen.smallSpace)),
     ) {
-        filterRow(filter = filter, onFilterChange = { viewModel.setFilter(it) })
+        filterRow(filter = filter, onFilterChange = viewModel::setFilter)
         Spacer(Modifier.height(dimensionResource(R.dimen.smallSpace)))
 
         Box(Modifier.weight(1f)) {
             val config =
                 defaultVerticalListConfig(
-                    listState = listState,
-                    paging = PagingState(
-                        isRefreshing = isRefreshing,
-                        onRefresh = {
-                            scope.launch { listState.scrollToItem(0) }
-                            viewModel.addDummyAndRefresh()
-                            lazyPagingItems.refresh()
-                        },
-                        isLoadingMore = isLoadingMore,
-                        endReached = endReached,
-                        onLoadMore = {
-                            if (lazyPagingItems.loadState.append !is LoadState.Loading && !endReached) {
-                                val last = lazyPagingItems.itemCount - 1
-                                if (last >= 0) {
-                                    @Suppress("UNUSED_EXPRESSION")
-                                    lazyPagingItems[last]
-                                }
-                            }
-                        },
-                    ),
-                ).copy(
-                    emptyContent = { emptySection() },
-                )
+                    listState = bundle.listState,
+                    paging = bundle.paging,
+                ).copy(emptyContent = { emptySection() })
+
             verticalListComponent(
-                items = items,
-                key = { item -> "$topId:${item.id}" },
+                items = bundle.items,
+                key = { item -> "${bundle.topId}:${item.id}" },
                 itemContent = { notificationCard(it) },
                 config = config,
             )
@@ -139,21 +105,67 @@ fun notificationScreen(viewModel: NotificationsViewModel = viewModel(factory = N
 }
 
 @Composable
+private fun rememberListAndPaging(
+    lazyPagingItems: LazyPagingItems<NotificationUi>,
+    onRefresh: () -> Unit,
+): NotificationListBundle {
+    val isRefreshing = lazyPagingItems.loadState.refresh is LoadState.Loading
+    val isLoadingMore = lazyPagingItems.loadState.append is LoadState.Loading
+    val endReached =
+        (lazyPagingItems.loadState.append as? LoadState.NotLoading)?.endOfPaginationReached == true
+
+    val items =
+        remember(lazyPagingItems.itemCount, lazyPagingItems.loadState) {
+            List(lazyPagingItems.itemCount) { i -> lazyPagingItems[i] }.filterNotNull()
+        }
+    val topId = items.firstOrNull()?.id ?: -1L
+    val listState = remember(topId) { LazyListState(0, 0) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(isRefreshing) { if (isRefreshing) listState.scrollToItem(0) }
+
+    val paging =
+        remember(isRefreshing, isLoadingMore, endReached) {
+            PagingState(
+                isRefreshing = isRefreshing,
+                onRefresh = {
+                    scope.launch { listState.scrollToItem(0) }
+                    onRefresh()
+                },
+                isLoadingMore = isLoadingMore,
+                endReached = endReached,
+                onLoadMore = {
+                    if (lazyPagingItems.loadState.append !is LoadState.Loading && !endReached) {
+                        val last = lazyPagingItems.itemCount - 1
+                        if (last >= 0) {
+                            @Suppress("UNUSED_EXPRESSION")
+                            lazyPagingItems[last]
+                        }
+                    }
+                },
+            )
+        }
+    return NotificationListBundle(items, listState, paging, topId)
+}
+
+private data class NotificationListBundle(
+    val items: List<NotificationUi>,
+    val listState: LazyListState,
+    val paging: PagingState,
+    val topId: Long,
+)
+
+@Composable
 private fun notificationCard(item: NotificationUi) {
     val nowMs = rememberNowMillis(MILLIS_PER_MINUTE)
     val ageLabel = relativeAgeLabel(nowMs, item.timestampMs)
 
-    val accent =
+    val cs = MaterialTheme.colorScheme
+    val (accent, icon) =
         when (item.type) {
-            AgentNotification.Type.ORDER_STATUS -> MaterialTheme.colorScheme.primary
-            AgentNotification.Type.WALLET -> MaterialTheme.colorScheme.tertiary
-            AgentNotification.Type.OTHER -> MaterialTheme.colorScheme.secondary
-        }
-    val icon =
-        when (item.type) {
-            AgentNotification.Type.ORDER_STATUS -> Icons.Outlined.LocalShipping
-            AgentNotification.Type.WALLET -> Icons.Outlined.AttachMoney
-            AgentNotification.Type.OTHER -> Icons.Outlined.Notifications
+            AgentNotification.Type.ORDER_STATUS -> cs.primary to Icons.Outlined.LocalShipping
+            AgentNotification.Type.WALLET -> cs.tertiary to Icons.Outlined.AttachMoney
+            AgentNotification.Type.OTHER -> cs.secondary to Icons.Outlined.Notifications
         }
 
     ElevatedCard(
@@ -168,48 +180,73 @@ private fun notificationCard(item: NotificationUi) {
                 .padding(dimensionResource(R.dimen.smallSpace)),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
-                modifier =
-                    Modifier
-                        .size(dimensionResource(R.dimen.notificationIconBox))
-                        .background(accent.copy(alpha = 0.15f), shape = CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(icon, contentDescription = null, tint = accent)
-            }
-
+            leadingIcon(accent, icon)
             Spacer(Modifier.width(dimensionResource(R.dimen.smallSpace)))
-
-            Column(Modifier.weight(1f)) {
-                Text(
-                    text = item.message,
-                    style = MaterialTheme.typography.bodyLarge,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Spacer(Modifier.height(dimensionResource(R.dimen.tinySpace)))
-                Text(
-                    text = ageLabel,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-
-            Spacer(
-                Modifier
-                    .width(dimensionResource(R.dimen.extraSmallSpace))
-                    .height(IntrinsicSize.Max)
-                    .background(
-                        accent.copy(alpha = 0.8f),
-                        RoundedCornerShape(
-                            topStart = dimensionResource(R.dimen.notificationAccentBarRadius),
-                            bottomStart = dimensionResource(R.dimen.notificationAccentBarRadius),
-                        ),
-                    ),
-            )
+            messageAndAge(item.message, ageLabel, modifier = Modifier.weight(1f))
+            accentBar(accent)
         }
     }
 }
+
+@Composable
+private fun leadingIcon(
+    accent: Color,
+    icon: ImageVector,
+) {
+    Box(
+        modifier =
+            Modifier
+                .size(dimensionResource(R.dimen.notificationIconBox))
+                .background(accent.copy(alpha = 0.15f), shape = CircleShape),
+        contentAlignment = Alignment.Center,
+    ) { Icon(icon, contentDescription = null, tint = accent) }
+}
+
+@Composable
+private fun messageAndAge(
+    message: String,
+    ageLabel: String,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier) {
+        Text(
+            message,
+            style = MaterialTheme.typography.bodyLarge,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Spacer(Modifier.height(dimensionResource(R.dimen.tinySpace)))
+        Text(
+            ageLabel,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun accentBar(accent: Color) {
+    Spacer(
+        Modifier
+            .width(dimensionResource(R.dimen.extraSmallSpace))
+            .height(IntrinsicSize.Max)
+            .background(
+                accent.copy(alpha = 0.8f),
+                RoundedCornerShape(
+                    topStart = dimensionResource(R.dimen.notificationAccentBarRadius),
+                    bottomStart = dimensionResource(R.dimen.notificationAccentBarRadius),
+                ),
+            ),
+    )
+}
+
+// @Composable
+// private fun styleFor(type: AgentNotification.Type) =
+//    when (type) {
+//        AgentNotification.Type.ORDER_STATUS -> MaterialTheme.colorScheme.primary to Icons.Outlined.LocalShipping
+//        AgentNotification.Type.WALLET -> MaterialTheme.colorScheme.tertiary to Icons.Outlined.AttachMoney
+//        AgentNotification.Type.OTHER -> MaterialTheme.colorScheme.secondary to Icons.Outlined.Notifications
+//    }
 
 @Composable
 private fun seedNotificationsOnce() {
@@ -223,78 +260,78 @@ private fun seedNotificationsOnce() {
     }
 }
 
-private fun LazyListScope.footerAppendState(lazyPagingItems: LazyPagingItems<NotificationUi>) {
-    when (val state = lazyPagingItems.loadState.append) {
-        is LoadState.Loading -> {
-            item {
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(dimensionResource(R.dimen.mediumSpace)),
-                    contentAlignment = Alignment.Center,
-                ) { CircularProgressIndicator() }
-            }
-        }
+// private fun LazyListScope.footerAppendState(lazyPagingItems: LazyPagingItems<NotificationUi>) {
+//    when (val state = lazyPagingItems.loadState.append) {
+//        is LoadState.Loading -> {
+//            item {
+//                Box(
+//                    Modifier
+//                        .fillMaxWidth()
+//                        .padding(dimensionResource(R.dimen.mediumSpace)),
+//                    contentAlignment = Alignment.Center,
+//                ) { CircularProgressIndicator() }
+//            }
+//        }
+//
+//        is LoadState.Error -> {
+//            item {
+//                Column(
+//                    Modifier
+//                        .fillMaxWidth()
+//                        .padding(dimensionResource(R.dimen.mediumSpace)),
+//                    horizontalAlignment = Alignment.CenterHorizontally,
+//                ) {
+//                    Text(
+//                        text = state.error.message ?: stringResource(R.string.loading_more_failed),
+//                        color = MaterialTheme.colorScheme.error,
+//                    )
+//                    Spacer(Modifier.height(dimensionResource(R.dimen.smallerSpace)))
+//                    Button(onClick = { lazyPagingItems.retry() }) {
+//                        Text(stringResource(R.string.retry))
+//                    }
+//                }
+//            }
+//        }
+//
+//        is LoadState.NotLoading -> {
+//            if (state.endOfPaginationReached) {
+//                item {
+//                    Box(
+//                        Modifier
+//                            .fillMaxWidth()
+//                            .padding(dimensionResource(R.dimen.largerSpace)),
+//                        contentAlignment = Alignment.Center,
+//                    ) {
+//                        Text(
+//                            stringResource(R.string.caught_up),
+//                            style = MaterialTheme.typography.labelLarge,
+//                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+//                        )
+//                    }
+//                }
+//            }
+//        }
+//    }
+// }
 
-        is LoadState.Error -> {
-            item {
-                Column(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(dimensionResource(R.dimen.mediumSpace)),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Text(
-                        text = state.error.message ?: stringResource(R.string.loading_more_failed),
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                    Spacer(Modifier.height(dimensionResource(R.dimen.smallerSpace)))
-                    Button(onClick = { lazyPagingItems.retry() }) {
-                        Text(stringResource(R.string.retry))
-                    }
-                }
-            }
-        }
-
-        is LoadState.NotLoading -> {
-            if (state.endOfPaginationReached) {
-                item {
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(dimensionResource(R.dimen.largerSpace)),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            stringResource(R.string.caught_up),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun errorSection(
-    message: String,
-    onRetry: () -> Unit,
-) {
-    Column(
-        Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(
-            message,
-            color = MaterialTheme.colorScheme.error,
-        )
-        Spacer(Modifier.height(dimensionResource(R.dimen.smallerSpace)))
-        Button(onClick = onRetry) { Text("Retry") }
-    }
-}
+// @Composable
+// private fun errorSection(
+//    message: String,
+//    onRetry: () -> Unit,
+// ) {
+//    Column(
+//        Modifier.fillMaxSize(),
+//        horizontalAlignment = Alignment.CenterHorizontally,
+//        verticalArrangement = Arrangement.Center,
+//    ) {
+//        Text(
+//            message,
+//            color = MaterialTheme.colorScheme.error,
+//        )
+//        Spacer(Modifier.height(dimensionResource(R.dimen.smallerSpace)))
+//        Button(onClick = onRetry) { Text("Retry") }
+//    }
+// }
 
 @Composable
 private fun emptySection() {

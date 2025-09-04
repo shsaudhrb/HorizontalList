@@ -1,12 +1,8 @@
 package com.ntg.lmd.order.ui.screen
 
 import android.content.Context
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -15,11 +11,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ntg.lmd.network.core.RetrofitProvider
@@ -199,23 +191,11 @@ private fun ordersHistoryUi(
     onRefresh: () -> Unit,
 ) {
     val listConfig =
-        defaultVerticalListConfig(
+        buildOrdersListConfig(
             listState = listState,
-            paging = PagingState(
-                isRefreshing = state.isRefreshing,
-                onRefresh = onRefresh,
-                isLoadingMore = state.isLoadingMore,
-                endReached = state.endReached,
-                onLoadMore = config.onLoadMore,
-            ),
-        ).copy(
-            contentPadding =
-                PaddingValues(
-                    top = 16.dp,
-                    start = 16.dp,
-                    end = 16.dp,
-                    bottom = 16.dp,
-                ),
+            state = state,
+            onRefresh = onRefresh,
+            onLoadMore = config.onLoadMore,
         )
 
     verticalListComponent(
@@ -246,21 +226,47 @@ private fun ordersHistoryUi(
 }
 
 @Composable
-fun statusBadge(
-    text: String,
-    color: Color,
-) {
-    Box(
-        modifier = Modifier.padding(start = 8.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = text,
-            style =
-                MaterialTheme.typography.bodySmall.copy(
-                    color = color,
-                    fontWeight = FontWeight.SemiBold,
-                ),
-        )
-    }
-}
+private fun buildOrdersListConfig(
+    listState: LazyListState,
+    state: OrdersHistoryUiState,
+    onRefresh: () -> Unit,
+    onLoadMore: () -> Unit,
+) = defaultVerticalListConfig(
+    listState = listState,
+    paging =
+        PagingState(
+            isRefreshing = state.isRefreshing,
+            onRefresh = onRefresh,
+            isLoadingMore = state.isLoadingMore,
+            endReached = state.endReached,
+            onLoadMore = onLoadMore,
+        ),
+).copy(
+    contentPadding =
+        PaddingValues(
+            top = 16.dp,
+            start = 16.dp,
+            end = 16.dp,
+            bottom = 16.dp,
+        ),
+)
+
+// @Composable
+// fun statusBadge(
+//    text: String,
+//    color: Color,
+// ) {
+//    Box(
+//        modifier = Modifier.padding(start = 8.dp),
+//        contentAlignment = Alignment.Center,
+//    ) {
+//        Text(
+//            text = text,
+//            style =
+//                MaterialTheme.typography.bodySmall.copy(
+//                    color = color,
+//                    fontWeight = FontWeight.SemiBold,
+//                ),
+//        )
+//    }
+// }

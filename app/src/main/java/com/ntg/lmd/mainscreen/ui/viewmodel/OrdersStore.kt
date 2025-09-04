@@ -2,7 +2,7 @@ package com.ntg.lmd.mainscreen.ui.viewmodel
 
 import android.location.Location
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
-import com.ntg.lmd.mainscreen.ui.screens.orders.model.MyOrdersUiState
+import com.ntg.lmd.mainscreen.ui.model.MyOrdersUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 
 class OrdersStore(

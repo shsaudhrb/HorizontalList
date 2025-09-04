@@ -98,14 +98,16 @@ private fun myOrderCardPrimaryRow(
     setDialog: (OrderActions) -> Unit,
 ) {
     Row(horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.smallerSpace))) {
-        DetailsButton(isUpdating = isUpdating, onDetails = onDetails)
-        PrimaryActionForStatus(status = status, isUpdating = isUpdating, setDialog = setDialog)
+        detailsButton(isUpdating = isUpdating, onDetails = onDetails)
+        primaryActionForStatus(status = status, isUpdating = isUpdating, setDialog = setDialog)
     }
 }
 
-
 @Composable
-private fun RowScope.DetailsButton(isUpdating: Boolean, onDetails: () -> Unit) {
+private fun RowScope.detailsButton(
+    isUpdating: Boolean,
+    onDetails: () -> Unit,
+) {
     OutlinedButton(
         onClick = onDetails,
         enabled = !isUpdating,
@@ -124,7 +126,7 @@ private fun RowScope.DetailsButton(isUpdating: Boolean, onDetails: () -> Unit) {
 }
 
 @Composable
-private fun RowScope.PrimaryActionForStatus(
+private fun RowScope.primaryActionForStatus(
     status: OrderStatus?,
     isUpdating: Boolean,
     setDialog: (OrderActions) -> Unit,
@@ -133,25 +135,25 @@ private fun RowScope.PrimaryActionForStatus(
         OrderStatus.ADDED ->
             myOrderCardPrimaryAction(
                 R.string.confirm_order,
-                isUpdating
+                isUpdating,
             ) { setDialog(OrderActions.Confirm) }
 
         OrderStatus.CONFIRMED ->
             myOrderCardPrimaryAction(
                 R.string.pick_order,
-                isUpdating
+                isUpdating,
             ) { setDialog(OrderActions.PickUp) }
 
         OrderStatus.PICKUP ->
             myOrderCardPrimaryAction(
                 R.string.start_delivery,
-                isUpdating
+                isUpdating,
             ) { setDialog(OrderActions.Start) }
 
         OrderStatus.START_DELIVERY ->
             myOrderCardPrimaryAction(
                 R.string.deliver_order,
-                isUpdating
+                isUpdating,
             ) { setDialog(OrderActions.Deliver) }
 
         else -> Unit
