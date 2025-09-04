@@ -6,54 +6,35 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.ui.components.OrdersUiConstants.VISIBLE_THRESHOLD
 import com.ntg.lmd.mainscreen.ui.model.LocalUiOnlyStatusBus
-import com.ntg.lmd.mainscreen.ui.model.MyOrdersUiState
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyOrdersViewModel
 import kotlinx.coroutines.flow.collectLatest
 
 @Composable
 fun ordersEffects(
     vm: MyOrdersViewModel,
-    state: MyOrdersUiState,
     listState: LazyListState,
     snackbarHostState: SnackbarHostState,
     context: Context,
 ) {
-    loadInitialOrdersEffect(vm, context)
-    collectStatusUpdatesEffect(vm)
-    snackbarErrorEffect(snackbarHostState, context)
-    loadMoreEffect(vm, state, listState, context)
-}
+    val uiState by vm.uiState.collectAsState()
 
-@Composable
-private fun loadInitialOrdersEffect(
-    vm: MyOrdersViewModel,
-    context: Context,
-) {
     LaunchedEffect(Unit) {
-        vm.loadOrders(context)
+        vm.listVM.loadOrders(context)
     }
-}
 
-@Composable
-private fun collectStatusUpdatesEffect(vm: MyOrdersViewModel) {
     LaunchedEffect(Unit) {
         LocalUiOnlyStatusBus.statusEvents.collectLatest { (id, newStatus) ->
-            vm.updateStatusLocally(id, newStatus)
+            vm.statusVM.updateStatusLocally(id, newStatus)
         }
     }
-}
 
-@Composable
-private fun snackbarErrorEffect(
-    snackbarHostState: SnackbarHostState,
-    context: Context,
-) {
     LaunchedEffect(Unit) {
         LocalUiOnlyStatusBus.errorEvents.collectLatest { (msg, retry) ->
             val result =
@@ -65,29 +46,20 @@ private fun snackbarErrorEffect(
             if (result == SnackbarResult.ActionPerformed) retry?.invoke()
         }
     }
-}
 
-@Composable
-private fun loadMoreEffect(
-    vm: MyOrdersViewModel,
-    state: MyOrdersUiState,
-    listState: LazyListState,
-    context: Context,
-) {
     val shouldLoadMore by remember {
         derivedStateOf {
-            val lastVisible =
+            val last =
                 listState.layoutInfo.visibleItemsInfo
                     .lastOrNull()
                     ?.index ?: -1
             val total = listState.layoutInfo.totalItemsCount
-            total > 0 && lastVisible >= total - VISIBLE_THRESHOLD
+            total > 0 && last >= total - VISIBLE_THRESHOLD
         }
     }
-
-    LaunchedEffect(shouldLoadMore, state.isRefreshing, state.isLoading) {
-        if (shouldLoadMore && !state.isRefreshing && !state.isLoading) {
-            vm.loadNextPage(context)
+    LaunchedEffect(shouldLoadMore, uiState.isRefreshing, uiState.isLoading) {
+        if (shouldLoadMore && !uiState.isRefreshing && !uiState.isLoading) {
+            vm.listVM.loadNextPage(context)
         }
     }
 }

@@ -33,7 +33,7 @@ fun myPoolOrderCardItem(
                     onReassignRequested = {},
                     onDetails = { onOpenOrderDetails(order.orderNumber) },
                     onCall = { onCall(order.customerPhone) },
-                    onAction = {},
+                    onAction = { action: OrderActions -> },
                 ),
             updateVm = updateVm,
         )

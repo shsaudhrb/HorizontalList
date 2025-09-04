@@ -61,7 +61,14 @@ class MyPoolViewModel(
     }
 
     private suspend fun fillFirstChunk() {
-        _ui.update { it.copy(isLoading = true, isLoadingMore = false, endReached = false, orders = emptyList()) }
+        _ui.update {
+            it.copy(
+                isLoading = true,
+                isLoadingMore = false,
+                endReached = false,
+                orders = emptyList(),
+            )
+        }
 
         val acc = ArrayList<OrderInfo>(pageSize)
         val (reachedEnd, lastPage) =
@@ -75,7 +82,13 @@ class MyPoolViewModel(
                 _ui.update { it.copy(isLoading = false) }
                 when (e) {
                     is CancellationException -> throw e
-                    is HttpException -> Log.e("MyPoolVM", "Initial fill failed (HTTP): ${e.code()} - ${e.message()}", e)
+                    is HttpException ->
+                        Log.e(
+                            "MyPoolVM",
+                            "Initial fill failed (HTTP): ${e.code()} - ${e.message()}",
+                            e,
+                        )
+
                     is IOException -> Log.e("MyPoolVM", "Initial fill failed (IO): ${e.message}", e)
                     else -> Log.e("MyPoolVM", "Initial fill failed: ${e.message}", e)
                 }

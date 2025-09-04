@@ -1,7 +1,8 @@
 package com.ntg.lmd.mainscreen.ui.screens
 
 import android.app.Application
-import android.content.Context
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListState
@@ -11,179 +12,165 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.PullToRefreshState
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import com.ntg.lmd.R
-import com.ntg.lmd.mainscreen.domain.model.ActiveUser
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
+import com.ntg.lmd.mainscreen.ui.components.OrdersContentCallbacks
+import com.ntg.lmd.mainscreen.ui.components.OrdersContentDeps
 import com.ntg.lmd.mainscreen.ui.components.bottomStickyButton
 import com.ntg.lmd.mainscreen.ui.components.initialCameraPositionEffect
 import com.ntg.lmd.mainscreen.ui.components.locationPermissionAndLastLocation
 import com.ntg.lmd.mainscreen.ui.components.ordersContent
 import com.ntg.lmd.mainscreen.ui.components.ordersEffects
 import com.ntg.lmd.mainscreen.ui.components.reassignBottomSheet
-import com.ntg.lmd.mainscreen.ui.model.MyOrdersUiState
-import com.ntg.lmd.mainscreen.ui.model.OrdersContentParams
 import com.ntg.lmd.mainscreen.ui.viewmodel.ActiveAgentsViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.ActiveAgentsViewModelFactory
-import com.ntg.lmd.mainscreen.ui.viewmodel.AgentsState
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyOrdersViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyOrdersViewModelFactory
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyPoolVMFactory
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyPoolViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
+import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel.OrderLogger
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModelFactory
 import com.ntg.lmd.network.core.RetrofitProvider.userStore
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 
+@RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun myOrdersScreen(onOpenOrderDetails: (String) -> Unit) {
+fun myOrdersScreen(
+    navController: NavController,
+    onOpenOrderDetails: (String) -> Unit,
+) {
     val app = LocalContext.current.applicationContext as Application
-
-    val ordersVm: MyOrdersViewModel = viewModel(factory = MyOrdersViewModelFactory())
-    val updateVm: UpdateOrderStatusViewModel = viewModel(factory = UpdateOrderStatusViewModelFactory(app))
-    val agentsVm: ActiveAgentsViewModel = viewModel(factory = ActiveAgentsViewModelFactory())
+    val ordersVm: MyOrdersViewModel = viewModel(factory = MyOrdersViewModelFactory(app))
+    val updateVm: UpdateOrderStatusViewModel =
+        viewModel(factory = UpdateOrderStatusViewModelFactory(app))
+    val agentsVm: ActiveAgentsViewModel = viewModel(factory = ActiveAgentsViewModelFactory(app))
     val poolVm: MyPoolViewModel = viewModel(factory = MyPoolVMFactory())
 
-    myOrdersScreenInner(
-        ordersVm = ordersVm,
-        updateVm = updateVm,
-        agentsVm = agentsVm,
-        poolVm = poolVm,
-        onOpenOrderDetails = onOpenOrderDetails,
+    val snack = remember { SnackbarHostState() }
+    val listState = rememberLazyListState()
+    val reassignOrderId = remember { mutableStateOf<String?>(null) }
+
+    wireMyOrders(
+        WireDeps(
+            navController = navController,
+            ordersVm = ordersVm,
+            updateVm = updateVm,
+            agentsVm = agentsVm,
+            poolVm = poolVm,
+            listState = listState,
+            snack = snack,
+            reassignOrderId = reassignOrderId,
+        ),
+    )
+
+    ordersBody(
+        OrdersBodyDeps(
+            ordersVm = ordersVm,
+            updateVm = updateVm,
+            agentsVm = agentsVm,
+            listState = listState,
+            snack = snack,
+            reassignOrderId = reassignOrderId,
+            onOpenOrderDetails = onOpenOrderDetails,
+        ),
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun myOrdersScreenInner(
-    ordersVm: MyOrdersViewModel,
-    updateVm: UpdateOrderStatusViewModel,
-    agentsVm: ActiveAgentsViewModel,
-    poolVm: MyPoolViewModel,
-    onOpenOrderDetails: (String) -> Unit,
-) {
-    val ctx = LocalContext.current
-    val snack = remember { SnackbarHostState() }
-    val listState = rememberLazyListState()
-    val pullState = rememberPullToRefreshState()
+private fun ordersBody(deps: OrdersBodyDeps) {
+    val uiState by deps.ordersVm.uiState.collectAsState()
+    val updatingIds by deps.updateVm.updatingIds.collectAsState()
+    val agentsState by deps.agentsVm.state.collectAsState()
 
-    val ui by ordersVm.state.collectAsState()
-    val updatingIds by updateVm.updatingIds.collectAsState()
-
-    setupMapAndLocation(poolVm, ordersVm)
-    connectCurrentUserToOrders(ordersVm)
-    ordersEffectsHost(ordersVm, ui, listState, snack, ctx)
-    updateVmCollectors(updateVm, ordersVm, snack, ctx)
-
-    reassignHost(ui = ui, agentsVm = agentsVm, updateVm = updateVm) { onReassignRequested ->
-        ordersScaffold(
-            isRefreshing = ui.isRefreshing,
-            onRefresh = { ordersVm.refresh(ctx) },
-            pullState = pullState,
-            snack = snack,
-        ) {
-            ordersContent(
-                OrdersContentParams(
-                    ordersVm = ordersVm,
-                    updateVm = updateVm,
-                    listState = listState,
-                    onOpenOrderDetails = onOpenOrderDetails,
-                    updatingIds = updatingIds,
-                    onReassignRequested = onReassignRequested,
+    Scaffold(
+        snackbarHost = { SnackbarHost(deps.snack) },
+        bottomBar = { bottomStickyButton(text = stringResource(R.string.order_pool)) {} },
+    ) { innerPadding ->
+        ordersContent(
+            ordersVm = deps.ordersVm,
+            deps = OrdersContentDeps(updateVm = deps.updateVm, listState = deps.listState, updatingIds = updatingIds),
+            cbs =
+                OrdersContentCallbacks(
+                    onOpenOrderDetails = deps.onOpenOrderDetails,
+                    onReassignRequested = { id ->
+                        deps.reassignOrderId.value = id
+                        deps.agentsVm.load()
+                    },
                 ),
+            modifier = Modifier.fillMaxSize().padding(innerPadding),
+        )
+    }
+
+    reassignBottomSheet(
+        open = deps.reassignOrderId.value != null,
+        state = agentsState,
+        onDismiss = { deps.reassignOrderId.value = null },
+        onRetry = { deps.agentsVm.load() },
+        onSelect = { user ->
+            val orderId = deps.reassignOrderId.value ?: return@reassignBottomSheet
+            OrderLogger.uiTap(
+                orderId,
+                uiState.orders.firstOrNull { it.id == orderId }?.orderNumber,
+                "Menu:Reassign→${user.name}",
             )
+            deps.updateVm.update(orderId, OrderStatus.REASSIGNED, assignedAgentId = user.id)
+            deps.reassignOrderId.value = null
+        },
+    )
+}
+
+@RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+@Composable
+private fun wireMyOrders(deps: WireDeps) {
+    val ctx = LocalContext.current
+    val poolUi by deps.poolVm.ui.collectAsState()
+
+    // Location + camera
+    locationPermissionAndLastLocation(deps.poolVm)
+    val mapStates = rememberMapStates()
+    initialCameraPositionEffect(poolUi.orders, poolUi.selectedOrderNumber, mapStates)
+    forwardMyPoolLocationToMyOrders(deps.poolVm, deps.ordersVm)
+
+    // Current user
+    val currentUserId: String? = remember { userStore.getUserId() }
+    LaunchedEffect(currentUserId) { deps.ordersVm.listVM.setCurrentUserId(currentUserId) }
+
+    // Effects + snackbar
+    ordersEffects(
+        vm = deps.ordersVm,
+        listState = deps.listState,
+        snackbarHostState = deps.snack,
+        context = ctx,
+    )
+
+    val uiState by deps.ordersVm.uiState.collectAsState()
+    LaunchedEffect(uiState.query) { deps.listState.scrollToItem(0) }
+
+    LaunchedEffect(Unit) {
+        deps.updateVm.success.collect { updated ->
+            deps.ordersVm.statusVM.applyServerPatch(updated)
         }
     }
-}
-
-@Composable
-private fun reassignHost(
-    ui: MyOrdersUiState,
-    agentsVm: ActiveAgentsViewModel,
-    updateVm: UpdateOrderStatusViewModel,
-    content: @Composable (onReassignRequested: (String) -> Unit) -> Unit,
-) {
-    val agentsState by agentsVm.state.collectAsState()
-    var reassignOrderId by remember { mutableStateOf<String?>(null) }
-
-    val onReassignRequested: (String) -> Unit = {
-        reassignOrderId = it
-        agentsVm.load()
-    }
-
-    content(onReassignRequested)
-
-    reassignBottomSheetHost(
-        open = reassignOrderId != null,
-        agentsState = agentsState,
-        onDismiss = { reassignOrderId = null },
-        onRetry = { agentsVm.load() },
-    ) { user ->
-        val id = reassignOrderId ?: return@reassignBottomSheetHost
-        UpdateOrderStatusViewModel.OrderLogger.uiTap(
-            id,
-            ui.orders.firstOrNull { it.id == id }?.orderNumber,
-            "Menu:Reassign→${user.name}",
-        )
-        updateVm.update(id, OrderStatus.REASSIGNED, assignedAgentId = user.id)
-        reassignOrderId = null
-    }
-}
-
-@Composable
-private fun setupMapAndLocation(
-    poolVm: MyPoolViewModel,
-    ordersVm: MyOrdersViewModel,
-) {
-    locationPermissionAndLastLocation(poolVm)
-    val mapStates = rememberMapStates()
-    val poolUi by poolVm.ui.collectAsState()
-    initialCameraPositionEffect(poolUi.orders, poolUi.selectedOrderNumber, mapStates)
-    forwardMyPoolLocationToMyOrders(poolVm, ordersVm)
-}
-
-@Composable
-private fun connectCurrentUserToOrders(ordersVm: MyOrdersViewModel) {
-    val currentUserId = remember { userStore.getUserId() }
-    LaunchedEffect(currentUserId) { ordersVm.setCurrentUserId(currentUserId) }
-}
-
-@Composable
-private fun ordersEffectsHost(
-    ordersVm: MyOrdersViewModel,
-    state: MyOrdersUiState,
-    listState: LazyListState,
-    snack: SnackbarHostState,
-    ctx: Context,
-) {
-    ordersEffects(ordersVm, state, listState, snack, ctx)
-}
-
-@Composable
-private fun updateVmCollectors(
-    updateVm: UpdateOrderStatusViewModel,
-    ordersVm: MyOrdersViewModel,
-    snack: SnackbarHostState,
-    ctx: Context,
-) {
-    LaunchedEffect(Unit) { updateVm.success.collect { ordersVm.applyServerPatch(it) } }
     LaunchedEffect(Unit) {
-        updateVm.error.collect { (msg, retry) ->
+        deps.updateVm.error.collect { (msg, retry) ->
             val res =
-                snack.showSnackbar(
+                deps.snack.showSnackbar(
                     message = msg,
                     actionLabel = ctx.getString(R.string.retry),
                     withDismissAction = true,
@@ -191,52 +178,71 @@ private fun updateVmCollectors(
             if (res == SnackbarResult.ActionPerformed) retry()
         }
     }
+
+    // Search observers
+    observeOrdersSearch(deps.navController, deps.ordersVm)
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ordersScaffold(
-    isRefreshing: Boolean,
-    onRefresh: () -> Unit,
-    pullState: PullToRefreshState,
-    snack: SnackbarHostState,
-    content: @Composable () -> Unit,
-) {
-    Scaffold(
-        snackbarHost = { SnackbarHost(snack) },
-        bottomBar = { bottomStickyButton(text = stringResource(R.string.order_pool)) {} },
-    ) { innerPadding ->
-        PullToRefreshBox(
-            isRefreshing = isRefreshing,
-            onRefresh = onRefresh,
-            state = pullState,
-            modifier = Modifier.fillMaxSize().padding(innerPadding),
-        ) { content() }
-    }
-}
-
-@Composable
-private fun reassignBottomSheetHost(
-    open: Boolean,
-    agentsState: AgentsState,
-    onDismiss: () -> Unit,
-    onRetry: () -> Unit,
-    onSelect: (ActiveUser) -> Unit,
-) {
-    reassignBottomSheet(
-        open = open,
-        state = agentsState,
-        onDismiss = onDismiss,
-        onRetry = onRetry,
-        onSelect = onSelect,
-    )
-}
-
+@RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
 @Composable
 private fun forwardMyPoolLocationToMyOrders(
     poolVm: MyPoolViewModel,
     ordersVm: MyOrdersViewModel,
 ) {
     val lastLoc by poolVm.lastLocation.collectAsState(initial = null)
-    LaunchedEffect(lastLoc) { ordersVm.updateDeviceLocation(lastLoc) }
+    LaunchedEffect(lastLoc) { ordersVm.listVM.updateDeviceLocation(lastLoc) }
 }
+
+// Handle search for orders
+@Composable
+private fun observeOrdersSearch(
+    navController: NavController,
+    vm: MyOrdersViewModel,
+) {
+    val back = navController.currentBackStackEntry
+
+    // Launched Effects for Search
+    LaunchedEffect(back) {
+        val h = back?.savedStateHandle ?: return@LaunchedEffect
+        combine(
+            h.getStateFlow("searching", false),
+            h.getStateFlow("search_text", ""),
+        ) { enabled, text -> if (enabled) text else null }
+            .filterNotNull()
+            .distinctUntilChanged()
+            .collect { q ->
+                vm.searchVM.applySearchQuery(q)
+            }
+    }
+
+    LaunchedEffect(back) {
+        val h = back?.savedStateHandle ?: return@LaunchedEffect
+        h.getStateFlow("search_submit", "").collect { submitted ->
+            if (submitted.isNotEmpty()) {
+                vm.searchVM.applySearchQuery(submitted)
+                h["search_submit"] = ""
+            }
+        }
+    }
+}
+
+data class OrdersBodyDeps(
+    val ordersVm: MyOrdersViewModel,
+    val updateVm: UpdateOrderStatusViewModel,
+    val agentsVm: ActiveAgentsViewModel,
+    val listState: LazyListState,
+    val snack: SnackbarHostState,
+    val reassignOrderId: MutableState<String?>,
+    val onOpenOrderDetails: (String) -> Unit,
+)
+
+data class WireDeps(
+    val navController: NavController,
+    val ordersVm: MyOrdersViewModel,
+    val updateVm: UpdateOrderStatusViewModel,
+    val agentsVm: ActiveAgentsViewModel,
+    val poolVm: MyPoolViewModel,
+    val listState: LazyListState,
+    val snack: SnackbarHostState,
+    val reassignOrderId: MutableState<String?>,
+)

@@ -28,12 +28,19 @@ class DeliveriesLogViewModel : ViewModel() {
     private val _endReached = MutableStateFlow(false)
     val endReached: StateFlow<Boolean> = _endReached
 
-    private val _isRefreshing = MutableStateFlow(false)
+    private val _isRefreshing = MutableStateFlow(true)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing
 
     fun load(context: Context) {
         reset()
-        viewModelScope.launch { fetchNext(context) }
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            try {
+                fetchNext(context)
+            } finally {
+                _isRefreshing.value = false
+            }
+        }
     }
 
     private fun reset() {

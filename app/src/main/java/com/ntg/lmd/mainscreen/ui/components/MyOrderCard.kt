@@ -98,8 +98,8 @@ private fun myOrderCardPrimaryRow(
     setDialog: (OrderActions) -> Unit,
 ) {
     Row(horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.smallerSpace))) {
-        detailsButton(isUpdating, onDetails)
-        primaryActionForStatus(status, isUpdating, setDialog)
+        detailsButton(isUpdating = isUpdating, onDetails = onDetails)
+        primaryActionForStatus(status = status, isUpdating = isUpdating, setDialog = setDialog)
     }
 }
 
@@ -133,21 +133,29 @@ private fun RowScope.primaryActionForStatus(
 ) {
     when (status) {
         OrderStatus.ADDED ->
-            myOrderCardPrimaryAction(R.string.confirm_order, isUpdating) {
-                setDialog(OrderActions.Confirm)
-            }
+            myOrderCardPrimaryAction(
+                R.string.confirm_order,
+                isUpdating,
+            ) { setDialog(OrderActions.Confirm) }
+
         OrderStatus.CONFIRMED ->
-            myOrderCardPrimaryAction(R.string.pick_order, isUpdating) {
-                setDialog(OrderActions.PickUp)
-            }
+            myOrderCardPrimaryAction(
+                R.string.pick_order,
+                isUpdating,
+            ) { setDialog(OrderActions.PickUp) }
+
         OrderStatus.PICKUP ->
-            myOrderCardPrimaryAction(R.string.start_delivery, isUpdating) {
-                setDialog(OrderActions.Start)
-            }
+            myOrderCardPrimaryAction(
+                R.string.start_delivery,
+                isUpdating,
+            ) { setDialog(OrderActions.Start) }
+
         OrderStatus.START_DELIVERY ->
-            myOrderCardPrimaryAction(R.string.deliver_order, isUpdating) {
-                setDialog(OrderActions.Deliver)
-            }
+            myOrderCardPrimaryAction(
+                R.string.deliver_order,
+                isUpdating,
+            ) { setDialog(OrderActions.Deliver) }
+
         else -> Unit
     }
 }
@@ -164,6 +172,22 @@ private fun RowScope.myOrderCardPrimaryAction(
         enabled = !isUpdating,
         onClick = onClick,
     )
+}
+
+@Composable
+private fun myOrderCardFailIfNeeded(
+    status: OrderStatus?,
+    isUpdating: Boolean,
+    onFail: () -> Unit,
+) {
+    if (status == OrderStatus.PICKUP || status == OrderStatus.START_DELIVERY) {
+        OutlinedButton(
+            onClick = onFail,
+            enabled = !isUpdating,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(dimensionResource(R.dimen.mediumSpace)),
+        ) { Text(stringResource(R.string.delivery_failed)) }
+    }
 }
 
 @Composable
@@ -193,40 +217,29 @@ private fun myOrderCardDialogsHost(
             myOrderCardSimpleDialog(R.string.confirm_order, onDismiss) {
                 onConfirmForward(OrderActions.Confirm)
             }
+
         OrderActions.PickUp ->
             myOrderCardSimpleDialog(R.string.pick_order, onDismiss) {
                 onConfirmForward(OrderActions.PickUp)
             }
+
         OrderActions.Start ->
             myOrderCardSimpleDialog(R.string.start_delivery, onDismiss) {
                 onConfirmForward(OrderActions.Start)
             }
+
         OrderActions.Deliver ->
             deliverDialog(onDismiss = onDismiss) {
                 onConfirmForward(OrderActions.Deliver)
             }
+
         OrderActions.Fail ->
             reasonDialog(
                 title = stringResource(R.string.delivery_failed),
                 onDismiss = onDismiss,
             ) { onConfirmForward(OrderActions.Fail) }
-        null -> Unit
-    }
-}
 
-@Composable
-private fun myOrderCardFailIfNeeded(
-    status: OrderStatus?,
-    isUpdating: Boolean,
-    onFail: () -> Unit,
-) {
-    if (status == OrderStatus.PICKUP || status == OrderStatus.START_DELIVERY) {
-        OutlinedButton(
-            onClick = onFail,
-            enabled = !isUpdating,
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(dimensionResource(R.dimen.mediumSpace)),
-        ) { Text(stringResource(R.string.delivery_failed)) }
+        null -> Unit
     }
 }
 

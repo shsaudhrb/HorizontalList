@@ -1,24 +1,24 @@
 package com.ntg.lmd.mainscreen.ui.screens
 
 import android.content.Context
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -30,19 +30,20 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.ntg.lmd.R
-import com.ntg.lmd.mainscreen.domain.model.DeliveryLog
 import com.ntg.lmd.mainscreen.domain.model.LogsUi
 import com.ntg.lmd.mainscreen.ui.components.deliveryLogItem
 import com.ntg.lmd.mainscreen.ui.components.emptyState
 import com.ntg.lmd.mainscreen.ui.components.loadingFooter
-import com.ntg.lmd.mainscreen.ui.components.observeNearEnd
 import com.ntg.lmd.mainscreen.ui.viewmodel.DeliveriesLogViewModel
+import com.ntg.lmd.order.domain.model.PagingState
+import com.ntg.lmd.order.domain.model.VerticalListConfig
+import com.ntg.lmd.order.domain.model.defaultVerticalListConfig
+import com.ntg.lmd.order.ui.components.verticalListComponent
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-@Suppress("UNUSED_PARAMETER")
 fun deliveriesLogScreen(
     navController: NavController,
     vm: DeliveriesLogViewModel = viewModel(),
@@ -50,27 +51,67 @@ fun deliveriesLogScreen(
     val ctx = LocalContext.current
     LaunchedEffect(Unit) { vm.load(ctx) }
     observeSearch(navController, vm, ctx)
-    val ui = rememberLogsUi(vm)
 
-    PullToRefreshBox(isRefreshing = ui.refreshing, onRefresh = { vm.refresh(ctx) }) {
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            headerRow()
-            HorizontalDivider()
-            logsList(
-                logs = ui.logs,
-                isLoadingMore = ui.loadingMore,
-                endReached = ui.endReached,
-                onLoadMore = { vm.loadMore(ctx) },
-                modifier = Modifier.weight(1f),
+    val ui = rememberLogsUi(vm)
+    val bundle = rememberLogListBundle(ui, vm, ctx)
+
+    Column(
+        Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        headerRow()
+        HorizontalDivider()
+        Box(Modifier.weight(1f)) {
+            verticalListComponent(
+                items = ui.logs,
+                key = { it.orderId },
+                itemContent = { deliveryLogItem(it) },
+                config = bundle.config,
             )
         }
     }
 }
+
+@Composable
+private fun rememberLogListBundle(
+    ui: LogsUi,
+    vm: DeliveriesLogViewModel,
+    ctx: Context,
+): LogListBundle {
+    val listState = rememberLazyListState()
+
+    // Only remember the non-composable PagingState
+    val paging =
+        remember(ui.refreshing, ui.loadingMore, ui.endReached) {
+            PagingState(
+                isRefreshing = ui.refreshing,
+                onRefresh = { vm.refresh(ctx) },
+                isLoadingMore = ui.loadingMore,
+                endReached = ui.endReached,
+                onLoadMore = { vm.loadMore(ctx) },
+            )
+        }
+
+    // Call the composable function outside of remember
+    val config =
+        defaultVerticalListConfig(
+            listState = listState,
+            paging = paging,
+        ).copy(
+            emptyContent = {
+                if (!ui.refreshing && !ui.loadingMore) emptyState(Modifier.fillMaxSize())
+            },
+            loadingFooter = { loadingFooter() },
+        )
+
+    return LogListBundle(config)
+}
+
+private data class LogListBundle(
+    val config: VerticalListConfig,
+)
 
 @Composable
 private fun observeSearch(
@@ -130,7 +171,7 @@ private fun headerRow() {
 
 @Composable
 private fun headerText(
-    @androidx.annotation.StringRes textRes: Int,
+    @StringRes textRes: Int,
 ) {
     Text(
         text = stringResource(textRes),
@@ -139,30 +180,4 @@ private fun headerText(
         color = MaterialTheme.colorScheme.onBackground,
         textAlign = TextAlign.Center,
     )
-}
-
-@Composable
-private fun logsList(
-    logs: List<DeliveryLog>,
-    isLoadingMore: Boolean,
-    endReached: Boolean,
-    onLoadMore: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val listState = rememberLazyListState()
-    observeNearEnd(listState, isLoadingMore, endReached, onLoadMore)
-
-    if (logs.isEmpty() && !isLoadingMore) {
-        emptyState(modifier)
-        return
-    }
-
-    LazyColumn(
-        state = listState,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = modifier.fillMaxSize(),
-    ) {
-        items(logs) { deliveryLogItem(it) }
-        if (isLoadingMore && !endReached) item { loadingFooter() }
-    }
 }

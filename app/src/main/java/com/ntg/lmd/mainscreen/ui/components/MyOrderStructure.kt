@@ -1,10 +1,13 @@
 package com.ntg.lmd.mainscreen.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -23,6 +26,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,7 +37,7 @@ import androidx.compose.ui.unit.dp
 import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
-import com.ntg.lmd.mainscreen.ui.model.OrderMenuCallbacks
+import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel.OrderLogger
 import java.util.Locale
 
 @Composable
@@ -43,7 +48,10 @@ fun distanceBadge(
     val bg = MaterialTheme.colorScheme.primary
     val fg = MaterialTheme.colorScheme.onPrimary
     Box(
-        modifier = modifier.size(56.dp).background(bg, CircleShape),
+        modifier =
+            modifier
+                .size(56.dp)
+                .background(bg, CircleShape),
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -58,6 +66,30 @@ fun distanceBadge(
                 color = fg.copy(alpha = 0.9f),
             )
         }
+    }
+}
+
+@Composable
+fun primaryActionButton(
+    text: String,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier,
+        enabled = enabled,
+        colors =
+            ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            ),
+        shape = RoundedCornerShape(dimensionResource(R.dimen.mediumSpace)),
+    ) {
+        Text(text = text, style = MaterialTheme.typography.titleSmall)
     }
 }
 
@@ -112,66 +144,160 @@ fun bottomStickyButton(
 }
 
 @Composable
-fun menuToggleButton(onOpen: () -> Unit) {
-    IconButton(onClick = onOpen, modifier = Modifier.size(24.dp)) {
+fun orderHeaderWithMenu(
+    order: OrderInfo,
+    enabled: Boolean = true,
+    onPickUp: () -> Unit,
+    onCancel: () -> Unit,
+    onReassign: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Top,
+    ) {
+        orderHeaderLeft(
+            order = order,
+            onPickUp = onPickUp,
+            onCancel = onCancel,
+            onReassign = onReassign,
+            enabled = enabled,
+        )
+    }
+}
+
+@Composable
+fun orderHeaderLeft(
+    order: OrderInfo,
+    onPickUp: () -> Unit,
+    onCancel: () -> Unit,
+    onReassign: () -> Unit,
+    enabled: Boolean = true,
+) {
+    var menuExpanded by remember { mutableStateOf(false) }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        headerLeftInfo(order)
+        headerRightInfo(
+            order = order,
+            enabled = enabled,
+            menuState =
+                MenuState(
+                    expanded = menuExpanded,
+                    onExpand = { menuExpanded = true },
+                    onDismiss = { menuExpanded = false },
+                    onPickUp = onPickUp,
+                    onCancel = onCancel,
+                    onReassign = onReassign,
+                ),
+        )
+    }
+}
+
+@Composable
+private fun headerLeftInfo(order: OrderInfo) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        distanceBadge(
+            distanceKm = order.distanceKm,
+            modifier = Modifier.padding(end = dimensionResource(R.dimen.mediumSpace)),
+        )
+        Column {
+            Text(order.name, style = MaterialTheme.typography.titleMedium)
+            Text(
+                "#${order.orderNumber}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                maxLines = 1,
+            )
+            Text(
+                text = order.status.toString(),
+                color = statusTint(order.status.toString()),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            order.details?.let {
+                Spacer(Modifier.height(dimensionResource(R.dimen.extraSmallSpace)))
+                Text(it, style = MaterialTheme.typography.bodySmall)
+            }
+        }
+    }
+}
+
+@Composable
+private fun headerRightInfo(
+    order: OrderInfo,
+    enabled: Boolean,
+    menuState: MenuState,
+) {
+    Column(horizontalAlignment = Alignment.End) {
+        moreMenu(order = order, enabled = enabled, menuState = menuState)
+        Spacer(Modifier.height(dimensionResource(R.dimen.smallerSpace)))
+        Text(order.price, style = MaterialTheme.typography.titleSmall)
+    }
+}
+
+@Composable
+private fun moreMenu(
+    order: OrderInfo,
+    enabled: Boolean,
+    menuState: MenuState,
+) {
+    IconButton(onClick = menuState.onExpand, modifier = Modifier.size(24.dp)) {
         Icon(
             imageVector = Icons.Filled.MoreVert,
             contentDescription = stringResource(R.string.more_options),
             tint = MaterialTheme.colorScheme.onSurface,
         )
     }
-}
-
-@Composable
-fun orderMenuSection(
-    expanded: Boolean,
-    order: OrderInfo,
-    enabled: Boolean,
-    callbacks: OrderMenuCallbacks,
-) {
-    orderMenu(
-        expanded = expanded,
-        order = order,
-        enabled = enabled,
-        callbacks = callbacks,
-    )
-}
-
-@Composable
-fun priceText(price: String) {
-    Text(text = price, style = MaterialTheme.typography.titleSmall)
-}
-
-@Composable
-fun orderMenu(
-    expanded: Boolean,
-    order: OrderInfo,
-    enabled: Boolean,
-    callbacks: OrderMenuCallbacks,
-) {
-    DropdownMenu(expanded = expanded, onDismissRequest = callbacks.onDismiss) {
+    DropdownMenu(expanded = menuState.expanded, onDismissRequest = menuState.onDismiss) {
         if (order.status == OrderStatus.CONFIRMED) {
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.pick_order)) },
-                enabled = enabled && order.status == OrderStatus.CONFIRMED,
-                onClick = callbacks.onPickUp,
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.cancel_order)) },
-                enabled =
-                    enabled &&
-                        order.status in
-                        listOf(
-                            OrderStatus.ADDED,
-                            OrderStatus.CONFIRMED,
-                        ),
-                onClick = callbacks.onCancel,
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.reassign_order)) },
-                enabled = enabled,
-                onClick = callbacks.onReassign,
-            )
+            menuItems(order = order, enabled = enabled, menuState = menuState)
         }
     }
 }
+
+@Composable
+private fun menuItems(
+    order: OrderInfo,
+    enabled: Boolean,
+    menuState: MenuState,
+) {
+    DropdownMenuItem(
+        text = { Text(stringResource(R.string.pick_order)) },
+        enabled = enabled,
+        onClick = {
+            menuState.onDismiss()
+            OrderLogger.uiTap(order.id, order.orderNumber, "Menu:PickUp")
+            menuState.onPickUp()
+        },
+    )
+    DropdownMenuItem(
+        text = { Text(stringResource(R.string.cancel_order)) },
+        enabled = enabled, // status is CONFIRMED here
+        onClick = {
+            menuState.onDismiss()
+            OrderLogger.uiTap(order.id, order.orderNumber, "Menu:Cancel")
+            menuState.onCancel()
+        },
+    )
+    DropdownMenuItem(
+        text = { Text(stringResource(R.string.reassign_order)) },
+        enabled = enabled,
+        onClick = {
+            menuState.onDismiss()
+            OrderLogger.uiTap(order.id, order.orderNumber, "Menu:Reassign")
+            menuState.onReassign()
+        },
+    )
+}
+
+data class MenuState(
+    val expanded: Boolean,
+    val onExpand: () -> Unit,
+    val onDismiss: () -> Unit,
+    val onPickUp: () -> Unit,
+    val onCancel: () -> Unit,
+    val onReassign: () -> Unit,
+)

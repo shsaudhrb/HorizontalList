@@ -144,32 +144,25 @@ class OrdersPaginator(
         return PageBundle(allOrders.toList(), endReached, page)
     }
 
-    suspend fun loadNext(uid: String?): PageBundle? {
-        if (endReached) {
-            return null
-        }
-
-        val nextPage = page + 1
-        val res =
-            getMyOrders(
-                page = nextPage,
-                limit = pageSize,
-                bypassCache = true,
-                assignedAgentId = uid,
-                userOrdersOnly = true,
-            )
-
-        val next = res.items
-        endReached = res.rawCount < pageSize || next.isEmpty()
-
-        return if (next.isEmpty()) {
-            null
-        } else {
-            allOrders.addAll(next)
-            page = nextPage
-            PageBundle(allOrders.toList(), endReached, page)
-        }
-    }
+//    suspend fun loadNext(uid: String?): PageBundle? {
+//        if (endReached) return null
+//        val nextPage = page + 1
+//        val res =
+//            getMyOrders(
+//                page = nextPage,
+//                limit = pageSize,
+//                bypassCache = true,
+//                assignedAgentId = uid,
+//                userOrdersOnly = true,
+//            )
+//        val next = res.items
+//        endReached = res.rawCount < pageSize || next.isEmpty()
+//        if (next.isEmpty()) return null
+//
+//        allOrders.addAll(next)
+//        page = nextPage
+//        return PageBundle(allOrders.toList(), endReached, page)
+//    }
 
     fun snapshot(): List<OrderInfo> = allOrders.toList()
 

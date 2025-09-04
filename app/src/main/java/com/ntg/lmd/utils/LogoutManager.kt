@@ -32,11 +32,11 @@ class LogoutManager(
             com.ntg.lmd.network.core.RetrofitProvider.userStore
                 .getUserId()
         if (!userId.isNullOrBlank()) {
-            runCatching { FirebaseMessaging.getInstance().unsubscribeFromTopic("user_$userId").await() }
-                .onSuccess { Log.i(TAG, "FCM: unsubscribed from user_$userId") }
+            runCatching {
+                FirebaseMessaging.getInstance().unsubscribeFromTopic("user_$userId").await()
+            }.onSuccess { Log.i(TAG, "FCM: unsubscribed from user_$userId") }
                 .onFailure { Log.w(TAG, "FCM: unsubscribe user_$userId failed", it) }
         }
-
         Log.i(TAG, "FCM: deleting token…")
         runCatching { FirebaseMessaging.getInstance().deleteToken().await() }
             .onSuccess { Log.i(TAG, "FCM: deleteToken OK") }
@@ -52,15 +52,12 @@ class LogoutManager(
         withContext(Dispatchers.IO) {
             Log.i(TAG, "Logout started")
             wipePushState()
-
             runCatching { socket?.disconnect() }
                 .onSuccess { Log.i(TAG, "Socket disconnected") }
                 .onFailure { Log.w(TAG, "Socket disconnect failed", it) }
-
             runCatching { db?.clearAllTables() }
                 .onSuccess { Log.i(TAG, "DB cleared") }
                 .onFailure { Log.w(TAG, "DB clear failed", it) }
-
             tokenStore.clear()
             Log.i(TAG, "Token store cleared")
 

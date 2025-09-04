@@ -1,17 +1,8 @@
 package com.ntg.lmd.order.ui.screen
 
 import android.content.Context
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -20,33 +11,30 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.dimensionResource
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.ntg.lmd.R
 import com.ntg.lmd.network.core.RetrofitProvider
 import com.ntg.lmd.order.data.remote.repository.OrdersRepositoryImpl
+import com.ntg.lmd.order.domain.model.OrderHistoryUi
 import com.ntg.lmd.order.domain.model.OrdersDialogsCallbacks
 import com.ntg.lmd.order.domain.model.OrdersDialogsState
+import com.ntg.lmd.order.domain.model.OrdersHistoryFilter
 import com.ntg.lmd.order.domain.model.OrdersHistoryUiState
+import com.ntg.lmd.order.domain.model.PagingState
+import com.ntg.lmd.order.domain.model.defaultVerticalListConfig
 import com.ntg.lmd.order.domain.model.usecase.GetOrdersUseCase
 import com.ntg.lmd.order.ui.components.OrdersHistoryEffectsConfig
 import com.ntg.lmd.order.ui.components.OrdersHistoryUiConfig
-import com.ntg.lmd.order.ui.components.endFooter
 import com.ntg.lmd.order.ui.components.exportOrdersHistoryPdf
-import com.ntg.lmd.order.ui.components.loadingFooter
 import com.ntg.lmd.order.ui.components.orderHistoryCard
 import com.ntg.lmd.order.ui.components.ordersHistoryDialogs
 import com.ntg.lmd.order.ui.components.ordersHistoryMenu
 import com.ntg.lmd.order.ui.components.sharePdf
+import com.ntg.lmd.order.ui.components.verticalListComponent
 import com.ntg.lmd.order.ui.viewmodel.OrderHistoryViewModel
 import com.ntg.lmd.order.ui.viewmodel.OrderHistoryViewModelFactory
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -75,7 +63,13 @@ private fun ordersHistoryStateHolders(
     val scope = rememberCoroutineScope()
 
     ordersHistoryEffects(
-        OrdersHistoryEffectsConfig(vm, token, uiState.orders.size, uiState.listState, registerOpenMenu) {
+        OrdersHistoryEffectsConfig(
+            vm,
+            token,
+            uiState.orders.size,
+            uiState.listState,
+            registerOpenMenu,
+        ) {
             uiState.setMenuOpen(true)
         },
     )
@@ -87,7 +81,19 @@ private fun ordersHistoryStateHolders(
         ctx = ctx,
         listState = uiState.listState,
         config = config,
-        onRefresh = { vm.refreshOrders(token) },
+        onRefresh = {
+            // Close Filter Menu
+            uiState.setShowFilterDialog(false)
+            uiState.setShowSortDialog(false)
+            uiState.setMenuOpen(false)
+
+            // Reset then refresh
+            vm.resetFilters()
+            vm.refreshOrders(token)
+
+            // Scroll to top
+            scope.launch { uiState.listState.scrollToItem(0) }
+        },
     )
 }
 
@@ -97,7 +103,7 @@ private fun rememberOrdersUiConfig(
     token: String,
     uiState: OrdersUiStateHolder,
     ctx: Context,
-    scope: kotlinx.coroutines.CoroutineScope,
+    scope: CoroutineScope,
 ): OrdersHistoryUiConfig =
     OrdersHistoryUiConfig(
         showFilterDialog = uiState.showFilterDialog,
@@ -107,8 +113,16 @@ private fun rememberOrdersUiConfig(
         onCloseMenu = { uiState.setMenuOpen(false) },
         onOpenFilter = { uiState.setShowFilterDialog(true) },
         onOpenSort = { uiState.setShowSortDialog(true) },
-        onApplyFilter = { allowed -> vm.setAllowedStatuses(allowed, token) },
-        onApplySort = { asc -> vm.setAgeAscending(asc, token) },
+        onApplyFilter = { allowed ->
+            scope.launch { uiState.listState.scrollToItem(0) }
+            vm.setAllowedStatuses(allowed, token)
+            uiState.setShowFilterDialog(false)
+        },
+        onApplySort = { asc ->
+            scope.launch { uiState.listState.scrollToItem(0) }
+            vm.setAgeAscending(asc, token)
+            uiState.setShowSortDialog(false)
+        },
         onExportPdf = {
             scope.launch(Dispatchers.IO) {
                 val uri = exportOrdersHistoryPdf(ctx, uiState.orders)
@@ -117,13 +131,14 @@ private fun rememberOrdersUiConfig(
         },
         onDismissFilter = { uiState.setShowFilterDialog(false) },
         onDismissSort = { uiState.setShowSortDialog(false) },
+        onLoadMore = { vm.loadMoreOrders(token) },
     )
 
 data class OrdersUiStateHolder(
     val state: OrdersHistoryUiState,
-    val filter: com.ntg.lmd.order.domain.model.OrdersHistoryFilter,
+    val filter: OrdersHistoryFilter,
     val listState: LazyListState,
-    val orders: List<com.ntg.lmd.order.domain.model.OrderHistoryUi>,
+    val orders: List<OrderHistoryUi>,
     val showFilterDialog: Boolean,
     val setShowFilterDialog: (Boolean) -> Unit,
     val showSortDialog: Boolean,
@@ -143,7 +158,7 @@ private fun rememberOrdersUiState(vm: OrderHistoryViewModel): OrdersUiStateHolde
     var showFilterDialog by remember { mutableStateOf(false) }
     var showSortDialog by remember { mutableStateOf(false) }
     var menuOpen by remember { mutableStateOf(false) }
-    val listState = remember { LazyListState(0, 0) }
+    val listState = remember(filter.ageAscending, filter.allowed) { LazyListState(0, 0) }
 
     return OrdersUiStateHolder(
         state = OrdersHistoryUiState(orders, isLoadingMore, endReached, isRefreshing),
@@ -165,13 +180,6 @@ private fun ordersHistoryEffects(config: OrdersHistoryEffectsConfig) {
         if (config.token.isNotBlank() && config.ordersSize == 0) config.vm.loadOrders(config.token)
     }
     LaunchedEffect(Unit) { config.registerOpenMenu?.invoke { config.openMenu() } }
-    LaunchedEffect(config.listState, config.ordersSize) {
-        snapshotFlow {
-            config.listState.layoutInfo.visibleItemsInfo
-                .lastOrNull()
-                ?.index ?: 0
-        }.collect { lastVisible -> config.vm.loadMoreIfNeeded(lastVisible, config.token) }
-    }
 }
 
 @Composable
@@ -182,7 +190,20 @@ private fun ordersHistoryUi(
     config: OrdersHistoryUiConfig,
     onRefresh: () -> Unit,
 ) {
-    ordersHistoryContent(state, listState, ctx, onRefresh)
+    val listConfig =
+        buildOrdersListConfig(
+            listState = listState,
+            state = state,
+            onRefresh = onRefresh,
+            onLoadMore = config.onLoadMore,
+        )
+
+    verticalListComponent(
+        items = state.orders,
+        key = { order -> "${config.filter.ageAscending}:${config.filter.allowed}:${order.number}" },
+        itemContent = { order -> orderHistoryCard(ctx, order) },
+        config = listConfig,
+    )
 
     ordersHistoryDialogs(
         state = OrdersDialogsState(config.showFilterDialog, config.showSortDialog, config.filter),
@@ -204,56 +225,48 @@ private fun ordersHistoryUi(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ordersHistoryContent(
-    state: OrdersHistoryUiState,
+private fun buildOrdersListConfig(
     listState: LazyListState,
-    ctx: Context,
+    state: OrdersHistoryUiState,
     onRefresh: () -> Unit,
-) {
-    PullToRefreshBox(isRefreshing = state.isRefreshing, onRefresh = onRefresh) {
-        if (state.orders.isEmpty() && !state.isRefreshing) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = stringResource(id = R.string.no_data),
-                    style =
-                        MaterialTheme.typography.bodyLarge.copy(
-                            color = Color.Gray,
-                            fontWeight = FontWeight.Medium,
-                        ),
-                )
-            }
-        } else {
-            ordersList(state, listState, ctx)
-        }
-    }
-}
+    onLoadMore: () -> Unit,
+) = defaultVerticalListConfig(
+    listState = listState,
+    paging =
+        PagingState(
+            isRefreshing = state.isRefreshing,
+            onRefresh = onRefresh,
+            isLoadingMore = state.isLoadingMore,
+            endReached = state.endReached,
+            onLoadMore = onLoadMore,
+        ),
+).copy(
+    contentPadding =
+        PaddingValues(
+            top = 16.dp,
+            start = 16.dp,
+            end = 16.dp,
+            bottom = 16.dp,
+        ),
+)
 
-@Composable
-private fun ordersList(
-    state: OrdersHistoryUiState,
-    listState: LazyListState,
-    ctx: Context,
-) {
-    LazyColumn(
-        state = listState,
-        contentPadding =
-            PaddingValues(
-                start = dimensionResource(R.dimen.mediumSpace),
-                end = dimensionResource(R.dimen.mediumSpace),
-                bottom = dimensionResource(R.dimen.mediumSpace),
-            ),
-        verticalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.list_item_spacing)),
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        items(state.orders, key = { it.number }) {
-            orderHistoryCard(ctx, order = it)
-        }
-        if (state.isLoadingMore) item("loading_footer") { loadingFooter() }
-        if (state.endReached && state.orders.isNotEmpty()) item("end_footer") { endFooter() }
-    }
-}
+// @Composable
+// fun statusBadge(
+//    text: String,
+//    color: Color,
+// ) {
+//    Box(
+//        modifier = Modifier.padding(start = 8.dp),
+//        contentAlignment = Alignment.Center,
+//    ) {
+//        Text(
+//            text = text,
+//            style =
+//                MaterialTheme.typography.bodySmall.copy(
+//                    color = color,
+//                    fontWeight = FontWeight.SemiBold,
+//                ),
+//        )
+//    }
+// }

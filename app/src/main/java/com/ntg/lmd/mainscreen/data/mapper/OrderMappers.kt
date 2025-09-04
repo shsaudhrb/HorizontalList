@@ -5,15 +5,12 @@ import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus.Companion.fromId
 import com.ntg.lmd.utils.AppDefaults
 
-private const val METER_TO_KM = 1000.0
-private const val MIN_DISTANCE_METERS = 0.0
+private const val METERS_PER_KILOMETER = 1_000.0
 
-private fun Double?.toKmOrDefault(default: Double): Double =
-    if (this != null && this.isFinite() && this >= MIN_DISTANCE_METERS) {
-        this / METER_TO_KM
-    } else {
-        default
-    }
+private fun Double?.toKmOrDefault(default: Double): Double {
+    val meters = this ?: return default
+    return if (meters.isFinite() && meters >= 0.0) meters / METERS_PER_KILOMETER else default
+}
 
 fun OrderDto.toDomain(): OrderInfo =
     OrderInfo(

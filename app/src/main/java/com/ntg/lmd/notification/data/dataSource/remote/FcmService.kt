@@ -46,12 +46,17 @@ class FcmService : FirebaseMessagingService() {
             return
         }
 
-        val payload = parsePayload(msg) ?: run {
-            Log.w(TAG, "Ignored push: invalid/empty payload")
-            return
-        }
-        Log.d(TAG, "Parsed payload: title=${payload.title}, body=${payload.body}, type=${payload.type}")
+        val payload =
+            parsePayload(msg) ?: run {
+                Log.w(TAG, "Ignored push: invalid/empty payload")
+                return
+            }
+        Log.d(
+            TAG,
+            "Parsed payload: title=${payload.title}, body=${payload.body}, type=${payload.type}",
+        )
 
+        // Save to repository
         persistAgentNotification(payload.type, payload.body)
         showNotificationIfAllowed(payload)
     }
@@ -61,12 +66,13 @@ class FcmService : FirebaseMessagingService() {
             if (FcmNotificationHelper.canPostNotifications(this@FcmService)) {
                 try {
                     Log.d(TAG, "SHOWING local notification")
-                    val notif = FcmNotificationHelper.buildNotification(
-                        context = this@FcmService,
-                        title = payload.title,
-                        body = payload.body,
-                        deepLink = payload.deepLink,
-                    )
+                    val notif =
+                        FcmNotificationHelper.buildNotification(
+                            context = this@FcmService,
+                            title = payload.title,
+                            body = payload.body,
+                            deepLink = payload.deepLink,
+                        )
                     NotificationManagerCompat.from(this@FcmService).notify(Random.nextInt(), notif)
                     Log.d(TAG, "Local notification shown successfully")
                 } catch (e: SecurityException) {

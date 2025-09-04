@@ -43,7 +43,6 @@ class UpdateOrderStatusViewModel(
         viewModelScope.launch {
             try {
                 OrderLogger.postStart(orderId, targetStatus)
-
                 runCatching { updateStatus(orderId, targetStatus.toApiId(), assignedAgentId) }
                     .onSuccess { serverOrder ->
                         OrderLogger.postSuccess(orderId, serverOrder.status)
@@ -51,7 +50,15 @@ class UpdateOrderStatusViewModel(
                     }.onFailure { e ->
                         if (e is CancellationException) throw e
                         OrderLogger.postError(orderId, targetStatus, e)
-                        _error.emit(e.toUserMessage() to { update(orderId, targetStatus, assignedAgentId) })
+                        _error.emit(
+                            e.toUserMessage() to {
+                                update(
+                                    orderId,
+                                    targetStatus,
+                                    assignedAgentId,
+                                )
+                            },
+                        )
                     }
             } finally {
                 _updatingIds.update { it - orderId }

@@ -19,10 +19,13 @@ fun Throwable.toUserMessage(): String {
         is HttpException -> httpStatusMessage(this.code(), this.message())
         is UnknownHostException, is java.net.ConnectException ->
             "No internet connection."
+
         is SocketTimeoutException ->
             "Request timed out. Please try again."
+
         is javax.net.ssl.SSLHandshakeException ->
             "Secure connection failed."
+
         else -> "Unexpected error. Please try again."
     }
 }
