@@ -39,6 +39,13 @@ class UpdateOrderStatusViewModel(
         targetStatus: OrderStatus,
         assignedAgentId: String? = null,
     ) {
+        if (targetStatus == OrderStatus.REASSIGNED && assignedAgentId.isNullOrBlank()) {
+            viewModelScope.launch {
+                _error.emit("Missing assignee for REASSIGNED" to { /* no-op */ })
+            }
+            return
+        }
+
         _updatingIds.update { it + orderId }
         viewModelScope.launch {
             try {
@@ -51,13 +58,7 @@ class UpdateOrderStatusViewModel(
                         if (e is CancellationException) throw e
                         OrderLogger.postError(orderId, targetStatus, e)
                         _error.emit(
-                            e.toUserMessage() to {
-                                update(
-                                    orderId,
-                                    targetStatus,
-                                    assignedAgentId,
-                                )
-                            },
+                            e.toUserMessage() to { update(orderId, targetStatus, assignedAgentId) },
                         )
                     }
             } finally {

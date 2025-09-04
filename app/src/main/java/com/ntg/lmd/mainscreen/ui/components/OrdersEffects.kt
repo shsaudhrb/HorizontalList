@@ -11,30 +11,25 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import com.ntg.lmd.R
+import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.ui.components.OrdersUiConstants.VISIBLE_THRESHOLD
 import com.ntg.lmd.mainscreen.ui.model.LocalUiOnlyStatusBus
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyOrdersViewModel
+import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
 import kotlinx.coroutines.flow.collectLatest
 
 @Composable
 fun ordersEffects(
     vm: MyOrdersViewModel,
+    updateVm: UpdateOrderStatusViewModel,
     listState: LazyListState,
     snackbarHostState: SnackbarHostState,
     context: Context,
 ) {
     val uiState by vm.uiState.collectAsState()
-
-    LaunchedEffect(Unit) {
-        vm.listVM.loadOrders(context)
-    }
-
-    LaunchedEffect(Unit) {
-        LocalUiOnlyStatusBus.statusEvents.collectLatest { (id, newStatus) ->
-            vm.statusVM.updateStatusLocally(id, newStatus)
-        }
-    }
-
+    ordersInitialLoadEffect(vm, context)
+    localStatusBusEffect(vm)
+    updateSuccessEffect(updateVm, vm)
     LaunchedEffect(Unit) {
         LocalUiOnlyStatusBus.errorEvents.collectLatest { (msg, retry) ->
             val result =
@@ -60,6 +55,33 @@ fun ordersEffects(
     LaunchedEffect(shouldLoadMore, uiState.isRefreshing, uiState.isLoading) {
         if (shouldLoadMore && !uiState.isRefreshing && !uiState.isLoading) {
             vm.listVM.loadNextPage(context)
+        }
+    }
+}
+
+@Composable
+private fun ordersInitialLoadEffect(vm: MyOrdersViewModel, context: Context) {
+    LaunchedEffect(Unit) { vm.listVM.loadOrders(context) }
+}
+
+@Composable
+private fun localStatusBusEffect(vm: MyOrdersViewModel) {
+    LaunchedEffect(Unit) {
+        LocalUiOnlyStatusBus.statusEvents.collectLatest { (id, newStatus) ->
+            vm.statusVM.updateStatusLocally(id, newStatus)
+        }
+    }
+}
+
+@Composable
+private fun updateSuccessEffect(
+    updateVm: UpdateOrderStatusViewModel,
+    vm: MyOrdersViewModel,
+) {
+    LaunchedEffect(Unit) {
+        updateVm.success.collectLatest { serverOrder: OrderInfo ->
+            vm.statusVM.applyServerPatch(serverOrder)
+            vm.listVM.refreshOrders()
         }
     }
 }

@@ -6,6 +6,7 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.paging.OrdersPaging
 import com.ntg.lmd.mainscreen.domain.usecase.ComputeDistancesUseCase
 import com.ntg.lmd.mainscreen.domain.usecase.GetMyOrdersUseCase
@@ -15,7 +16,7 @@ import kotlinx.coroutines.launch
 import java.io.IOException
 import java.net.SocketTimeoutException
 import kotlin.coroutines.cancellation.CancellationException
-
+@Suppress("LargeClass")
 class OrdersListViewModel(
     private val store: OrdersStore,
     private val getMyOrders: GetMyOrdersUseCase,
@@ -37,48 +38,56 @@ class OrdersListViewModel(
             state.update { it.copy(orders = computed) }
         }
     }
-
     fun refreshOrders() {
+        if (state.value.isLoading) return
         viewModelScope.launch {
             state.update { it.copy(isLoading = true, errorMessage = null) }
-            try {
-                store.page = 1
-                store.endReached = false
 
-                val uid = currentUserId.value
-                val page1 =
-                    getMyOrders(
-                        page = 1,
-                        limit = OrdersPaging.PAGE_SIZE, bypassCache = true,
-                        assignedAgentId = uid,
-                        userOrdersOnly = true,
-                    )
-
-                allOrders.clear()
-                allOrders.addAll(page1.items)
-                store.endReached = page1.rawCount < OrdersPaging.PAGE_SIZE
-
-                val display = helpers.applyDisplayFilter(allOrders, state.value.query, uid)
-                val withDist = helpers.withDistances(deviceLocation.value, display)
-                helpers.publishFirstPageFrom(
-                    state,
-                    withDist,
-                    OrdersPaging.PAGE_SIZE,
-                    state.value.query,
-                    store.endReached,
-                )
-            } catch (ce: CancellationException) {
-                throw ce
-            } catch (e: IOException) {
-                state.update {
-                    it.copy(
-                        isLoading = false,
-                        isLoadingMore = false,
-                        errorMessage = helpers.messageFor(e),
-                    )
+            runCatching { fetchFirstPage() }
+                .onSuccess { (items, endReached) -> applyFirstPage(items, endReached) }
+                .onFailure { e ->
+                    if (e is CancellationException) throw e
+                    state.update {
+                        it.copy(
+                            isLoading = false,
+                            isLoadingMore = false,
+                            errorMessage = helpers.messageFor(e as Exception)
+                        )
+                    }
                 }
-            }
         }
+    }
+    private suspend fun fetchFirstPage(): Pair<List<OrderInfo>, Boolean> {
+        store.page = 1
+        store.endReached = false
+
+        val uid = currentUserId.value
+        val page1 = getMyOrders(
+            page = 1,
+            limit = OrdersPaging.PAGE_SIZE,
+            bypassCache = true,
+            assignedAgentId = uid,
+            userOrdersOnly = true,
+        )
+
+        allOrders.clear()
+        allOrders.addAll(page1.items)
+        store.endReached = page1.rawCount < OrdersPaging.PAGE_SIZE
+
+        return allOrders.toList() to store.endReached
+    }
+    private fun applyFirstPage(items: List<OrderInfo>, endReached: Boolean) {
+        val uid = currentUserId.value
+        val display = helpers.applyDisplayFilter(items, state.value.query, uid)
+        val withDist = helpers.withDistances(deviceLocation.value, display)
+
+        helpers.publishFirstPageFrom(
+            state,
+            withDist,
+            OrdersPaging.PAGE_SIZE,
+            state.value.query,
+            endReached
+        )
     }
 
     fun loadOrders(context: Context) {

@@ -34,8 +34,10 @@ import com.ntg.lmd.mainscreen.ui.components.locationPermissionAndLastLocation
 import com.ntg.lmd.mainscreen.ui.components.ordersContent
 import com.ntg.lmd.mainscreen.ui.components.ordersEffects
 import com.ntg.lmd.mainscreen.ui.components.reassignBottomSheet
+import com.ntg.lmd.mainscreen.ui.model.MyOrdersUiState
 import com.ntg.lmd.mainscreen.ui.viewmodel.ActiveAgentsViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.ActiveAgentsViewModelFactory
+import com.ntg.lmd.mainscreen.ui.viewmodel.AgentsState
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyOrdersViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyOrdersViewModelFactory
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyPoolVMFactory
@@ -98,25 +100,57 @@ private fun ordersBody(deps: OrdersBodyDeps) {
     val updatingIds by deps.updateVm.updatingIds.collectAsState()
     val agentsState by deps.agentsVm.state.collectAsState()
 
+    ordersScaffold(
+        deps = deps,
+        updatingIds = updatingIds
+    )
+
+    reassignSheet(
+        deps = deps,
+        uiOrders = uiState,
+        agentsState = agentsState
+    )
+}
+
+@Composable
+private fun ordersScaffold(
+    deps: OrdersBodyDeps,
+    updatingIds: Set<String>
+) {
+    val listState = deps.listState
+    val snack = deps.snack
+
     Scaffold(
-        snackbarHost = { SnackbarHost(deps.snack) },
+        snackbarHost = { SnackbarHost(snack) },
         bottomBar = { bottomStickyButton(text = stringResource(R.string.order_pool)) {} },
     ) { innerPadding ->
         ordersContent(
             ordersVm = deps.ordersVm,
-            deps = OrdersContentDeps(updateVm = deps.updateVm, listState = deps.listState, updatingIds = updatingIds),
-            cbs =
-                OrdersContentCallbacks(
-                    onOpenOrderDetails = deps.onOpenOrderDetails,
-                    onReassignRequested = { id ->
-                        deps.reassignOrderId.value = id
-                        deps.agentsVm.load()
-                    },
-                ),
-            modifier = Modifier.fillMaxSize().padding(innerPadding),
+            deps = OrdersContentDeps(
+                updateVm = deps.updateVm,
+                listState = listState,
+                updatingIds = updatingIds
+            ),
+            cbs = OrdersContentCallbacks(
+                onOpenOrderDetails = deps.onOpenOrderDetails,
+                onReassignRequested = { id ->
+                    deps.reassignOrderId.value = id
+                    deps.agentsVm.load()
+                },
+            ),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
         )
     }
+}
 
+@Composable
+private fun reassignSheet(
+    deps: OrdersBodyDeps,
+    uiOrders: MyOrdersUiState,
+    agentsState: AgentsState,
+) {
     reassignBottomSheet(
         open = deps.reassignOrderId.value != null,
         state = agentsState,
@@ -124,12 +158,23 @@ private fun ordersBody(deps: OrdersBodyDeps) {
         onRetry = { deps.agentsVm.load() },
         onSelect = { user ->
             val orderId = deps.reassignOrderId.value ?: return@reassignBottomSheet
+            android.util.Log.d("ReassignFlow", "onSelect: orderId=$orderId → newAssignee=${user.id}")
+
             OrderLogger.uiTap(
                 orderId,
-                uiState.orders.firstOrNull { it.id == orderId }?.orderNumber,
+                uiOrders.orders.firstOrNull { it.id == orderId }?.orderNumber,
                 "Menu:Reassign→${user.name}",
             )
-            deps.updateVm.update(orderId, OrderStatus.REASSIGNED, assignedAgentId = user.id)
+            deps.ordersVm.statusVM.updateStatusLocally(
+                id = orderId,
+                newStatus = OrderStatus.ADDED,
+                newAssigneeId = user.id,
+            )
+            deps.updateVm.update(
+                orderId = orderId,
+                targetStatus = OrderStatus.ADDED,
+                assignedAgentId = user.id,
+            )
             deps.reassignOrderId.value = null
         },
     )
@@ -154,6 +199,7 @@ private fun wireMyOrders(deps: WireDeps) {
     // Effects + snackbar
     ordersEffects(
         vm = deps.ordersVm,
+        updateVm = deps.updateVm,
         listState = deps.listState,
         snackbarHostState = deps.snack,
         context = ctx,
@@ -161,12 +207,6 @@ private fun wireMyOrders(deps: WireDeps) {
 
     val uiState by deps.ordersVm.uiState.collectAsState()
     LaunchedEffect(uiState.query) { deps.listState.scrollToItem(0) }
-
-    LaunchedEffect(Unit) {
-        deps.updateVm.success.collect { updated ->
-            deps.ordersVm.statusVM.applyServerPatch(updated)
-        }
-    }
     LaunchedEffect(Unit) {
         deps.updateVm.error.collect { (msg, retry) ->
             val res =

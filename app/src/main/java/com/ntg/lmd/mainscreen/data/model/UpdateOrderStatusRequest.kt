@@ -16,10 +16,10 @@ data class UpdateOrderStatusEnvelope(
 )
 
 data class UpdatedOrderData(
-    @SerializedName("order_id") val orderId: String,
     @SerializedName("order_number") val orderNumber: String?,
-    @SerializedName("status_id") val statusId: Int?,
-    @SerializedName("assigned_agent_id") val assignedAgentId: String?,
+    @SerializedName("order_id") val orderId: String,
+    @SerializedName("status_id") val statusId: Int,
+    @SerializedName("assigned_agent_id") val assignedAgentId: String? = null,
     @SerializedName("last_updated") val lastUpdated: String?,
     @SerializedName("customer_name") val customerName: String?,
     val address: String?,
