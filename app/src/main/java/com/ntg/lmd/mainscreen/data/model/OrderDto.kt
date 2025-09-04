@@ -36,6 +36,10 @@ data class OrderDto(
     val statusId: Int?,
     @SerializedName("assigned_agent_id")
     val assignedAgentId: String?,
+    @SerializedName("price")
+    val price: String?,
+    @SerializedName("phone")
+    val phone: String?,
     @SerializedName("partner_id")
     val partnerId: String?,
     @SerializedName("dc_id")
