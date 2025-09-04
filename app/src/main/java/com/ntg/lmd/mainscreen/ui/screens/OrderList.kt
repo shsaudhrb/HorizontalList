@@ -53,29 +53,9 @@ fun orderList(
     updateVm: UpdateOrderStatusViewModel,
     callbacks: OrderListCallbacks,
 ) {
-    var hiddenIds by remember { mutableStateOf(emptySet<String>()) }
-
-    LaunchedEffect(updateVm) {
-        updateVm.success.collect { serverOrder ->
-            if (serverOrder.status in AutoHideOnSuccessStatuses) {
-                hiddenIds = hiddenIds + serverOrder.id
-            }
-        }
-    }
-
-    LaunchedEffect(state.isRefreshing) {
-        if (!state.isRefreshing) hiddenIds = emptySet()
-    }
-
-    val filteredOrders by remember(state.orders, hiddenIds) {
-        derivedStateOf {
-            // VM already filtered by status + user
-            state.orders.filter { it.id !in hiddenIds }
-        }
-    }
+    val filteredOrders = rememberFilteredOrders(state, updateVm)
 
     Box(Modifier.padding(top = 12.dp)) {
-        // applied generic list component for this screen
         verticalListComponent(
             items = filteredOrders,
             key = { it.id },
@@ -88,9 +68,7 @@ fun orderList(
                             onReassignRequested = { callbacks.onReassignRequested(order.id) },
                             onDetails = { callbacks.onDetails(order.id) },
                             onCall = { callbacks.onCall(order.id) },
-                            onAction = { act: OrderActions ->
-                                callbacks.onAction(order.id, act)
-                            },
+                            onAction = { act -> callbacks.onAction(order.id, act) },
                         ),
                     updateVm = updateVm,
                 )
@@ -109,4 +87,26 @@ fun orderList(
                 ),
         )
     }
+}
+
+@Composable
+private fun rememberFilteredOrders(
+    state: OrderListState,
+    updateVm: UpdateOrderStatusViewModel,
+): List<OrderInfo> {
+    var hiddenIds by remember { mutableStateOf(emptySet<String>()) }
+
+    LaunchedEffect(updateVm) {
+        updateVm.success.collect { s ->
+            if (s.status in AutoHideOnSuccessStatuses) hiddenIds = hiddenIds + s.id
+        }
+    }
+    LaunchedEffect(state.isRefreshing) {
+        if (!state.isRefreshing) hiddenIds = emptySet()
+    }
+
+    val filtered by remember(state.orders, hiddenIds) {
+        derivedStateOf { state.orders.filter { it.id !in hiddenIds } }
+    }
+    return filtered
 }

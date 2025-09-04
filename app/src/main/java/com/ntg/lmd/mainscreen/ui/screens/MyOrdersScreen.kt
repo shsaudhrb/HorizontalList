@@ -5,6 +5,7 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
@@ -13,11 +14,11 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -59,58 +60,117 @@ fun myOrdersScreen(
     val updateVm: UpdateOrderStatusViewModel =
         viewModel(factory = UpdateOrderStatusViewModelFactory(app))
     val agentsVm: ActiveAgentsViewModel = viewModel(factory = ActiveAgentsViewModelFactory(app))
-    val agentsState by agentsVm.state.collectAsState()
-    var reassignOrderId by remember { mutableStateOf<String?>(null) }
-
     val poolVm: MyPoolViewModel = viewModel(factory = MyPoolVMFactory())
-    val poolUi by poolVm.ui.collectAsState()
 
-    // Location + map camera
-    locationPermissionAndLastLocation(poolVm)
+    val snack = remember { SnackbarHostState() }
+    val listState = rememberLazyListState()
+    val reassignOrderId = remember { mutableStateOf<String?>(null) }
+
+    wireMyOrders(
+        WireDeps(
+            navController = navController,
+            ordersVm = ordersVm,
+            updateVm = updateVm,
+            agentsVm = agentsVm,
+            poolVm = poolVm,
+            listState = listState,
+            snack = snack,
+            reassignOrderId = reassignOrderId,
+        ),
+    )
+
+    ordersBody(
+        OrdersBodyDeps(
+            ordersVm = ordersVm,
+            updateVm = updateVm,
+            agentsVm = agentsVm,
+            listState = listState,
+            snack = snack,
+            reassignOrderId = reassignOrderId,
+            onOpenOrderDetails = onOpenOrderDetails,
+        ),
+    )
+}
+
+@Composable
+private fun ordersBody(deps: OrdersBodyDeps) {
+    val uiState by deps.ordersVm.uiState.collectAsState()
+    val updatingIds by deps.updateVm.updatingIds.collectAsState()
+    val agentsState by deps.agentsVm.state.collectAsState()
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(deps.snack) },
+        bottomBar = { bottomStickyButton(text = stringResource(R.string.order_pool)) {} },
+    ) { innerPadding ->
+        ordersContent(
+            ordersVm = deps.ordersVm,
+            deps = OrdersContentDeps(updateVm = deps.updateVm, listState = deps.listState, updatingIds = updatingIds),
+            cbs =
+                OrdersContentCallbacks(
+                    onOpenOrderDetails = deps.onOpenOrderDetails,
+                    onReassignRequested = { id ->
+                        deps.reassignOrderId.value = id
+                        deps.agentsVm.load()
+                    },
+                ),
+            modifier = Modifier.fillMaxSize().padding(innerPadding),
+        )
+    }
+
+    reassignBottomSheet(
+        open = deps.reassignOrderId.value != null,
+        state = agentsState,
+        onDismiss = { deps.reassignOrderId.value = null },
+        onRetry = { deps.agentsVm.load() },
+        onSelect = { user ->
+            val orderId = deps.reassignOrderId.value ?: return@reassignBottomSheet
+            OrderLogger.uiTap(
+                orderId,
+                uiState.orders.firstOrNull { it.id == orderId }?.orderNumber,
+                "Menu:Reassign→${user.name}",
+            )
+            deps.updateVm.update(orderId, OrderStatus.REASSIGNED, assignedAgentId = user.id)
+            deps.reassignOrderId.value = null
+        },
+    )
+}
+
+@RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+@Composable
+private fun wireMyOrders(deps: WireDeps) {
+    val ctx = LocalContext.current
+    val poolUi by deps.poolVm.ui.collectAsState()
+
+    // Location + camera
+    locationPermissionAndLastLocation(deps.poolVm)
     val mapStates = rememberMapStates()
     initialCameraPositionEffect(poolUi.orders, poolUi.selectedOrderNumber, mapStates)
-    forwardMyPoolLocationToMyOrders(poolVm = poolVm, ordersVm = ordersVm)
-
-    val onReassignRequested: (String) -> Unit = { orderId ->
-        reassignOrderId = orderId
-        agentsVm.load()
-    }
+    forwardMyPoolLocationToMyOrders(deps.poolVm, deps.ordersVm)
 
     // Current user
     val currentUserId: String? = remember { userStore.getUserId() }
-    LaunchedEffect(currentUserId) {
-        ordersVm.listVM.setCurrentUserId(currentUserId)
-    }
+    LaunchedEffect(currentUserId) { deps.ordersVm.listVM.setCurrentUserId(currentUserId) }
 
-    // State
-    val uiState by ordersVm.uiState.collectAsState()
-    val updatingIds by updateVm.updatingIds.collectAsState()
-    val ctx = LocalContext.current
-    val snack = remember { SnackbarHostState() }
-    val listState = rememberLazyListState()
-
+    // Effects + snackbar
     ordersEffects(
-        vm = ordersVm,
-        listState = listState,
-        snackbarHostState = snack,
+        vm = deps.ordersVm,
+        listState = deps.listState,
+        snackbarHostState = deps.snack,
         context = ctx,
     )
 
-    // When the search query changes, jump back to the top of the list
-    LaunchedEffect(uiState.query) {
-        listState.scrollToItem(0)
-    }
+    val uiState by deps.ordersVm.uiState.collectAsState()
+    LaunchedEffect(uiState.query) { deps.listState.scrollToItem(0) }
 
     LaunchedEffect(Unit) {
-        updateVm.success.collect { updated ->
-            ordersVm.statusVM.applyServerPatch(updated)
+        deps.updateVm.success.collect { updated ->
+            deps.ordersVm.statusVM.applyServerPatch(updated)
         }
     }
-
     LaunchedEffect(Unit) {
-        updateVm.error.collect { (msg, retry) ->
+        deps.updateVm.error.collect { (msg, retry) ->
             val res =
-                snack.showSnackbar(
+                deps.snack.showSnackbar(
                     message = msg,
                     actionLabel = ctx.getString(R.string.retry),
                     withDismissAction = true,
@@ -119,50 +179,8 @@ fun myOrdersScreen(
         }
     }
 
-    // Handle search for orders
-    observeOrdersSearch(navController, ordersVm)
-
-    Scaffold(
-        snackbarHost = { SnackbarHost(snack) },
-        bottomBar = { bottomStickyButton(text = stringResource(R.string.order_pool)) {} },
-    ) { innerPadding ->
-
-        ordersContent(
-            ordersVm = ordersVm,
-            deps =
-                OrdersContentDeps(
-                    updateVm = updateVm,
-                    listState = listState,
-                    updatingIds = updatingIds,
-                ),
-            cbs =
-                OrdersContentCallbacks(
-                    onOpenOrderDetails = onOpenOrderDetails,
-                    onReassignRequested = onReassignRequested,
-                ),
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-        )
-    }
-
-    reassignBottomSheet(
-        open = reassignOrderId != null,
-        state = agentsState,
-        onDismiss = { reassignOrderId = null },
-        onRetry = { agentsVm.load() },
-        onSelect = { user ->
-            val orderId = reassignOrderId ?: return@reassignBottomSheet
-            OrderLogger.uiTap(
-                orderId,
-                uiState.orders.firstOrNull { it.id == orderId }?.orderNumber,
-                "Menu:Reassign→${user.name}",
-            )
-            updateVm.update(orderId, OrderStatus.REASSIGNED, assignedAgentId = user.id)
-            reassignOrderId = null
-        },
-    )
+    // Search observers
+    observeOrdersSearch(deps.navController, deps.ordersVm)
 }
 
 @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
@@ -172,9 +190,7 @@ private fun forwardMyPoolLocationToMyOrders(
     ordersVm: MyOrdersViewModel,
 ) {
     val lastLoc by poolVm.lastLocation.collectAsState(initial = null)
-    LaunchedEffect(lastLoc) {
-        ordersVm.listVM.updateDeviceLocation(lastLoc)
-    }
+    LaunchedEffect(lastLoc) { ordersVm.listVM.updateDeviceLocation(lastLoc) }
 }
 
 // Handle search for orders
@@ -209,3 +225,24 @@ private fun observeOrdersSearch(
         }
     }
 }
+
+data class OrdersBodyDeps(
+    val ordersVm: MyOrdersViewModel,
+    val updateVm: UpdateOrderStatusViewModel,
+    val agentsVm: ActiveAgentsViewModel,
+    val listState: LazyListState,
+    val snack: SnackbarHostState,
+    val reassignOrderId: MutableState<String?>,
+    val onOpenOrderDetails: (String) -> Unit,
+)
+
+data class WireDeps(
+    val navController: NavController,
+    val ordersVm: MyOrdersViewModel,
+    val updateVm: UpdateOrderStatusViewModel,
+    val agentsVm: ActiveAgentsViewModel,
+    val poolVm: MyPoolViewModel,
+    val listState: LazyListState,
+    val snack: SnackbarHostState,
+    val reassignOrderId: MutableState<String?>,
+)

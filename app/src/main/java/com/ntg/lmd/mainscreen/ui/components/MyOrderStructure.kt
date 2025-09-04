@@ -40,8 +40,6 @@ import com.ntg.lmd.mainscreen.domain.model.OrderStatus
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel.OrderLogger
 import java.util.Locale
 
-// private const val KM_DIVISOR = 1000.0
-
 @Composable
 fun distanceBadge(
     distanceKm: Double,
@@ -182,58 +180,63 @@ fun orderHeaderLeft(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            distanceBadge(
-                distanceKm = order.distanceKm,
-                modifier = Modifier.padding(end = dimensionResource(R.dimen.mediumSpace)),
+        headerLeftInfo(order)
+        headerRightInfo(
+            order = order,
+            enabled = enabled,
+            menuState =
+                MenuState(
+                    expanded = menuExpanded,
+                    onExpand = { menuExpanded = true },
+                    onDismiss = { menuExpanded = false },
+                    onPickUp = onPickUp,
+                    onCancel = onCancel,
+                    onReassign = onReassign,
+                ),
+        )
+    }
+}
+
+@Composable
+private fun headerLeftInfo(order: OrderInfo) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        distanceBadge(
+            distanceKm = order.distanceKm,
+            modifier = Modifier.padding(end = dimensionResource(R.dimen.mediumSpace)),
+        )
+        Column {
+            Text(order.name, style = MaterialTheme.typography.titleMedium)
+            Text(
+                "#${order.orderNumber}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                maxLines = 1,
             )
-            Column {
-                Text(order.name, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    "#${order.orderNumber}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                    maxLines = 1,
-                )
-                Text(
-                    text = order.status.toString(),
-                    color = statusTint(order.status.toString()),
-                    style = MaterialTheme.typography.titleSmall,
-                )
-                order.details?.let {
-                    Spacer(Modifier.height(dimensionResource(R.dimen.extraSmallSpace)))
-                    Text(it, style = MaterialTheme.typography.bodySmall)
-                }
+            Text(
+                text = order.status.toString(),
+                color = statusTint(order.status.toString()),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            order.details?.let {
+                Spacer(Modifier.height(dimensionResource(R.dimen.extraSmallSpace)))
+                Text(it, style = MaterialTheme.typography.bodySmall)
             }
-        }
-        Column(horizontalAlignment = Alignment.End) {
-            moreMenu(
-                order = order,
-                enabled = enabled,
-                menuState =
-                    MenuState(
-                        expanded = menuExpanded,
-                        onExpand = { menuExpanded = true },
-                        onDismiss = { menuExpanded = false },
-                        onPickUp = onPickUp,
-                        onCancel = onCancel,
-                        onReassign = onReassign,
-                    ),
-            )
-            Spacer(Modifier.height(dimensionResource(R.dimen.smallerSpace)))
-            Text(order.price, style = MaterialTheme.typography.titleSmall)
         }
     }
 }
 
-data class MenuState(
-    val expanded: Boolean,
-    val onExpand: () -> Unit,
-    val onDismiss: () -> Unit,
-    val onPickUp: () -> Unit,
-    val onCancel: () -> Unit,
-    val onReassign: () -> Unit,
-)
+@Composable
+private fun headerRightInfo(
+    order: OrderInfo,
+    enabled: Boolean,
+    menuState: MenuState,
+) {
+    Column(horizontalAlignment = Alignment.End) {
+        moreMenu(order = order, enabled = enabled, menuState = menuState)
+        Spacer(Modifier.height(dimensionResource(R.dimen.smallerSpace)))
+        Text(order.price, style = MaterialTheme.typography.titleSmall)
+    }
+}
 
 @Composable
 private fun moreMenu(
@@ -250,39 +253,51 @@ private fun moreMenu(
     }
     DropdownMenu(expanded = menuState.expanded, onDismissRequest = menuState.onDismiss) {
         if (order.status == OrderStatus.CONFIRMED) {
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.pick_order)) },
-                enabled = enabled,
-                onClick = {
-                    menuState.onDismiss()
-                    OrderLogger.uiTap(order.id, order.orderNumber, "Menu:PickUp")
-                    menuState.onPickUp()
-                },
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.cancel_order)) },
-                enabled =
-                    enabled &&
-                        order.status in
-                        listOf(
-                            OrderStatus.ADDED,
-                            OrderStatus.CONFIRMED,
-                        ),
-                onClick = {
-                    menuState.onDismiss()
-                    OrderLogger.uiTap(order.id, order.orderNumber, "Menu:Cancel")
-                    menuState.onCancel()
-                },
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.reassign_order)) },
-                enabled = enabled,
-                onClick = {
-                    menuState.onDismiss()
-                    OrderLogger.uiTap(order.id, order.orderNumber, "Menu:Reassign")
-                    menuState.onReassign()
-                },
-            )
+            menuItems(order = order, enabled = enabled, menuState = menuState)
         }
     }
 }
+
+@Composable
+private fun menuItems(
+    order: OrderInfo,
+    enabled: Boolean,
+    menuState: MenuState,
+) {
+    DropdownMenuItem(
+        text = { Text(stringResource(R.string.pick_order)) },
+        enabled = enabled,
+        onClick = {
+            menuState.onDismiss()
+            OrderLogger.uiTap(order.id, order.orderNumber, "Menu:PickUp")
+            menuState.onPickUp()
+        },
+    )
+    DropdownMenuItem(
+        text = { Text(stringResource(R.string.cancel_order)) },
+        enabled = enabled, // status is CONFIRMED here
+        onClick = {
+            menuState.onDismiss()
+            OrderLogger.uiTap(order.id, order.orderNumber, "Menu:Cancel")
+            menuState.onCancel()
+        },
+    )
+    DropdownMenuItem(
+        text = { Text(stringResource(R.string.reassign_order)) },
+        enabled = enabled,
+        onClick = {
+            menuState.onDismiss()
+            OrderLogger.uiTap(order.id, order.orderNumber, "Menu:Reassign")
+            menuState.onReassign()
+        },
+    )
+}
+
+data class MenuState(
+    val expanded: Boolean,
+    val onExpand: () -> Unit,
+    val onDismiss: () -> Unit,
+    val onPickUp: () -> Unit,
+    val onCancel: () -> Unit,
+    val onReassign: () -> Unit,
+)
