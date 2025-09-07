@@ -23,6 +23,7 @@ import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.CameraPositionState
 import com.google.maps.android.compose.MarkerState
@@ -31,7 +32,7 @@ import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.ui.components.HorizontalListCallbacks
 import com.ntg.lmd.mainscreen.ui.components.generalHorizontalList
 import com.ntg.lmd.mainscreen.ui.components.initialCameraPositionEffect
-import com.ntg.lmd.mainscreen.ui.components.locationPermissionAndLastLocation
+import com.ntg.lmd.mainscreen.ui.components.locationPermissionHandler
 import com.ntg.lmd.mainscreen.ui.components.mapCenter
 import com.ntg.lmd.mainscreen.ui.components.myPoolOrderCardItem
 import com.ntg.lmd.mainscreen.ui.components.rememberFocusOnMyOrder
@@ -70,7 +71,20 @@ fun myPoolScreen(
     val ui by viewModel.ui.collectAsState()
     var bottomBarHeight by remember { mutableStateOf(0.dp) }
 
-    locationPermissionAndLastLocation(viewModel)
+    locationPermissionHandler(
+        onPermissionGranted =
+            @androidx.annotation.RequiresPermission(
+                allOf = [
+                    android.Manifest.permission.ACCESS_FINE_LOCATION,
+                    android.Manifest.permission.ACCESS_COARSE_LOCATION,
+                ],
+            ) { ctx ->
+                val fused = LocationServices.getFusedLocationProviderClient(ctx)
+                fused.lastLocation.addOnSuccessListener { loc ->
+                    viewModel.updateDeviceLocation(loc)
+                }
+            },
+    )
     val mapStates = rememberMapStates()
     initialCameraPositionEffect(ui.orders, ui.selectedOrderNumber, mapStates)
 

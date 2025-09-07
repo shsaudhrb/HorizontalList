@@ -1,8 +1,5 @@
 package com.ntg.lmd.mainscreen.ui.screens
 
-import android.Manifest
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -36,12 +33,12 @@ import com.google.maps.android.compose.rememberCameraPositionState
 import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.ui.components.distanceFilterBar
+import com.ntg.lmd.mainscreen.ui.components.locationPermissionHandler
 import com.ntg.lmd.mainscreen.ui.components.mapCenter
 import com.ntg.lmd.mainscreen.ui.components.poolBottomContent
 import com.ntg.lmd.mainscreen.ui.components.searchResultsDropdown
 import com.ntg.lmd.mainscreen.ui.model.GeneralPoolUiState
 import com.ntg.lmd.mainscreen.ui.model.MapStates
-import com.ntg.lmd.mainscreen.ui.viewmodel.GeneralPoolUiEvent
 import com.ntg.lmd.mainscreen.ui.viewmodel.GeneralPoolViewModel
 import kotlinx.coroutines.launch
 
@@ -64,7 +61,11 @@ fun generalPoolScreen(
 
     setupInitialCamera(ui, deviceLatLng, cameraPositionState, hasCenteredOnDevice)
     LaunchedEffect(Unit) { generalPoolViewModel.attach(context) }
-    locationPermissionGate(generalPoolViewModel)
+    locationPermissionHandler(
+        onPermissionGranted = { ctx ->
+            generalPoolViewModel.ensureLocationReady(ctx, promptIfMissing = false)
+        },
+    )
     rememberSearchEffects(navController, generalPoolViewModel)
 
     val focusOnOrder =
@@ -197,32 +198,6 @@ private fun searchDropdown(
                 onPick = { focusOnOrder(it, true) },
             )
         }
-    }
-}
-
-@Composable
-private fun locationPermissionGate(viewModel: GeneralPoolViewModel) {
-    val context = LocalContext.current
-    val permissionLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
-            viewModel.ensureLocationReady(context, promptIfMissing = false)
-        }
-
-    LaunchedEffect(Unit) {
-        viewModel.events.collect { event ->
-            if (event is GeneralPoolUiEvent.RequestLocationPermission) {
-                permissionLauncher.launch(
-                    arrayOf(
-                        Manifest.permission.ACCESS_FINE_LOCATION,
-                        Manifest.permission.ACCESS_COARSE_LOCATION,
-                    ),
-                )
-            }
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        viewModel.ensureLocationReady(context, promptIfMissing = true)
     }
 }
 
