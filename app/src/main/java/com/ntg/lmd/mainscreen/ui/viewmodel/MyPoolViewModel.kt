@@ -75,7 +75,7 @@ class MyPoolViewModel(
             runCatching {
                 fillPagesForInitial(
                     pageSize = pageSize,
-                    fetch = { p, l -> getMyOrders(page = p, limit = l) },
+                    fetch = { p, l -> getMyOrders(page = p, limit = l,userOrdersOnly = true,) },
                     acc = acc,
                 )
             }.getOrElse { e ->
@@ -157,7 +157,9 @@ class MyPoolViewModel(
         var done = false
 
         while (!done && hops < PREFETCH_AHEAD_PAGES) {
-            val attempt = runCatching { getMyOrders(page = pageAt, limit = pageSize) }
+            val attempt = runCatching {
+                 getMyOrders(page = pageAt, limit = pageSize,userOrdersOnly = true,
+                 ) }
             outcome =
                 attempt.fold(
                     onSuccess = { res ->
