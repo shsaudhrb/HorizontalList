@@ -60,7 +60,10 @@ fun ordersEffects(
 }
 
 @Composable
-private fun ordersInitialLoadEffect(vm: MyOrdersViewModel, context: Context) {
+private fun ordersInitialLoadEffect(
+    vm: MyOrdersViewModel,
+    context: Context,
+) {
     LaunchedEffect(Unit) { vm.listVM.loadOrders(context) }
 }
 

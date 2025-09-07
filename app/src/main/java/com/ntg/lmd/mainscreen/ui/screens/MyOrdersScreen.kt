@@ -102,20 +102,20 @@ private fun ordersBody(deps: OrdersBodyDeps) {
 
     ordersScaffold(
         deps = deps,
-        updatingIds = updatingIds
+        updatingIds = updatingIds,
     )
 
     reassignSheet(
         deps = deps,
         uiOrders = uiState,
-        agentsState = agentsState
+        agentsState = agentsState,
     )
 }
 
 @Composable
 private fun ordersScaffold(
     deps: OrdersBodyDeps,
-    updatingIds: Set<String>
+    updatingIds: Set<String>,
 ) {
     val listState = deps.listState
     val snack = deps.snack
@@ -126,21 +126,24 @@ private fun ordersScaffold(
     ) { innerPadding ->
         ordersContent(
             ordersVm = deps.ordersVm,
-            deps = OrdersContentDeps(
-                updateVm = deps.updateVm,
-                listState = listState,
-                updatingIds = updatingIds
-            ),
-            cbs = OrdersContentCallbacks(
-                onOpenOrderDetails = deps.onOpenOrderDetails,
-                onReassignRequested = { id ->
-                    deps.reassignOrderId.value = id
-                    deps.agentsVm.load()
-                },
-            ),
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
+            deps =
+                OrdersContentDeps(
+                    updateVm = deps.updateVm,
+                    listState = listState,
+                    updatingIds = updatingIds,
+                ),
+            cbs =
+                OrdersContentCallbacks(
+                    onOpenOrderDetails = deps.onOpenOrderDetails,
+                    onReassignRequested = { id ->
+                        deps.reassignOrderId.value = id
+                        deps.agentsVm.load()
+                    },
+                ),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
         )
     }
 }

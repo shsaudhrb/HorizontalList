@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 import java.io.IOException
 import java.net.SocketTimeoutException
 import kotlin.coroutines.cancellation.CancellationException
+
 @Suppress("LargeClass")
 class OrdersListViewModel(
     private val store: OrdersStore,
@@ -27,7 +28,6 @@ class OrdersListViewModel(
     private val deviceLocation get() = store.deviceLocation
     private val allOrders get() = store.allOrders
 
-    // NEW: helper instance
     private val helpers = OrdersListHelpers(store, computeDistancesUseCase)
 
     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
@@ -38,6 +38,7 @@ class OrdersListViewModel(
             state.update { it.copy(orders = computed) }
         }
     }
+
     fun refreshOrders() {
         if (state.value.isLoading) return
         viewModelScope.launch {
@@ -51,24 +52,26 @@ class OrdersListViewModel(
                         it.copy(
                             isLoading = false,
                             isLoadingMore = false,
-                            errorMessage = helpers.messageFor(e as Exception)
+                            errorMessage = helpers.messageFor(e as Exception),
                         )
                     }
                 }
         }
     }
+
     private suspend fun fetchFirstPage(): Pair<List<OrderInfo>, Boolean> {
         store.page = 1
         store.endReached = false
 
         val uid = currentUserId.value
-        val page1 = getMyOrders(
-            page = 1,
-            limit = OrdersPaging.PAGE_SIZE,
-            bypassCache = true,
-            assignedAgentId = uid,
-            userOrdersOnly = true,
-        )
+        val page1 =
+            getMyOrders(
+                page = 1,
+                limit = OrdersPaging.PAGE_SIZE,
+                bypassCache = true,
+                assignedAgentId = uid,
+                userOrdersOnly = true,
+            )
 
         allOrders.clear()
         allOrders.addAll(page1.items)
@@ -76,7 +79,11 @@ class OrdersListViewModel(
 
         return allOrders.toList() to store.endReached
     }
-    private fun applyFirstPage(items: List<OrderInfo>, endReached: Boolean) {
+
+    private fun applyFirstPage(
+        items: List<OrderInfo>,
+        endReached: Boolean,
+    ) {
         val uid = currentUserId.value
         val display = helpers.applyDisplayFilter(items, state.value.query, uid)
         val withDist = helpers.withDistances(deviceLocation.value, display)
@@ -86,7 +93,7 @@ class OrdersListViewModel(
             withDist,
             OrdersPaging.PAGE_SIZE,
             state.value.query,
-            endReached
+            endReached,
         )
     }
 

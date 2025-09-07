@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 
 private const val NEAR_END_THRESHOLD = 3
+
 @Composable
 fun generalHorizontalList(
     orders: List<OrderInfo>,
