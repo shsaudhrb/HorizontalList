@@ -11,7 +11,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -26,6 +25,7 @@ import com.ntg.lmd.R
 import com.ntg.lmd.navigation.component.drawerHost
 import com.ntg.lmd.navigation.component.navigateSingleTop
 import com.ntg.lmd.notification.ui.viewmodel.DeepLinkViewModel
+import com.ntg.lmd.notification.ui.viewmodel.NotificationsViewModel
 import com.ntg.lmd.authentication.ui.screens.login.loginScreen as LoginScreen
 import com.ntg.lmd.authentication.ui.screens.register.registerScreen as RegisterScreen
 import com.ntg.lmd.authentication.ui.screens.splash.splashScreen as SplashScreen
@@ -34,13 +34,14 @@ import com.ntg.lmd.authentication.ui.screens.splash.splashScreen as SplashScreen
 fun appNavGraph(
     rootNavController: NavHostController,
     deeplinkVM: DeepLinkViewModel,
+    notificationsVM: NotificationsViewModel,
 ) {
     NavHost(
         navController = rootNavController,
         startDestination = Screen.Splash.route,
     ) {
         composable(Screen.Splash.route) {
-            handleSplashNavigation(rootNavController, deeplinkVM)
+            handleSplashNavigation(rootNavController, deeplinkVM, notificationsVM)
         }
 
         composable(Screen.Login.route) { LoginScreen(navController = rootNavController) }
@@ -66,9 +67,11 @@ fun appNavGraph(
 private fun handleSplashNavigation(
     navController: NavHostController,
     deeplinkVM: DeepLinkViewModel,
+    notificationsVM: NotificationsViewModel,
 ) {
     SplashScreen(
         navController = navController,
+        notificationsVM = notificationsVM,
         onDecide = { isLoggedIn ->
             val wantsNotifications = deeplinkVM.consumeOpenNotifications()
             navController.navigate(
