@@ -4,6 +4,7 @@ import android.content.Context
 import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.data.model.Order
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
+import com.ntg.lmd.mainscreen.domain.model.OrderStatus
 import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -86,14 +87,17 @@ fun Order.toUi(context: Context): OrderInfo {
     val timeAgo = formatRelative(context, whenMillis)
 
     return OrderInfo(
+        id = orderId ?: id ?: orderNumber ?: "-",
         name = customerName ?: "-",
         orderNumber = orderNumber ?: orderId ?: id ?: "-",
+        status = OrderStatus.fromId(statusId),
+        assignedAgentId = assignedAgentId,
         timeAgo = timeAgo,
         itemsCount = 0,
         distanceKm = Double.POSITIVE_INFINITY,
         lat = lat,
         lng = lng,
-        customerPhone = null,
-        details = null,
+        customerPhone = phone,
+        details = address,
     )
 }
