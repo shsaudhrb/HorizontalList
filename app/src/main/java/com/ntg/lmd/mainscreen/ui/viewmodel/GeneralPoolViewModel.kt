@@ -28,12 +28,7 @@ sealed class GeneralPoolUiEvent {
     data object RequestLocationPermission : GeneralPoolUiEvent()
 }
 
-class GeneralPoolViewModel(
-    private val ordersRepository: OrdersRepository,
-    private val loadOrders: LoadOrdersUseCase,
-    private val computeDistances: ComputeDistancesUseCase,
-    private val getDeviceLocations: GetDeviceLocationsUseCase,
-) : ViewModel() {
+class GeneralPoolViewModel() : ViewModel() {
     private val _ui = MutableStateFlow(GeneralPoolUiState())
     val ui: StateFlow<GeneralPoolUiState> = _ui.asStateFlow()
 
@@ -49,6 +44,7 @@ class GeneralPoolViewModel(
     private var realtimeStarted = false
     private var realtimeJob: Job? = null
 
+    private val computeDistances by lazy { GeneralPoolProvider.computeDistancesUseCase() }
     private var lastNonEmptyOrders: List<OrderInfo> = emptyList()
     private var userPinnedSelection: Boolean = false
 
@@ -72,16 +68,14 @@ class GeneralPoolViewModel(
     fun attach(context: Context) {
         if (::ctx.isInitialized) return
         ctx = context.applicationContext
-        if (!realtimeStarted) startRealtime(ordersRepository)
+        val repo = GeneralPoolProvider.ordersRepository(ctx)
+        if (!realtimeStarted) startRealtime(repo)
         loadOrdersFromApi()
         ensureLocationReady(ctx, promptIfMissing = true)
     }
 
     override fun onCleared() {
-        try {
-            ordersRepository.disconnectFromOrders()
-        } catch (_: Throwable) {
-        }
+        if (::ctx.isInitialized) GeneralPoolProvider.ordersRepository(ctx).disconnectFromOrders()
         realtimeJob?.cancel()
         realtimeStarted = false
         super.onCleared()
@@ -129,14 +123,9 @@ class GeneralPoolViewModel(
     fun fetchAndApplyDistances(context: Context) {
         if (_ui.value.orders.isEmpty()) return
         viewModelScope.launch {
-            val origin = getCurrentDeviceLocation(context, getDeviceLocations) ?: return@launch
+            val origin = getCurrentDeviceLocation(context) ?: return@launch
             val updated = computeDistances(origin, _ui.value.orders)
-            val nextSelected =
-                determineSelectionAfterDistanceUpdate(
-                    _ui.value.selected,
-                    updated,
-                    userPinnedSelection,
-                )
+            val nextSelected = determineSelectionAfterDistanceUpdate(_ui.value.selected, updated, userPinnedSelection)
             _ui.update(updateUiWithDistances(updated, nextSelected) { lastNonEmptyOrders = it })
             _deviceLatLng.value = LatLng(origin.latitude, origin.longitude)
             _ui.ensureSelectedStillVisible { this }
@@ -146,7 +135,8 @@ class GeneralPoolViewModel(
     private fun loadOrdersFromApi() {
         _ui.update { it.copy(isLoading = true) }
         viewModelScope.launch {
-            val result = loadOrders(pageSize = 25)
+            val loadUseCase = GeneralPoolProvider.loadOrdersUseCase(ctx)
+            val result = loadUseCase(pageSize = 25)
             result
                 .onSuccess { handleOrdersLoaded(it) }
                 .onFailure {

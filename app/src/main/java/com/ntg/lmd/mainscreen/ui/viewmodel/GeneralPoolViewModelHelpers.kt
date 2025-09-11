@@ -6,7 +6,6 @@ import android.content.pm.PackageManager
 import android.location.Location
 import androidx.core.content.ContextCompat
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
-import com.ntg.lmd.mainscreen.domain.usecase.GetDeviceLocationsUseCase
 import com.ntg.lmd.mainscreen.ui.model.GeneralPoolUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
@@ -35,9 +34,7 @@ internal fun determineNextSelection(
 ): OrderInfo? =
     when {
         userPinnedSelection -> currentSel
-        currentSel == null -> merged.firstOrNull { it.lat != 0.0 && it.lng != 0.0 }
-            ?: merged.firstOrNull()
-
+        currentSel == null -> merged.firstOrNull { it.lat != 0.0 && it.lng != 0.0 } ?: merged.firstOrNull()
         merged.none { it.orderNumber == currentSel.orderNumber } -> null
         else -> merged.firstOrNull { it.orderNumber == currentSel.orderNumber }
     }
@@ -56,10 +53,9 @@ fun MutableStateFlow<GeneralPoolUiState>.ensureSelectedStillVisible(update: Gene
 }
 
 suspend fun getCurrentDeviceLocation(
-    context: Context,
-    getDeviceLocations: GetDeviceLocationsUseCase,
+    context: Context
 ): Location? {
-    val (last, current) = getDeviceLocations(context)
+    val (last, current) = GeneralPoolProvider.getDeviceLocationsUseCase().invoke(context)
     return current ?: last
 }
 
