@@ -2,8 +2,10 @@ package com.ntg.lmd.navigation.component
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -109,25 +111,37 @@ private fun drawerContent(
 ) {
     val grouped = remember { Pair(drawerItems.take(FIRST_GROUP_SIZE), drawerItems.drop(FIRST_GROUP_SIZE)) }
 
-    drawerHeader(name = displayName ?: "—")
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        item {
+            drawerHeader(name = displayName ?: "—")
+        }
 
-    drawerSection(
-        titleRes = R.string.drawer_section_orders,
-        items = grouped.first,
-        currentRoute = currentRoute,
-        onLogout = onLogout,
-        onNavigate = onNavigate,
-    )
+        item {
+            drawerSection(
+                titleRes = R.string.drawer_section_orders,
+                items = grouped.first,
+                currentRoute = currentRoute,
+                onLogout = onLogout,
+                onNavigate = onNavigate,
+            )
+        }
 
-    Spacer(Modifier.height(dimensionResource(R.dimen.smallSpace)))
+        item {
+            Spacer(Modifier.height(dimensionResource(R.dimen.smallSpace)))
+        }
 
-    drawerSection(
-        titleRes = null,
-        items = grouped.second,
-        currentRoute = currentRoute,
-        onLogout = onLogout,
-        onNavigate = onNavigate,
-    )
+        item {
+            drawerSection(
+                titleRes = null,
+                items = grouped.second,
+                currentRoute = currentRoute,
+                onLogout = onLogout,
+                onNavigate = onNavigate,
+            )
+        }
+    }
 }
 
 @Composable

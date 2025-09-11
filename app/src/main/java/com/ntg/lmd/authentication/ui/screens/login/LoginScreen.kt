@@ -5,6 +5,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Spacer
@@ -28,6 +29,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.ntg.lmd.R
@@ -55,28 +57,20 @@ fun loginScreen(navController: NavController) {
     val viewModel = rememberLoginViewModel()
     val ui = collectLoginUi(viewModel)
     val focusManager = LocalFocusManager.current
-
     val (cardUi, onUsernameFocus, onPasswordFocus) = rememberCardAndFocusHandlers(viewModel)
 
-    provideLoginFocusLocals(
-        onUsernameFocus = onUsernameFocus,
-        onPasswordFocus = onPasswordFocus,
-    ) {
-        loginScaffold(
-            card = cardUi,
-            messageRes = ui.message,
-            messageText = ui.errorMessage,
+    BoxWithConstraints {
+        val isTablet = maxWidth > 600.dp
+
+        provideLoginFocusLocals(
+            onUsernameFocus = onUsernameFocus,
+            onPasswordFocus = onPasswordFocus,
         ) {
-            authFields(
-                navController = navController,
-                ui = ui,
-                onUsername = viewModel::updateUsername,
-                onPassword = viewModel::updatePassword,
-                onSubmit = {
-                    focusManager.clearFocus()
-                    viewModel.submit()
-                },
-            )
+            if (isTablet) {
+                tabletLoginLayout(navController, ui, viewModel, focusManager, cardUi)
+            } else {
+                phoneLoginLayout(navController, ui, viewModel, focusManager, cardUi)
+            }
         }
     }
 }
@@ -130,7 +124,7 @@ private fun provideLoginFocusLocals(
 }
 
 @Composable
-private fun loginScaffold(
+fun loginScaffold(
     card: CardUi,
     messageRes: Int?,
     messageText: String?,
@@ -161,7 +155,7 @@ private fun loginScaffold(
 
 // Card Fields & Button
 @Composable
-private fun authFields(
+fun authFields(
     navController: NavController,
     ui: LoginUiState,
     onUsername: (String) -> Unit,
