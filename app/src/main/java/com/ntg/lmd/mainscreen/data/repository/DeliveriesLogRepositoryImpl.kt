@@ -14,20 +14,19 @@ class DeliveriesLogRepositoryImpl(
         statusIds: List<Int>,
         search: String?,
     ): Pair<List<DeliveryLog>, Boolean> {
-        val env =
-            api.getOrders(
-                page = page,
-                limit = limit,
-                statusIds = statusIds,
-                search = search,
-            )
+        val statusFilter = if (statusIds.isEmpty()) null else statusIds.joinToString(",")
+        val env = api.getOrders(
+            page = page,
+            limit = limit,
+            statusIds = statusFilter,
+            search = search,
+            assignedAgentId = null,
+            userOrdersOnly = false,
+        )
         if (!env.success) error(env.error ?: "Unknown error from orders-list")
         val data = env.data ?: return emptyList<DeliveryLog>() to false
 
-        val allowed = statusIds.toSet()
-        val logs =
-            data.orders
-                .filter { it.statusId in allowed }
+        val logs = data.orders
                 .map { it.toDeliveryLog() }
 
         val hasNext = data.pagination?.hasNextPage ?: false

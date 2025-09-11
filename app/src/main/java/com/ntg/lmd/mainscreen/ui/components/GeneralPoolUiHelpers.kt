@@ -20,10 +20,11 @@ fun poolBottomContent(
     ui: GeneralPoolUiState,
     viewModel: GeneralPoolViewModel,
     focusOnOrder: (OrderInfo, Boolean) -> Unit,
+    onAddToMe: (OrderInfo) -> Unit,
 ) {
     when {
         ui.isLoading -> loadingText()
-        ui.mapOrders.isNotEmpty() -> ordersHorizontalList(ui, viewModel, focusOnOrder)
+        ui.mapOrders.isNotEmpty() -> ordersHorizontalList(ui, viewModel, focusOnOrder, onAddToMe)
     }
 }
 
@@ -46,6 +47,7 @@ fun ordersHorizontalList(
     ui: GeneralPoolUiState,
     viewModel: GeneralPoolViewModel,
     focusOnOrder: (OrderInfo, Boolean) -> Unit,
+    onAddToMe: (OrderInfo) -> Unit,
 ) {
     Box(Modifier.fillMaxSize()) {
         Box(Modifier.align(Alignment.BottomCenter)) {
@@ -64,7 +66,7 @@ fun ordersHorizontalList(
                 cardContent = { order, _ ->
                     orderCard(
                         order = order,
-                        onAddClick = { /* handle add */ },
+                        onAddClick = { onAddToMe(order) },
                         onOrderClick = { clicked -> focusOnOrder(clicked, false) },
                     )
                 },

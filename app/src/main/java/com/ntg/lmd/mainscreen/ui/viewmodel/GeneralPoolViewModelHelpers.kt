@@ -52,7 +52,9 @@ fun MutableStateFlow<GeneralPoolUiState>.ensureSelectedStillVisible(update: Gene
     this.update(update)
 }
 
-suspend fun getCurrentDeviceLocation(context: Context): Location? {
+suspend fun getCurrentDeviceLocation(
+    context: Context
+): Location? {
     val (last, current) = GeneralPoolProvider.getDeviceLocationsUseCase().invoke(context)
     return current ?: last
 }

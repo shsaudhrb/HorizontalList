@@ -2,15 +2,17 @@ package com.ntg.lmd.mainscreen.ui.viewmodel
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.os.FileUtils.copy
-import android.provider.SyncStateContract.Helpers.update
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.maps.model.LatLng
 import com.ntg.lmd.mainscreen.data.model.Order
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
+import com.ntg.lmd.mainscreen.domain.model.OrderStatus
 import com.ntg.lmd.mainscreen.domain.repository.OrdersRepository
+import com.ntg.lmd.mainscreen.domain.usecase.ComputeDistancesUseCase
+import com.ntg.lmd.mainscreen.domain.usecase.GetDeviceLocationsUseCase
+import com.ntg.lmd.mainscreen.domain.usecase.LoadOrdersUseCase
 import com.ntg.lmd.mainscreen.ui.mapper.toUi
 import com.ntg.lmd.mainscreen.ui.model.GeneralPoolUiState
 import kotlinx.coroutines.Job
@@ -21,13 +23,12 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlin.collections.map
 
 sealed class GeneralPoolUiEvent {
     data object RequestLocationPermission : GeneralPoolUiEvent()
 }
 
-class GeneralPoolViewModel : ViewModel() {
+class GeneralPoolViewModel() : ViewModel() {
     private val _ui = MutableStateFlow(GeneralPoolUiState())
     val ui: StateFlow<GeneralPoolUiState> = _ui.asStateFlow()
 
@@ -46,6 +47,23 @@ class GeneralPoolViewModel : ViewModel() {
     private val computeDistances by lazy { GeneralPoolProvider.computeDistancesUseCase() }
     private var lastNonEmptyOrders: List<OrderInfo> = emptyList()
     private var userPinnedSelection: Boolean = false
+
+    private var currentUserId: String? = null
+
+    val onSearchingChange: (Boolean) -> Unit = { v ->
+        _ui.update { it.copy(searching = v) }
+    }
+    val onSearchTextChange: (String) -> Unit = { v ->
+        _ui.update { it.copy(searchText = v) }
+    }
+    val onOrderSelected: (OrderInfo?) -> Unit = { order ->
+        userPinnedSelection = order != null
+        _ui.update { it.copy(selected = order) }
+    }
+
+    fun setCurrentUserId(id: String?) {
+        currentUserId = id?.trim()?.ifEmpty { null }
+    }
 
     fun attach(context: Context) {
         if (::ctx.isInitialized) return
@@ -66,10 +84,6 @@ class GeneralPoolViewModel : ViewModel() {
     private fun startRealtime(repo: OrdersRepository) {
         realtimeStarted = true
         repo.connectToOrders("orders")
-        observeRealtimeOrders(repo)
-    }
-
-    private fun observeRealtimeOrders(repo: OrdersRepository) {
         realtimeJob?.cancel()
         realtimeJob =
             viewModelScope.launch {
@@ -78,8 +92,8 @@ class GeneralPoolViewModel : ViewModel() {
     }
 
     private suspend fun handleLiveOrders(liveOrders: List<Order>) {
-        val incoming = liveOrders.map { it.toUi(ctx) }
-        val merged = mergeOrders(_ui.value.orders, incoming)
+        val incoming = liveOrders.map { it.toUi(ctx) }.poolVisible()
+        val merged = mergeOrders(_ui.value.orders, incoming).poolVisible()
         val nextSel = determineNextSelection(merged, _ui.value.selected, userPinnedSelection)
 
         _ui.update { it.copy(orders = merged, selected = nextSel ?: it.selected) }
@@ -88,18 +102,9 @@ class GeneralPoolViewModel : ViewModel() {
         _ui.ensureSelectedStillVisible { removeInvalidSelectionIfNeeded() }
     }
 
-    fun onSearchingChange(v: Boolean) = _ui.update { it.copy(searching = v) }
-
-    fun onSearchTextChange(v: String) = _ui.update { it.copy(searchText = v) }
-
     fun onDistanceChange(km: Double) {
         _ui.update { it.copy(distanceThresholdKm = km) }
         _ui.ensureSelectedStillVisible { removeInvalidSelectionIfNeeded() }
-    }
-
-    fun onOrderSelected(order: OrderInfo?) {
-        userPinnedSelection = order != null
-        _ui.update { it.copy(selected = order) }
     }
 
     fun ensureLocationReady(
@@ -136,18 +141,43 @@ class GeneralPoolViewModel : ViewModel() {
                 .onSuccess { handleOrdersLoaded(it) }
                 .onFailure {
                     Log.e("GeneralPoolVM", "Failed to load orders: ${it.message}", it)
-                    _ui.update { state -> state.copy(isLoading = false, errorMessage = "Unable to load orders.") }
+                    _ui.update { s ->
+                        s.copy(
+                            isLoading = false,
+                            errorMessage = "Unable to load orders.",
+                        )
+                    }
                 }
         }
     }
 
     private fun handleOrdersLoaded(allOrders: List<Order>) {
-        val initial = allOrders.map { it.toUi(ctx) }
+        val initial = allOrders.map { it.toUi(ctx) }.poolVisible()
         val defaultSel = pickDefaultSelection(_ui.value.selected, initial)
         userPinnedSelection = false
-        _ui.update { it.copy(orders = initial, isLoading = false, selected = defaultSel, errorMessage = null) }
+        _ui.update {
+            it.copy(orders = initial, isLoading = false, selected = defaultSel, errorMessage = null)
+        }
         if (initial.isNotEmpty()) lastNonEmptyOrders = initial
         if (_ui.value.hasLocationPerm) fetchAndApplyDistances(ctx)
         _ui.ensureSelectedStillVisible { removeInvalidSelectionIfNeeded() }
+    }
+
+    // show only orders with "Added" status and not mine so I can add to me later
+    private fun List<OrderInfo>.poolVisible(): List<OrderInfo> =
+        filter { info ->
+            val mine =
+                currentUserId?.let { uid ->
+                    info.assignedAgentId?.equals(uid, ignoreCase = true) == true
+                } ?: false
+            info.status == OrderStatus.ADDED && !mine
+        }
+
+    // after adding order to me, remove it from pool
+    fun removeOrderFromPool(orderId: String) {
+        _ui.update { cur ->
+            val newOrders = cur.orders.filterNot { it.id == orderId }
+            cur.copy(orders = newOrders, selected = cur.selected?.takeIf { it.id != orderId })
+        }
     }
 }

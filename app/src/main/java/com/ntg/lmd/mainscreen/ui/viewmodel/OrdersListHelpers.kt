@@ -41,8 +41,8 @@ class OrdersListHelpers(
             } else {
                 list.filter { o ->
                     o.orderNumber.contains(q, ignoreCase = true) ||
-                        o.name.contains(q, ignoreCase = true) ||
-                        (o.details?.contains(q, ignoreCase = true) == true)
+                            o.name.contains(q, ignoreCase = true) ||
+                            (o.details?.contains(q, ignoreCase = true) == true)
                 }
             }
         val afterStatus = afterQuery.filter { it.status in allowedStatuses }
@@ -51,6 +51,16 @@ class OrdersListHelpers(
         } else {
             afterStatus.filter { it.assignedAgentId == currentUserId }
         }
+    }
+
+    fun computeDisplay(
+        location: Location?,
+        source: List<OrderInfo>,
+        query: String?,
+        uid: String?,
+    ): List<OrderInfo> {
+        val filtered = applyDisplayFilter(source, query.orEmpty(), uid)
+        return withDistances(location, filtered)
     }
 
     fun withDistances(

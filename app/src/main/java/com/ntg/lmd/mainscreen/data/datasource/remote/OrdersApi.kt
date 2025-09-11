@@ -10,7 +10,7 @@ interface OrdersApi {
     suspend fun getOrders(
         @Query("page") page: Int,
         @Query("limit") limit: Int,
-        @Query("status_ids[]") statusIds: List<Int>? = null,
+        @Query("status_ids") statusIds: String? = null,
         @Query("search") search: String? = null,
         @Query("assigned_agent_id") assignedAgentId: String? = null,
         @Query("user_orders_only") userOrdersOnly: Boolean? = null,
