@@ -6,229 +6,48 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.ntg.lmd.mainscreen.domain.model.OrderInfo
-import com.ntg.lmd.mainscreen.domain.paging.OrdersPaging
 import com.ntg.lmd.mainscreen.domain.usecase.ComputeDistancesUseCase
 import com.ntg.lmd.mainscreen.domain.usecase.GetMyOrdersUseCase
-import com.ntg.lmd.mainscreen.ui.model.LocalUiOnlyStatusBus
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
-import java.io.IOException
-import java.net.SocketTimeoutException
-import kotlin.coroutines.cancellation.CancellationException
 
-@Suppress("LargeClass")
 class OrdersListViewModel(
     private val store: OrdersStore,
-    private val getMyOrders: GetMyOrdersUseCase,
+    getMyOrders: GetMyOrdersUseCase,
     computeDistancesUseCase: ComputeDistancesUseCase,
 ) : ViewModel() {
-    private val state get() = store.state
-    private val currentUserId get() = store.currentUserId
-    private val deviceLocation get() = store.deviceLocation
-    private val allOrders get() = store.allOrders
-
     private val helpers = OrdersListHelpers(store, computeDistancesUseCase)
 
+    private val controller =
+        OrdersListController(
+            store = store,
+            helpers = helpers,
+            getMyOrders = getMyOrders,
+            scope = viewModelScope,
+        )
+
+    // ---------- Location ----------
     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     fun updateDeviceLocation(location: Location?) {
-        deviceLocation.value = location
-        if (location != null && state.value.orders.isNotEmpty()) {
-            val computed = helpers.withDistances(location, state.value.orders)
-            state.update { it.copy(orders = computed) }
+        store.deviceLocation.value = location
+        if (location != null &&
+            store.state.value.orders
+                .isNotEmpty()
+        ) {
+            val computed = helpers.withDistances(location, store.state.value.orders)
+            store.state.update { it.copy(orders = computed) }
         }
     }
 
-    fun refreshOrders() {
-        if (state.value.isLoading) return
-        viewModelScope.launch {
-            state.update { it.copy(isLoading = true, errorMessage = null) }
+    // ---------- Public API----------
+    fun setCurrentUserId(id: String?) = controller.setCurrentUserId(id)
 
-            runCatching { fetchFirstPage() }
-                .onSuccess { (items, endReached) -> applyFirstPage(items, endReached) }
-                .onFailure { e ->
-                    if (e is CancellationException) throw e
-                    state.update {
-                        it.copy(
-                            isLoading = false,
-                            isLoadingMore = false,
-                            errorMessage = helpers.messageFor(e as Exception),
-                        )
-                    }
-                }
-        }
-    }
+    fun loadOrders(context: Context) = controller.loadInitial(context)
 
-    private suspend fun fetchFirstPage(): Pair<List<OrderInfo>, Boolean> {
-        store.page = 1
-        store.endReached = false
+    fun retry(context: Context) = controller.loadInitial(context)
 
-        val uid = currentUserId.value
-        val page1 =
-            getMyOrders(
-                page = 1,
-                limit = OrdersPaging.PAGE_SIZE,
-                bypassCache = true,
-                assignedAgentId = uid,
-                userOrdersOnly = true,
-            )
+    fun refresh(context: Context) = controller.refresh(context)
 
-        allOrders.clear()
-        allOrders.addAll(page1.items)
-        store.endReached = page1.rawCount < OrdersPaging.PAGE_SIZE
+    fun refreshOrders() = controller.refreshStrict()
 
-        return allOrders.toList() to store.endReached
-    }
-
-    private fun applyFirstPage(
-        items: List<OrderInfo>,
-        endReached: Boolean,
-    ) {
-        val uid = currentUserId.value
-        val display = helpers.applyDisplayFilter(items, state.value.query, uid)
-        val withDist = helpers.withDistances(deviceLocation.value, display)
-
-        helpers.publishFirstPageFrom(
-            state,
-            withDist,
-            OrdersPaging.PAGE_SIZE,
-            state.value.query,
-            endReached,
-        )
-    }
-
-    fun loadOrders(context: Context) {
-        val alreadyHasData = state.value.orders.isNotEmpty()
-        if (state.value.isLoading) return
-
-        state.update {
-            it.copy(isLoading = !alreadyHasData, errorMessage = null, emptyMessage = null)
-        }
-
-        viewModelScope.launch {
-            try {
-                store.page = 1
-                store.endReached = false
-
-                val uid = currentUserId.value
-                val page1 =
-                    getMyOrders(
-                        page = 1,
-                        limit = OrdersPaging.PAGE_SIZE,
-                        bypassCache = true,
-                        assignedAgentId = uid,
-                        userOrdersOnly = true,
-                    )
-
-                allOrders.clear()
-                allOrders.addAll(page1.items)
-                store.endReached = page1.rawCount < OrdersPaging.PAGE_SIZE
-
-                val display = helpers.applyDisplayFilter(allOrders, state.value.query, uid)
-                val withDist = helpers.withDistances(deviceLocation.value, display)
-                helpers.publishFirstPageFrom(
-                    state,
-                    withDist,
-                    OrdersPaging.PAGE_SIZE,
-                    state.value.query,
-                    store.endReached,
-                )
-            } catch (ce: CancellationException) {
-                throw ce
-            } catch (e: IOException) {
-                helpers.handleInitialLoadError(e, alreadyHasData, context, state, ::loadOrders)
-            }
-        }
-    }
-
-    fun retry(context: Context) = loadOrders(context)
-
-    fun refresh(context: Context) {
-        val s = state.value
-        if (s.isRefreshing) return
-        state.update { it.copy(isRefreshing = true, errorMessage = null) }
-
-        viewModelScope.launch {
-            try {
-                val uid = currentUserId.value
-                val page1 =
-                    getMyOrders(
-                        page = 1,
-                        limit = OrdersPaging.PAGE_SIZE,
-                        bypassCache = true,
-                        assignedAgentId = uid,
-                        userOrdersOnly = true,
-                    )
-
-                val fresh = page1.items
-                store.endReached = page1.rawCount < OrdersPaging.PAGE_SIZE
-
-                allOrders.clear()
-                allOrders.addAll(fresh)
-
-                val display = helpers.applyDisplayFilter(allOrders, state.value.query, uid)
-                val withDist = helpers.withDistances(deviceLocation.value, display)
-                helpers.publishFirstPageFrom(
-                    state,
-                    withDist,
-                    OrdersPaging.PAGE_SIZE,
-                    state.value.query,
-                    store.endReached,
-                )
-            } catch (ce: CancellationException) {
-                throw ce
-            } catch (e: SocketTimeoutException) {
-                LocalUiOnlyStatusBus.errorEvents.tryEmit(helpers.messageFor(e) to { refresh(context) })
-            } finally {
-                state.update { it.copy(isRefreshing = false) }
-            }
-        }
-    }
-
-    fun loadNextPage(context: Context) {
-        val s = state.value
-        if (s.isLoading || s.isLoadingMore || store.endReached) return
-        viewModelScope.launch {
-            state.update { it.copy(isLoadingMore = true) }
-            try {
-                val nextPageNum = store.page + 1
-                val uid = currentUserId.value
-                val pageRes =
-                    getMyOrders(
-                        page = nextPageNum,
-                        limit = OrdersPaging.PAGE_SIZE,
-                        bypassCache = true,
-                        assignedAgentId = uid,
-                        userOrdersOnly = true,
-                    )
-                val next = pageRes.items
-                store.endReached = pageRes.rawCount < OrdersPaging.PAGE_SIZE || next.isEmpty()
-                store.page = nextPageNum
-
-                allOrders.addAll(next)
-                val display = helpers.applyDisplayFilter(allOrders, state.value.query, uid)
-                val withDist = helpers.withDistances(deviceLocation.value, display)
-                helpers.publishAppendFrom(
-                    state,
-                    withDist,
-                    store.page,
-                    OrdersPaging.PAGE_SIZE,
-                    store.endReached,
-                )
-            } catch (ce: CancellationException) {
-                throw ce
-            } catch (e: IOException) {
-                LocalUiOnlyStatusBus.errorEvents.tryEmit(helpers.messageFor(e) to { refresh(context) })
-            } finally {
-                state.update { it.copy(isRefreshing = false) }
-            }
-        }
-    }
-
-    fun setCurrentUserId(id: String?) {
-        store.currentUserId.value = id
-        val display = helpers.applyDisplayFilter(allOrders, state.value.query, id)
-        val withDist = helpers.withDistances(deviceLocation.value, display)
-        state.update { it.copy(orders = withDist) }
-    }
+    fun loadNextPage(context: Context) = controller.loadNextPage(context)
 }

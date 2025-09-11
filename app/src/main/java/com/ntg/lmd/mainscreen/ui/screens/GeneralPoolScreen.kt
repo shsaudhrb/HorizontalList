@@ -1,5 +1,8 @@
 package com.ntg.lmd.mainscreen.ui.screens
 
+import android.app.Application
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -32,6 +35,7 @@ import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
+import com.ntg.lmd.mainscreen.domain.model.OrderStatus
 import com.ntg.lmd.mainscreen.ui.components.distanceFilterBar
 import com.ntg.lmd.mainscreen.ui.components.locationPermissionHandler
 import com.ntg.lmd.mainscreen.ui.components.mapCenter
@@ -40,6 +44,8 @@ import com.ntg.lmd.mainscreen.ui.components.searchResultsDropdown
 import com.ntg.lmd.mainscreen.ui.model.GeneralPoolUiState
 import com.ntg.lmd.mainscreen.ui.model.MapStates
 import com.ntg.lmd.mainscreen.ui.viewmodel.GeneralPoolViewModel
+import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
+import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModelFactory
 import com.ntg.lmd.network.core.RetrofitProvider.userStore
 import kotlinx.coroutines.launch
 
@@ -76,7 +82,7 @@ fun generalPoolScreen(
 
     rememberSearchEffects(navController, generalPoolViewModel)
 
-    val focusOnOrder = rememberFocusOnOrder(generalPoolViewModel, marker, camera, scope)
+    val focusOnOrder = rememberFocusOnOrder(generalPoolViewModel, markerState, cameraPositionState, scope)
     val onAddToMe = addToMeAction(context, generalPoolViewModel, currentUserId)
 
     Box(Modifier.fillMaxSize()) {
