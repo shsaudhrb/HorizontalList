@@ -1,7 +1,5 @@
 package com.ntg.lmd.mainscreen.ui.components
 
-import android.Manifest
-import android.content.pm.PackageManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -9,9 +7,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
-import androidx.core.content.ContextCompat
-import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.CameraPositionState
@@ -26,24 +21,6 @@ private const val INITIAL_CAMERA_ZOOM = 14f
 private const val MY_ORDER_FOCUS_ZOOM = 15f
 
 private fun OrderInfo.hasValidLatLng(): Boolean = lat.isFinite() && lng.isFinite() && !(lat == 0.0 && lng == 0.0)
-
-@Composable
-fun locationPermissionAndLastLocation(viewModel: MyPoolViewModel) {
-    val context = LocalContext.current
-    LaunchedEffect(Unit) {
-        val granted =
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.ACCESS_FINE_LOCATION,
-            ) == PackageManager.PERMISSION_GRANTED
-        if (granted) {
-            val fused =
-                LocationServices
-                    .getFusedLocationProviderClient(context)
-            fused.lastLocation.addOnSuccessListener { loc -> viewModel.updateDeviceLocation(loc) }
-        }
-    }
-}
 
 @Composable
 fun initialCameraPositionEffect(

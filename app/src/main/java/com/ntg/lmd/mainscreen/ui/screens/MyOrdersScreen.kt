@@ -30,7 +30,7 @@ import com.ntg.lmd.mainscreen.ui.components.OrdersContentCallbacks
 import com.ntg.lmd.mainscreen.ui.components.OrdersContentDeps
 import com.ntg.lmd.mainscreen.ui.components.bottomStickyButton
 import com.ntg.lmd.mainscreen.ui.components.initialCameraPositionEffect
-import com.ntg.lmd.mainscreen.ui.components.locationPermissionAndLastLocation
+import com.ntg.lmd.mainscreen.ui.components.locationPermissionHandler
 import com.ntg.lmd.mainscreen.ui.components.ordersContent
 import com.ntg.lmd.mainscreen.ui.components.ordersEffects
 import com.ntg.lmd.mainscreen.ui.components.reassignBottomSheet
@@ -189,17 +189,46 @@ private fun wireMyOrders(deps: WireDeps) {
     val ctx = LocalContext.current
     val poolUi by deps.poolVm.ui.collectAsState()
 
-    // Location + camera
-    locationPermissionAndLastLocation(deps.poolVm)
+    myOrdersLocationSection(deps, poolUi)
+    myOrdersUserSection(deps)
+    myOrdersEffectsSection(deps, ctx)
+    observeOrdersSearch(deps.navController, deps.ordersVm)
+}
+
+@RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+@Composable
+private fun myOrdersLocationSection(
+    deps: WireDeps,
+    poolUi: com.ntg.lmd.mainscreen.ui.model.MyOrdersPoolUiState,
+) {
+    locationPermissionHandler(
+        onPermissionGranted = { ctx ->
+            val fused =
+                com.google.android.gms.location.LocationServices
+                    .getFusedLocationProviderClient(ctx)
+            fused.lastLocation.addOnSuccessListener { loc ->
+                deps.poolVm.updateDeviceLocation(loc)
+            }
+        },
+    )
     val mapStates = rememberMapStates()
     initialCameraPositionEffect(poolUi.orders, poolUi.selectedOrderNumber, mapStates)
     forwardMyPoolLocationToMyOrders(deps.poolVm, deps.ordersVm)
+}
 
-    // Current user
+@Composable
+private fun myOrdersUserSection(deps: WireDeps) {
     val currentUserId: String? = remember { userStore.getUserId() }
-    LaunchedEffect(currentUserId) { deps.ordersVm.listVM.setCurrentUserId(currentUserId) }
+    LaunchedEffect(currentUserId) {
+        deps.ordersVm.listVM.setCurrentUserId(currentUserId)
+    }
+}
 
-    // Effects + snackbar
+@Composable
+private fun myOrdersEffectsSection(
+    deps: WireDeps,
+    ctx: android.content.Context,
+) {
     ordersEffects(
         vm = deps.ordersVm,
         updateVm = deps.updateVm,
@@ -210,6 +239,7 @@ private fun wireMyOrders(deps: WireDeps) {
 
     val uiState by deps.ordersVm.uiState.collectAsState()
     LaunchedEffect(uiState.query) { deps.listState.scrollToItem(0) }
+
     LaunchedEffect(Unit) {
         deps.updateVm.error.collect { (msg, retry) ->
             val res =
@@ -221,9 +251,6 @@ private fun wireMyOrders(deps: WireDeps) {
             if (res == SnackbarResult.ActionPerformed) retry()
         }
     }
-
-    // Search observers
-    observeOrdersSearch(deps.navController, deps.ordersVm)
 }
 
 @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)

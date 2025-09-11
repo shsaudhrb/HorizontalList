@@ -6,6 +6,7 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
+import com.ntg.lmd.authentication.ui.components.NotificationPermissionState
 import com.ntg.lmd.mainscreen.domain.paging.OrdersPaging
 import com.ntg.lmd.notification.data.dataSource.paging.NotificationsPagingSource
 import com.ntg.lmd.notification.data.model.FCMServiceLocator
@@ -16,8 +17,10 @@ import com.ntg.lmd.notification.domain.usecase.RefreshNotificationsUseCase
 import com.ntg.lmd.notification.ui.model.NotificationUi
 import com.ntg.lmd.notification.ui.model.NotificationsState
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
@@ -38,6 +41,9 @@ class NotificationsViewModel(
 
     private val _filter = MutableStateFlow(NotificationFilter.All)
     val filter: StateFlow<NotificationFilter> = _filter.asStateFlow()
+
+    private val _permissionState = MutableSharedFlow<NotificationPermissionState>()
+    val permissionState = _permissionState.asSharedFlow()
 
     init {
         viewModelScope.launch {
@@ -108,6 +114,17 @@ class NotificationsViewModel(
                     timestampMs = now,
                 ),
             )
+        }
+    }
+
+    private var lastPermissionState: NotificationPermissionState? = null
+
+    fun updatePermissionState(state: NotificationPermissionState) {
+        if (state != lastPermissionState) {
+            lastPermissionState = state
+            viewModelScope.launch {
+                _permissionState.emit(state)
+            }
         }
     }
 }
