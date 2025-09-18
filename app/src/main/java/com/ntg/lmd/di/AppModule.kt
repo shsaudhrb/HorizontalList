@@ -34,10 +34,6 @@ import com.ntg.lmd.mainscreen.ui.viewmodel.ActiveAgentsViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyOrdersViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyPoolViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
-import com.ntg.lmd.network.core.RetrofitProvider
-import com.ntg.lmd.utils.SecureUserStore
-import org.koin.androidx.viewmodel.dsl.viewModel
-import org.koin.dsl.module
 
 val authModule =
     module {
@@ -76,6 +72,12 @@ val networkModule =
 
         // AuthApi without token
         single<AuthApi> { RetrofitProvider.apiNoAuth }
+
+        single<OrdersApi> { RetrofitProvider.ordersApi }
+
+        single<UpdatetOrdersStatusApi> { RetrofitProvider.updateStatusApi }
+
+        single<GetUsersApi> { RetrofitProvider.usersApi }
     }
 
 val socketModule =
@@ -117,12 +119,6 @@ val settingsModule =
         }
     }
 
-val networkModule =
-    module {
-        single<OrdersApi> { RetrofitProvider.ordersApi }
-        single<UpdatetOrdersStatusApi> { RetrofitProvider.updateStatusApi }
-        single<GetUsersApi> { RetrofitProvider.usersApi }
-    }
 
 val secureUserStoreModule =
     module {
