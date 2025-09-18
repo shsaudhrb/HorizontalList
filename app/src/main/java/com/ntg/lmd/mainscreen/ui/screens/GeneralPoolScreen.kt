@@ -66,44 +66,34 @@ fun generalPoolScreen(
     val scope = rememberCoroutineScope()
     val deviceLatLng by generalPoolViewModel.deviceLatLng.collectAsStateWithLifecycle()
     val hasCenteredOnDevice = remember { mutableStateOf(false) }
-
     setupInitialCamera(ui, deviceLatLng, cameraPositionState, hasCenteredOnDevice)
     val currentUserId = remember { userStore.getUserId() }
-
     LaunchedEffect(Unit) {
         generalPoolViewModel.setCurrentUserId(currentUserId)
         generalPoolViewModel.attach()
     }
-
     locationPermissionHandler(
-        onPermissionGranted = {
-            generalPoolViewModel.handleLocationPermission(granted = true)
-        },
+        onPermissionGranted = { generalPoolViewModel.handleLocationPermission(true) },
         onPermissionDenied = {
-            generalPoolViewModel.handleLocationPermission(granted = false, promptIfMissing = true)
+            generalPoolViewModel.handleLocationPermission(
+                false,
+                promptIfMissing = true,
+            )
         },
     )
-
     rememberSearchEffects(navController, generalPoolViewModel)
-
     val focusOnOrder =
         rememberFocusOnOrder(generalPoolViewModel, markerState, cameraPositionState, scope)
     val onAddToMe = addToMeAction(context, generalPoolViewModel, currentUserId)
-
     Box(Modifier.fillMaxSize()) {
         generalPoolContent(
-            ui = ui,
-            focusOnOrder = focusOnOrder,
-            onMaxDistanceKm = generalPoolViewModel::onDistanceChange,
-            mapStates = MapStates(cameraPositionState, markerState),
-            deviceLatLng = deviceLatLng,
+            ui,
+            focusOnOrder,
+            generalPoolViewModel::onDistanceChange,
+            MapStates(cameraPositionState, markerState),
+            deviceLatLng,
         )
-        poolBottomContent(
-            ui = ui,
-            viewModel = generalPoolViewModel,
-            focusOnOrder = focusOnOrder,
-            onAddToMe = onAddToMe,
-        )
+        poolBottomContent(ui, generalPoolViewModel, focusOnOrder, onAddToMe)
     }
 }
 
