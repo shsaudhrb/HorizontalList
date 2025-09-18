@@ -22,20 +22,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.ntg.lmd.MyApp
 import com.ntg.lmd.R
 import com.ntg.lmd.navigation.AppNavConfig
 import com.ntg.lmd.navigation.Screen
 import com.ntg.lmd.navigation.TopBarConfigWithTitle
+import com.ntg.lmd.network.connectivity.NetworkMonitor
 import com.ntg.lmd.ui.theme.CupertinoSeparator
 import com.ntg.lmd.ui.theme.CupertinoSystemBackground
 import kotlinx.coroutines.launch
+import org.koin.androidx.compose.get
 
 const val ENABLED_ICON = 1f
 const val DISABLED_ICON = 0.38f
@@ -68,8 +68,8 @@ fun appScaffoldWithDrawer(
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
-    val app = LocalContext.current.applicationContext as MyApp
-    val online by app.networkMonitor.isOnline.collectAsState()
+    val networkMonitor: NetworkMonitor = get()
+    val online by networkMonitor.isOnline.collectAsState()
     LaunchedEffect(online) { }
 
     ModalNavigationDrawer(
