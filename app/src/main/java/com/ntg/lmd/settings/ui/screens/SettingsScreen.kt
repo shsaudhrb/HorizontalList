@@ -1,6 +1,5 @@
 package com.ntg.lmd.settings.ui.screens
 
-import android.app.Application
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -28,25 +27,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
 import com.ntg.lmd.R
 import com.ntg.lmd.settings.ui.viewmodel.AppLanguage
 import com.ntg.lmd.settings.ui.viewmodel.SettingsViewModel
-import com.ntg.lmd.settings.ui.viewmodel.SettingsViewModelFactory
+import org.koin.androidx.compose.getViewModel
 
 @Composable
 fun settingsScreen(backStackEntry: NavBackStackEntry) {
-    val ctx = LocalContext.current
-    val settingsVm: SettingsViewModel =
-        viewModel(
-            viewModelStoreOwner = backStackEntry,
-            factory = SettingsViewModelFactory(ctx.applicationContext as Application),
-        )
+    val settingsVm: SettingsViewModel = getViewModel(viewModelStoreOwner = backStackEntry)
 
     settingsHost(
         vm = settingsVm,

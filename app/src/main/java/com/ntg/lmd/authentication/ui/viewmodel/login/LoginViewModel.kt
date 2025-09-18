@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.messaging.FirebaseMessaging
 import com.ntg.lmd.R
-import com.ntg.lmd.authentication.data.repositoryImp.AuthRepositoryImp
+import com.ntg.lmd.authentication.domain.usecase.LoginUseCase
 import com.ntg.lmd.authentication.ui.model.LoginUiState
 import com.ntg.lmd.network.queue.NetworkResult
 import com.ntg.lmd.utils.ValidationField
@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class LoginViewModel(
-    private val authRepo: AuthRepositoryImp,
+    private val loginUseCase: LoginUseCase,
     private val validationViewModel: ValidationViewModel = ValidationViewModel(),
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(LoginUiState())
@@ -66,15 +66,10 @@ class LoginViewModel(
             val password = _uiState.value.password
 
             _uiState.setLoading()
-            when (val result = authRepo.login(username, password)) {
+            when (val result = loginUseCase.execute(username, password)) {
                 is NetworkResult.Success -> {
                     // If you have a display name from repo, use it; else fallback to username
-                    val displayName =
-                        try {
-                            authRepo.lastLoginName
-                        } catch (_: Throwable) {
-                            null
-                        } ?: username
+                    val displayName = loginUseCase.getLastLoginName() ?: username
                     _uiState.handleSuccess(displayName)
 
                     FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->

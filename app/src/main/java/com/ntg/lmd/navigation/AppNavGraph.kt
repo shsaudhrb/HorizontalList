@@ -2,7 +2,6 @@
 
 package com.ntg.lmd.navigation
 
-import android.app.Application
 import android.content.Intent
 import android.os.Build
 import androidx.compose.material.icons.Icons
@@ -11,9 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -26,6 +23,8 @@ import com.ntg.lmd.navigation.component.drawerHost
 import com.ntg.lmd.navigation.component.navigateSingleTop
 import com.ntg.lmd.notification.ui.viewmodel.DeepLinkViewModel
 import com.ntg.lmd.notification.ui.viewmodel.NotificationsViewModel
+import com.ntg.lmd.settings.ui.viewmodel.SettingsViewModel
+import org.koin.androidx.compose.getViewModel
 import com.ntg.lmd.authentication.ui.screens.login.loginScreen as LoginScreen
 import com.ntg.lmd.authentication.ui.screens.register.registerScreen as RegisterScreen
 import com.ntg.lmd.authentication.ui.screens.splash.splashScreen as SplashScreen
@@ -106,13 +105,7 @@ private fun handleDrawerHost(
     val uri = deepLinkIntent?.data
     val deepOpen = (uri?.scheme == "myapp" && uri.host == "notifications")
 
-    val ctx = LocalContext.current
-    val settingsVm: com.ntg.lmd.settings.ui.viewmodel.SettingsViewModel =
-        viewModel(
-            factory =
-                com.ntg.lmd.settings.ui.viewmodel
-                    .SettingsViewModelFactory(ctx.applicationContext as Application),
-        )
+    val settingsVm: SettingsViewModel = getViewModel()
 
     val logoutState by settingsVm.logoutState.collectAsState()
 
