@@ -2,6 +2,24 @@ package com.ntg.lmd.mainscreen.domain.model
 
 import com.ntg.lmd.order.domain.model.OrderStatusCode
 
+sealed class RelativeTime {
+    data object JustNow : RelativeTime()
+
+    data class MinutesAgo(
+        val minutes: Int,
+    ) : RelativeTime()
+
+    data class HoursAgo(
+        val hours: Int,
+    ) : RelativeTime()
+
+    data class DaysAgo(
+        val days: Int,
+    ) : RelativeTime()
+
+    data object Unknown : RelativeTime()
+}
+
 const val STATUS_ADDED = 1
 const val STATUS_CONFIRMED = 2
 const val STATUS_REASSIGNED = 4
@@ -12,7 +30,7 @@ data class OrderInfo(
     val id: String = "",
     val name: String = "",
     val orderNumber: String = "",
-    val timeAgo: String = "0m ago",
+    val timeAgo: RelativeTime = RelativeTime.Unknown,
     val itemsCount: Int = 0,
     val distanceKm: Double = 0.0,
     val lat: Double = 0.0,

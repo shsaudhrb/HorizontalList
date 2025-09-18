@@ -55,7 +55,7 @@ private const val ORDER_FOCUS_ZOOM = 14f
 @Composable
 fun generalPoolScreen(
     navController: NavController,
-    generalPoolViewModel: GeneralPoolViewModel = viewModel(),
+    generalPoolViewModel: GeneralPoolViewModel = koinViewModel(),
 ) {
     val context = LocalContext.current
     val ui by generalPoolViewModel.ui.collectAsStateWithLifecycle()
@@ -64,40 +64,34 @@ fun generalPoolScreen(
     val scope = rememberCoroutineScope()
     val deviceLatLng by generalPoolViewModel.deviceLatLng.collectAsStateWithLifecycle()
     val hasCenteredOnDevice = remember { mutableStateOf(false) }
-
     setupInitialCamera(ui, deviceLatLng, cameraPositionState, hasCenteredOnDevice)
     val currentUserId = remember { userStore.getUserId() }
-
     LaunchedEffect(Unit) {
         generalPoolViewModel.setCurrentUserId(currentUserId)
-        generalPoolViewModel.attach(context)
+        generalPoolViewModel.attach()
     }
-
     locationPermissionHandler(
-        onPermissionGranted = { ctx ->
-            generalPoolViewModel.ensureLocationReady(ctx, promptIfMissing = false)
+        onPermissionGranted = { generalPoolViewModel.handleLocationPermission(true) },
+        onPermissionDenied = {
+            generalPoolViewModel.handleLocationPermission(
+                false,
+                promptIfMissing = true,
+            )
         },
     )
-
     rememberSearchEffects(navController, generalPoolViewModel)
-
-    val focusOnOrder = rememberFocusOnOrder(generalPoolViewModel, markerState, cameraPositionState, scope)
+    val focusOnOrder =
+        rememberFocusOnOrder(generalPoolViewModel, markerState, cameraPositionState, scope)
     val onAddToMe = addToMeAction(context, generalPoolViewModel, currentUserId)
-
     Box(Modifier.fillMaxSize()) {
         generalPoolContent(
-            ui = ui,
-            focusOnOrder = focusOnOrder,
-            onMaxDistanceKm = generalPoolViewModel::onDistanceChange,
-            mapStates = MapStates(cameraPositionState, markerState),
-            deviceLatLng = deviceLatLng,
+            ui,
+            focusOnOrder,
+            generalPoolViewModel::onDistanceChange,
+            MapStates(cameraPositionState, markerState),
+            deviceLatLng,
         )
-        poolBottomContent(
-            ui = ui,
-            viewModel = generalPoolViewModel,
-            focusOnOrder = focusOnOrder,
-            onAddToMe = onAddToMe,
-        )
+        poolBottomContent(ui, generalPoolViewModel, focusOnOrder, onAddToMe)
     }
 }
 

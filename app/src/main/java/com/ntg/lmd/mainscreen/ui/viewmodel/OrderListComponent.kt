@@ -1,9 +1,9 @@
 package com.ntg.lmd.mainscreen.ui.viewmodel
 
+import android.content.Context
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.paging.OrdersPaging
 import com.ntg.lmd.mainscreen.domain.usecase.GetMyOrdersUseCase
-import android.content.Context
 import com.ntg.lmd.mainscreen.ui.model.LocalUiOnlyStatusBus
 import kotlinx.coroutines.flow.update
 import java.io.IOException
@@ -35,11 +35,15 @@ class OrdersListErrorHandler(
         }
     }
 
-    fun postError(message: String, retry: () -> Unit) {
+    fun postError(
+        message: String,
+        retry: () -> Unit,
+    ) {
         state.update { it.copy(errorMessage = message) }
         LocalUiOnlyStatusBus.errorEvents.tryEmit(message to retry)
     }
 }
+
 class OrdersPager(
     private val getMyOrders: GetMyOrdersUseCase,
 ) {
@@ -50,13 +54,14 @@ class OrdersPager(
         userOrdersOnly: Boolean = true,
         limit: Int = OrdersPaging.PAGE_SIZE,
     ): List<OrderInfo> {
-        val res = getMyOrders(
-            page = page,
-            limit = limit,
-            bypassCache = bypassCache,
-            assignedAgentId = assignedAgentId,
-            userOrdersOnly = userOrdersOnly,
-        )
+        val res =
+            getMyOrders(
+                page = page,
+                limit = limit,
+                bypassCache = bypassCache,
+                assignedAgentId = assignedAgentId,
+                userOrdersOnly = userOrdersOnly,
+            )
         return res.items
     }
 }
@@ -70,7 +75,7 @@ class OrdersThrottle(
     fun canRequest(page: Int): Boolean {
         val withinCooldown =
             lastFailedPage == page &&
-                    (System.currentTimeMillis() - lastNextPageErrorAtMs) < cooldownMs
+                (System.currentTimeMillis() - lastNextPageErrorAtMs) < cooldownMs
         return !withinCooldown
     }
 
@@ -100,7 +105,10 @@ class OrdersListPublisher(
         state.update { it.copy(orders = display) }
     }
 
-    fun publishFirstPage(items: List<OrderInfo>, endReached: Boolean) {
+    fun publishFirstPage(
+        items: List<OrderInfo>,
+        endReached: Boolean,
+    ) {
         val uid = currentUserId.value
         val display = helpers.computeDisplay(deviceLocation.value, items, state.value.query, uid)
         helpers.publishFirstPageFrom(

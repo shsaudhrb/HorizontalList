@@ -5,6 +5,7 @@ import com.ntg.lmd.mainscreen.data.model.UpdateOrderStatusRequest
 import com.ntg.lmd.mainscreen.data.model.UpdatedOrderData
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus.Companion.fromId
+import com.ntg.lmd.mainscreen.domain.model.RelativeTime
 import com.ntg.lmd.mainscreen.domain.repository.UpdateOrdersStatusRepository
 
 class UpdateOrdersStatusRepositoryImpl(
@@ -41,7 +42,7 @@ class UpdateOrdersStatusRepositoryImpl(
             id = d?.orderId ?: fallbackOrderId,
             name = d?.customerName.orEmpty(),
             orderNumber = d?.orderNumber.orEmpty(),
-            timeAgo = "now",
+            timeAgo = RelativeTime.JustNow,
             itemsCount = 0,
             distanceKm = 0.0,
             lat = 0.0,

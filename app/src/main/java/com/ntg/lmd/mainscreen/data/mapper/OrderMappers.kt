@@ -3,6 +3,7 @@ package com.ntg.lmd.mainscreen.data.mapper
 import com.ntg.lmd.mainscreen.data.model.OrderDto
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus.Companion.fromId
+import com.ntg.lmd.mainscreen.domain.model.RelativeTime
 import com.ntg.lmd.utils.AppDefaults
 
 private const val METERS_PER_KILOMETER = 1_000.0
@@ -17,7 +18,7 @@ fun OrderDto.toDomain(): OrderInfo =
         id = orderId,
         name = customerName.orEmpty(),
         orderNumber = orderNumber,
-        timeAgo = "now",
+        timeAgo = RelativeTime.JustNow,
         itemsCount = 0,
         distanceKm = distanceKm.toKmOrDefault(AppDefaults.DEFAULT_DISTANCE_KM),
         lat = coordinates?.latitude ?: AppDefaults.DEFAULT_LAT,
