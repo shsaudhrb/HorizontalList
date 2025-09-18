@@ -190,7 +190,6 @@ dependencies {
 
     //Koin
     implementation(libs.koin.android)
-    implementation(libs.koin.androidx.viewmodel)
     implementation(libs.koin.androidx.compose)
 }
 
