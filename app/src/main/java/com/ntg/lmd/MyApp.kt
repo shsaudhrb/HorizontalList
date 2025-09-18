@@ -20,7 +20,6 @@ import kotlinx.coroutines.launch
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.GlobalContext.startKoin
 import org.koin.java.KoinJavaComponent
-import org.koin.core.context.GlobalContext.startKoin
 
 class MyApp : Application() {
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
