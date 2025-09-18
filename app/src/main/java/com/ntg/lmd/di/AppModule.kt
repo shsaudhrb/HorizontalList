@@ -34,12 +34,14 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 val ordersHistoryModule =
     module {
+        single<OrdersHistoryApi> { get<Retrofit>().create(OrdersHistoryApi::class.java)}
         single<OrdersRepository> { OrdersRepositoryImpl(get()) }
         factory { GetOrdersUseCase(get()) }
         viewModel { OrderHistoryViewModel(get()) }
     }
 val deliveriesLogModule =
     module {
+        single<OrdersApi> { get<Retrofit>().create(OrdersApi::class.java) }
         single<DeliveriesLogRepository> { DeliveriesLogRepositoryImpl(get()) }
         factory { GetDeliveriesLogFromApiUseCase(get()) }
         viewModel { DeliveriesLogViewModel(get()) }
@@ -48,7 +50,7 @@ val deliveriesLogModule =
 val authModule =
     module {
         // SecureUserStore
-        single { SecureUserStore(androidContext()) }
+        single { SecureUserStore(get()) }
 
         single {
             AuthInterceptor(
@@ -74,7 +76,7 @@ val authModule =
         }
 
         // AuthApi (Retrofit no auth)
-        single<AuthApi> { RetrofitProvider.apiNoAuth }
+        single<AuthApi> { get<Retrofit>().create(AuthApi::class.java) }
 
         // Repository
         single<AuthRepository> {
@@ -95,18 +97,7 @@ val authModule =
 val networkModule =
     module {
         // SecureTokenStore (only here)
-        single { SecureTokenStore(androidContext()) }
-
-        // RetrofitProvider init
-        single {
-            RetrofitProvider.init(androidContext())
-            RetrofitProvider
-        }
-
-        // AuthApi without token
-        single<AuthApi> { RetrofitProvider.apiNoAuth }
-        single<OrdersHistoryApi> { RetrofitProvider.ordersHistoryApi }
-        single<OrdersApi> { RetrofitProvider.ordersApi }
+        single { SecureTokenStore(get()) }
     }
 
 val socketModule =
