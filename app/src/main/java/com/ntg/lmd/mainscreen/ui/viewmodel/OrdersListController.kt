@@ -15,6 +15,7 @@ import java.net.UnknownHostException
 import javax.net.ssl.SSLHandshakeException
 import kotlin.coroutines.cancellation.CancellationException
 
+@Suppress("LargeClass")
 class OrdersListController(
     private val store: OrdersStore,
     private val helpers: OrdersListHelpers,
@@ -44,7 +45,7 @@ class OrdersListController(
             it.copy(
                 isLoading = !alreadyHasData,
                 errorMessage = null,
-                emptyMessage = null
+                emptyMessage = null,
             )
         }
 

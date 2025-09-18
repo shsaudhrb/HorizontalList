@@ -59,7 +59,7 @@ class MyApp : Application() {
             modules(
                 networkBridgeModule,
                 ordersHistoryModule,
-                deliveriesLogModule
+                deliveriesLogModule,
             )
         }
     }

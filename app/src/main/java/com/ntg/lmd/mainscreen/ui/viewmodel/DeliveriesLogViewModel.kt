@@ -1,6 +1,5 @@
 package com.ntg.lmd.mainscreen.ui.viewmodel
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ntg.lmd.mainscreen.domain.model.DeliveryLog
@@ -14,7 +13,6 @@ import kotlinx.coroutines.launch
 class DeliveriesLogViewModel(
     private val getLogsUseCase: GetDeliveriesLogFromApiUseCase,
 ) : ViewModel() {
-
     private val _logs = MutableStateFlow<List<DeliveryLog>>(emptyList())
     val logs: StateFlow<List<DeliveryLog>> = _logs
 
@@ -39,7 +37,11 @@ class DeliveriesLogViewModel(
         reset()
         viewModelScope.launch {
             _isRefreshing.value = true
-            try { fetchNext() } finally { _isRefreshing.value = false }
+            try {
+                fetchNext()
+            } finally {
+                _isRefreshing.value = false
+            }
         }
     }
 
@@ -79,12 +81,13 @@ class DeliveriesLogViewModel(
         val g = generationCounter
         _isLoadingMore.value = true
         try {
-            val (items, next) = getLogsUseCase(
-                page = page,
-                limit = OrdersPaging.PAGE_SIZE,
-                statusIds = DeliveryStatusIds.DEFAULT_LOG_STATUSES,
-                search = currentQuery,
-            )
+            val (items, next) =
+                getLogsUseCase(
+                    page = page,
+                    limit = OrdersPaging.PAGE_SIZE,
+                    statusIds = DeliveryStatusIds.DEFAULT_LOG_STATUSES,
+                    search = currentQuery,
+                )
             if (g == generationCounter) applyPageResult(items, next)
         } catch (_: Throwable) {
             if (g == generationCounter) _endReached.value = true
@@ -105,7 +108,10 @@ class DeliveriesLogViewModel(
         return canProceed
     }
 
-    private fun applyPageResult(items: List<DeliveryLog>, next: Boolean) {
+    private fun applyPageResult(
+        items: List<DeliveryLog>,
+        next: Boolean,
+    ) {
         _logs.value = (_logs.value + items).distinctBy { it.orderId }
         hasNext = next
         _endReached.value = !hasNext

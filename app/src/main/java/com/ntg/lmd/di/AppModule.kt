@@ -14,18 +14,20 @@ import com.ntg.lmd.order.ui.viewmodel.OrderHistoryViewModel
 import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
 
-val networkBridgeModule = module {
-    single<OrdersHistoryApi> { RetrofitProvider.ordersHistoryApi }
-    single<OrdersApi> { RetrofitProvider.ordersApi }
-
-}
-val ordersHistoryModule = module {
-    single<OrdersRepository> { OrdersRepositoryImpl(get()) }
-    factory { GetOrdersUseCase(get()) }
-    viewModel { OrderHistoryViewModel(get()) }
-}
-val deliveriesLogModule = module {
-    single<DeliveriesLogRepository> { DeliveriesLogRepositoryImpl(get()) }
-    factory { GetDeliveriesLogFromApiUseCase(get()) }
-    viewModel { DeliveriesLogViewModel(get()) }
-}
+val networkBridgeModule =
+    module {
+        single<OrdersHistoryApi> { RetrofitProvider.ordersHistoryApi }
+        single<OrdersApi> { RetrofitProvider.ordersApi }
+    }
+val ordersHistoryModule =
+    module {
+        single<OrdersRepository> { OrdersRepositoryImpl(get()) }
+        factory { GetOrdersUseCase(get()) }
+        viewModel { OrderHistoryViewModel(get()) }
+    }
+val deliveriesLogModule =
+    module {
+        single<DeliveriesLogRepository> { DeliveriesLogRepositoryImpl(get()) }
+        factory { GetDeliveriesLogFromApiUseCase(get()) }
+        viewModel { DeliveriesLogViewModel(get()) }
+    }
