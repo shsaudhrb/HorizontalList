@@ -188,7 +188,7 @@ dependencies {
     // LeakCanary for memory leak detection
     debugImplementation(libs.leakcanary.android)
 
-    //Koin
+    // Koin
     implementation(libs.koin.android)
     implementation(libs.koin.androidx.compose)
 
