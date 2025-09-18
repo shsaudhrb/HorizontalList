@@ -2,16 +2,16 @@ package com.ntg.lmd
 
 import android.app.Application
 import com.ntg.lmd.di.MyOrderMyPoolModule
-import com.ntg.lmd.di.networkModule
-import com.ntg.lmd.network.connectivity.NetworkMonitor
 import com.ntg.lmd.di.authModule
+import com.ntg.lmd.di.deliveriesLogModule
 import com.ntg.lmd.di.generalPoolModule
 import com.ntg.lmd.di.locationModule
 import com.ntg.lmd.di.monitorModule
+import com.ntg.lmd.di.networkModule
+import com.ntg.lmd.di.ordersHistoryModule
 import com.ntg.lmd.di.settingsModule
 import com.ntg.lmd.di.socketModule
-import com.ntg.lmd.di.deliveriesLogModule
-import com.ntg.lmd.di.ordersHistoryModule
+import com.ntg.lmd.network.connectivity.NetworkMonitor
 import com.ntg.lmd.network.core.RetrofitProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

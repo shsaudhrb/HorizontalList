@@ -48,7 +48,8 @@ class OrdersListController(
             try {
                 val (items, endReached) = fetchFirstPage(bypassCache = true)
                 publisher.publishFirstPage(items, endReached)
-            } catch (ce: CancellationException) { throw ce
+            } catch (ce: CancellationException) {
+                throw ce
             } catch (e: SocketTimeoutException) {
                 errors.handleInitialError(e, alreadyHasData, context) { ctx -> loadInitial(ctx) }
             } catch (e: IOException) {
@@ -73,7 +74,8 @@ class OrdersListController(
             try {
                 val (items, endReached) = fetchFirstPage(bypassCache = true)
                 publisher.publishFirstPage(items, endReached)
-            } catch (ce: CancellationException) { throw ce
+            } catch (ce: CancellationException) {
+                throw ce
             } catch (e: SocketTimeoutException) {
                 errors.postError(e.toUserMessage()) { refresh(context) }
             } catch (e: IOException) {
@@ -119,12 +121,13 @@ class OrdersListController(
         scope.launch {
             state.update { it.copy(isLoadingMore = true) }
             try {
-                val nextItems = pager.getPage(
-                    page = nextPageNum,
-                    bypassCache = true,
-                    assignedAgentId = currentUserId.value,
-                    limit = OrdersPaging.PAGE_SIZE,
-                )
+                val nextItems =
+                    pager.getPage(
+                        page = nextPageNum,
+                        bypassCache = true,
+                        assignedAgentId = currentUserId.value,
+                        limit = OrdersPaging.PAGE_SIZE,
+                    )
 
                 store.endReached = nextItems.isEmpty() || nextItems.size < OrdersPaging.PAGE_SIZE
                 store.page = nextPageNum
@@ -157,12 +160,13 @@ class OrdersListController(
         store.endReached = false
         allOrders.clear()
 
-        val first = pager.getPage(
-            page = 1,
-            bypassCache = bypassCache,
-            assignedAgentId = currentUserId.value,
-            limit = OrdersPaging.PAGE_SIZE,
-        )
+        val first =
+            pager.getPage(
+                page = 1,
+                bypassCache = bypassCache,
+                assignedAgentId = currentUserId.value,
+                limit = OrdersPaging.PAGE_SIZE,
+            )
         allOrders.addAll(first)
         store.endReached = first.size < OrdersPaging.PAGE_SIZE
 

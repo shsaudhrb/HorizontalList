@@ -15,7 +15,6 @@ class OrdersListViewModel(
     getMyOrders: GetMyOrdersUseCase,
     computeDistancesUseCase: ComputeDistancesUseCase,
 ) : ViewModel() {
-
     private val helpers = OrdersListHelpers(store, computeDistancesUseCase)
 
     private val pager = OrdersPager(getMyOrders)
@@ -24,13 +23,14 @@ class OrdersListViewModel(
     private val throttle = OrdersThrottle()
 
     // orchestrator
-    private val deps = OrdersListControllerDeps(
-        store = store,
-        pager = pager,
-        publisher = publisher,
-        errors = errors,
-        throttle = throttle,
-    )
+    private val deps =
+        OrdersListControllerDeps(
+            store = store,
+            pager = pager,
+            publisher = publisher,
+            errors = errors,
+            throttle = throttle,
+        )
 
     private val controller =
         OrdersListController(
@@ -41,16 +41,24 @@ class OrdersListViewModel(
     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     fun updateDeviceLocation(location: Location?) {
         store.deviceLocation.value = location
-        if (location != null && store.state.value.orders.isNotEmpty()) {
+        if (location != null &&
+            store.state.value.orders
+                .isNotEmpty()
+        ) {
             val computed = helpers.withDistances(location, store.state.value.orders)
             store.state.update { it.copy(orders = computed) }
         }
     }
 
     fun setCurrentUserId(id: String?) = controller.setCurrentUserId(id)
+
     fun loadOrders(context: Context) = controller.loadInitial(context)
+
     fun retry(context: Context) = controller.loadInitial(context)
+
     fun refresh(context: Context) = controller.refresh(context)
+
     fun refreshOrders() = controller.refreshStrict()
+
     fun loadNextPage(context: Context) = controller.loadNextPage(context)
 }
