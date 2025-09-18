@@ -34,11 +34,11 @@ import androidx.navigation.NavBackStackEntry
 import com.ntg.lmd.R
 import com.ntg.lmd.settings.ui.viewmodel.AppLanguage
 import com.ntg.lmd.settings.ui.viewmodel.SettingsViewModel
-import org.koin.androidx.compose.getViewModel
+import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun settingsScreen(backStackEntry: NavBackStackEntry) {
-    val settingsVm: SettingsViewModel = getViewModel(viewModelStoreOwner = backStackEntry)
+    val settingsVm: SettingsViewModel = koinViewModel(viewModelStoreOwner = backStackEntry)
 
     settingsHost(
         vm = settingsVm,

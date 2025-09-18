@@ -42,7 +42,7 @@ import com.ntg.lmd.authentication.ui.model.InputProps
 import com.ntg.lmd.authentication.ui.model.LoginUiState
 import com.ntg.lmd.authentication.ui.viewmodel.login.LoginViewModel
 import com.ntg.lmd.navigation.Screen
-import org.koin.androidx.compose.getViewModel
+import org.koin.androidx.compose.koinViewModel
 
 private const val CARD_SCALE_FOCUSED = 1.02f
 private const val CARD_SCALE_DEFAULT = 1f
@@ -51,7 +51,7 @@ private const val CARD_ELEVATION_DEFAULT = 2f
 
 @Composable
 fun loginScreen(navController: NavController) {
-    val viewModel: LoginViewModel = getViewModel()
+    val viewModel: LoginViewModel = koinViewModel()
     val ui = collectLoginUi(viewModel)
     val focusManager = LocalFocusManager.current
     val (cardUi, onUsernameFocus, onPasswordFocus) = rememberCardAndFocusHandlers(viewModel)

@@ -23,7 +23,7 @@ import com.ntg.lmd.navigation.buildRouteUiSpec
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.koin.androidx.compose.get
-import org.koin.androidx.compose.getViewModel
+import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun drawerHost(
@@ -35,7 +35,7 @@ fun drawerHost(
     val currentRoute = backStack?.destination?.route ?: Screen.GeneralPool.route
     val startDest = if (openNotifications) Screen.Notifications.route else Screen.GeneralPool.route
 
-    val loginVm: LoginViewModel = getViewModel()
+    val loginVm: LoginViewModel = koinViewModel()
     val loginUi by loginVm.uiState.collectAsState()
     val authRepo: AuthRepository = get()
     val effectiveUserName = loginUi.displayName ?: authRepo.lastLoginName

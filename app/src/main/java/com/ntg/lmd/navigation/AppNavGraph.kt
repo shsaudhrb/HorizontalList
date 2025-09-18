@@ -24,7 +24,7 @@ import com.ntg.lmd.navigation.component.navigateSingleTop
 import com.ntg.lmd.notification.ui.viewmodel.DeepLinkViewModel
 import com.ntg.lmd.notification.ui.viewmodel.NotificationsViewModel
 import com.ntg.lmd.settings.ui.viewmodel.SettingsViewModel
-import org.koin.androidx.compose.getViewModel
+import org.koin.androidx.compose.koinViewModel
 import com.ntg.lmd.authentication.ui.screens.login.loginScreen as LoginScreen
 import com.ntg.lmd.authentication.ui.screens.register.registerScreen as RegisterScreen
 import com.ntg.lmd.authentication.ui.screens.splash.splashScreen as SplashScreen
@@ -105,7 +105,7 @@ private fun handleDrawerHost(
     val uri = deepLinkIntent?.data
     val deepOpen = (uri?.scheme == "myapp" && uri.host == "notifications")
 
-    val settingsVm: SettingsViewModel = getViewModel()
+    val settingsVm: SettingsViewModel = koinViewModel()
 
     val logoutState by settingsVm.logoutState.collectAsState()
 
