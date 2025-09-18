@@ -13,9 +13,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ntg.lmd.network.core.RetrofitProvider
-import com.ntg.lmd.order.data.remote.repository.OrdersRepositoryImpl
 import com.ntg.lmd.order.domain.model.OrderHistoryUi
 import com.ntg.lmd.order.domain.model.OrdersDialogsCallbacks
 import com.ntg.lmd.order.domain.model.OrdersDialogsState
@@ -23,7 +21,6 @@ import com.ntg.lmd.order.domain.model.OrdersHistoryFilter
 import com.ntg.lmd.order.domain.model.OrdersHistoryUiState
 import com.ntg.lmd.order.domain.model.PagingState
 import com.ntg.lmd.order.domain.model.defaultVerticalListConfig
-import com.ntg.lmd.order.domain.model.usecase.GetOrdersUseCase
 import com.ntg.lmd.order.ui.components.OrdersHistoryEffectsConfig
 import com.ntg.lmd.order.ui.components.OrdersHistoryUiConfig
 import com.ntg.lmd.order.ui.components.exportOrdersHistoryPdf
@@ -33,21 +30,16 @@ import com.ntg.lmd.order.ui.components.ordersHistoryMenu
 import com.ntg.lmd.order.ui.components.sharePdf
 import com.ntg.lmd.order.ui.components.verticalListComponent
 import com.ntg.lmd.order.ui.viewmodel.OrderHistoryViewModel
-import com.ntg.lmd.order.ui.viewmodel.OrderHistoryViewModelFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun ordersHistoryRoute(registerOpenMenu: ((() -> Unit) -> Unit)? = null) {
-    val vm: OrderHistoryViewModel =
-        viewModel(
-            factory =
-                OrderHistoryViewModelFactory(
-                    GetOrdersUseCase(OrdersRepositoryImpl(RetrofitProvider.ordersHistoryApi)),
-                ),
-        )
+    val vm: OrderHistoryViewModel = koinViewModel()
+
     val token = RetrofitProvider.tokenStore.getAccessToken() ?: ""
     ordersHistoryStateHolders(vm, token, registerOpenMenu)
 }

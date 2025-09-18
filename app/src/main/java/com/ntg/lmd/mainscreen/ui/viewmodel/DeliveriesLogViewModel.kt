@@ -1,21 +1,23 @@
 package com.ntg.lmd.mainscreen.ui.viewmodel
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ntg.lmd.mainscreen.domain.model.DeliveryLog
 import com.ntg.lmd.mainscreen.domain.paging.OrdersPaging
 import com.ntg.lmd.mainscreen.domain.usecase.DeliveryStatusIds
+import com.ntg.lmd.mainscreen.domain.usecase.GetDeliveriesLogFromApiUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-class DeliveriesLogViewModel : ViewModel() {
+class DeliveriesLogViewModel(
+    private val getLogsUseCase: GetDeliveriesLogFromApiUseCase,
+) : ViewModel() {
     private val _logs = MutableStateFlow<List<DeliveryLog>>(emptyList())
     val logs: StateFlow<List<DeliveryLog>> = _logs
 
     private var lastRequested: Pair<Int, String?>? = null
-    private var generationCounter: Int = 0 // increases every time we reset or refresh data
+    private var generationCounter: Int = 0
 
     // paging state
     private var page = 1
@@ -31,12 +33,25 @@ class DeliveriesLogViewModel : ViewModel() {
     private val _isRefreshing = MutableStateFlow(true)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing
 
-    fun load(context: Context) {
+    fun load() {
         reset()
         viewModelScope.launch {
             _isRefreshing.value = true
             try {
-                fetchNext(context)
+                fetchNext()
+            } finally {
+                _isRefreshing.value = false
+            }
+        }
+    }
+
+    fun refresh() {
+        if (_isRefreshing.value) return
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            try {
+                reset()
+                fetchNext()
             } finally {
                 _isRefreshing.value = false
             }
@@ -52,32 +67,22 @@ class DeliveriesLogViewModel : ViewModel() {
         _logs.value = emptyList()
     }
 
-    fun loadMore(context: Context) {
+    fun loadMore() {
         if (_isLoadingMore.value || _endReached.value) return
-        viewModelScope.launch { fetchNext(context) }
+        viewModelScope.launch { fetchNext() }
     }
 
-    fun refresh(context: Context) {
-        if (_isRefreshing.value) return
-        viewModelScope.launch {
-            _isRefreshing.value = true
-            try {
-                reset()
-                fetchNext(context)
-            } finally {
-                _isRefreshing.value = false
-            }
-        }
+    fun searchById(query: String) {
+        currentQuery = query.trim().removePrefix("#").ifEmpty { null }
     }
 
-    private suspend fun fetchNext(context: Context) {
+    private suspend fun fetchNext() {
         if (!prepareNext()) return
         val g = generationCounter
         _isLoadingMore.value = true
         try {
-            val useCase = DeliveriesLogProvider.getLogsUseCase(context)
             val (items, next) =
-                useCase(
+                getLogsUseCase(
                     page = page,
                     limit = OrdersPaging.PAGE_SIZE,
                     statusIds = DeliveryStatusIds.DEFAULT_LOG_STATUSES,
@@ -98,12 +103,8 @@ class DeliveriesLogViewModel : ViewModel() {
             canProceed = false
         }
         val key = page to currentQuery
-        if (canProceed && lastRequested == key) {
-            canProceed = false
-        }
-        if (canProceed) {
-            lastRequested = key
-        }
+        if (canProceed && lastRequested == key) canProceed = false
+        if (canProceed) lastRequested = key
         return canProceed
     }
 
@@ -115,10 +116,5 @@ class DeliveriesLogViewModel : ViewModel() {
         hasNext = next
         _endReached.value = !hasNext
         if (hasNext) page += 1
-    }
-
-    // search by order number
-    fun searchById(query: String) {
-        currentQuery = query.trim().removePrefix("#").ifEmpty { null }
     }
 }
