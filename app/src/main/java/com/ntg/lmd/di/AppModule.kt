@@ -1,6 +1,5 @@
 package com.ntg.lmd.di
 
-import android.content.Context
 import com.google.android.gms.location.LocationServices
 import com.ntg.lmd.BuildConfig
 import com.ntg.lmd.authentication.data.datasource.remote.api.AuthApi
@@ -65,9 +64,6 @@ val authModule =
                 .addConverterFactory(GsonConverterFactory.create())
                 .build()
         }
-
-        // AuthApi (Retrofit no auth)
-        single<AuthApi> { RetrofitProvider.apiNoAuth }
 
         // Repository
         single<AuthRepository> {
