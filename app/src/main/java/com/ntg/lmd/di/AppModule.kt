@@ -11,6 +11,7 @@ import com.ntg.lmd.mainscreen.data.repository.DeliveriesLogRepositoryImpl
 import com.ntg.lmd.mainscreen.domain.repository.DeliveriesLogRepository
 import com.ntg.lmd.mainscreen.domain.usecase.GetDeliveriesLogFromApiUseCase
 import com.ntg.lmd.mainscreen.ui.viewmodel.DeliveriesLogViewModel
+import com.ntg.lmd.network.authheader.AuthInterceptor
 import com.ntg.lmd.network.authheader.SecureTokenStore
 import com.ntg.lmd.network.connectivity.NetworkMonitor
 import com.ntg.lmd.network.core.RetrofitProvider
@@ -24,9 +25,12 @@ import com.ntg.lmd.settings.data.SettingsPreferenceDataSource
 import com.ntg.lmd.settings.ui.viewmodel.SettingsViewModel
 import com.ntg.lmd.utils.LogoutManager
 import com.ntg.lmd.utils.SecureUserStore
+import okhttp3.OkHttpClient
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 
 val ordersHistoryModule =
     module {
@@ -45,6 +49,32 @@ val authModule =
     module {
         // SecureUserStore
         single { SecureUserStore(androidContext()) }
+
+        single {
+            AuthInterceptor(
+                store = get(),
+                supabaseKey = BuildConfig.SUPABASE_KEY,
+            )
+        }
+
+        single {
+            OkHttpClient
+                .Builder()
+                .addInterceptor(get<AuthInterceptor>())
+                .build()
+        }
+
+        single {
+            Retrofit
+                .Builder()
+                .baseUrl(BuildConfig.BASE_URL)
+                .client(get<OkHttpClient>())
+                .addConverterFactory(GsonConverterFactory.create())
+                .build()
+        }
+
+        // AuthApi (Retrofit no auth)
+        single<AuthApi> { RetrofitProvider.apiNoAuth }
 
         // Repository
         single<AuthRepository> {
