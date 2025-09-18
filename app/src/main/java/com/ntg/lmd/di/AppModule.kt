@@ -8,6 +8,8 @@ import com.ntg.lmd.authentication.data.repositoryImp.AuthRepositoryImp
 import com.ntg.lmd.authentication.domain.repository.AuthRepository
 import com.ntg.lmd.authentication.domain.usecase.LoginUseCase
 import com.ntg.lmd.authentication.ui.viewmodel.login.LoginViewModel
+import com.ntg.lmd.mainscreen.data.datasource.remote.LiveOrdersApiService
+import com.ntg.lmd.mainscreen.data.datasource.remote.UpdatetOrdersStatusApi
 import com.ntg.lmd.mainscreen.data.repository.LiveOrdersRepositoryImpl
 import com.ntg.lmd.mainscreen.data.repository.LocationRepositoryImpl
 import com.ntg.lmd.mainscreen.data.repository.UpdateOrdersStatusRepositoryImpl
@@ -28,21 +30,14 @@ import com.ntg.lmd.settings.data.SettingsPreferenceDataSource
 import com.ntg.lmd.settings.ui.viewmodel.SettingsViewModel
 import com.ntg.lmd.utils.LogoutManager
 import com.ntg.lmd.utils.SecureUserStore
-import okhttp3.OkHttpClient
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.viewmodel.dsl.viewModel
-import org.koin.core.qualifier.named
 import org.koin.dsl.module
-
-class AppModule
 
 val authModule =
     module {
         // SecureUserStore
         single { SecureUserStore(androidContext()) }
-
-        // AuthApi (Retrofit no auth)
-        single<AuthApi> { RetrofitProvider.apiNoAuth }
 
         // Repository
         single<AuthRepository> {
@@ -73,6 +68,9 @@ val networkModule =
 
         // AuthApi without token
         single<AuthApi> { RetrofitProvider.apiNoAuth }
+
+        single<LiveOrdersApiService> { RetrofitProvider.liveOrderApi }
+        single<UpdatetOrdersStatusApi> { RetrofitProvider.updateStatusApi }
     }
 
 val socketModule =
@@ -144,7 +142,6 @@ val updateOrderStatusModule =
         factory { UpdateOrderStatusUseCase(get<UpdateOrdersStatusRepository>()) }
     }
 
-val locationModule =
-    module {
-        single { LocationServices.getFusedLocationProviderClient(get<Context>()) }
-    }
+val locationModule = module {
+    single { LocationServices.getFusedLocationProviderClient(androidContext()) }
+}
