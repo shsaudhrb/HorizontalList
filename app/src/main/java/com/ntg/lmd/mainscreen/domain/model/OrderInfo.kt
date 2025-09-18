@@ -4,6 +4,7 @@ import com.ntg.lmd.order.domain.model.OrderStatusCode
 
 sealed class RelativeTime {
     data object JustNow : RelativeTime()
+
     data class MinutesAgo(
         val minutes: Int,
     ) : RelativeTime()

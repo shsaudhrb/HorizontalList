@@ -57,9 +57,8 @@ private const val ORDER_FOCUS_ZOOM = 14f
 @Composable
 fun generalPoolScreen(
     navController: NavController,
-    generalPoolViewModel: GeneralPoolViewModel = koinViewModel()
+    generalPoolViewModel: GeneralPoolViewModel = koinViewModel(),
 ) {
-
     val context = LocalContext.current
     val ui by generalPoolViewModel.ui.collectAsStateWithLifecycle()
     val cameraPositionState = rememberCameraPositionState()
@@ -73,18 +72,22 @@ fun generalPoolScreen(
 
     LaunchedEffect(Unit) {
         generalPoolViewModel.setCurrentUserId(currentUserId)
-        generalPoolViewModel.attach(context)
+        generalPoolViewModel.attach()
     }
 
     locationPermissionHandler(
-        onPermissionGranted = { ctx ->
-            generalPoolViewModel.ensureLocationReady(ctx, promptIfMissing = false)
+        onPermissionGranted = {
+            generalPoolViewModel.handleLocationPermission(granted = true)
+        },
+        onPermissionDenied = {
+            generalPoolViewModel.handleLocationPermission(granted = false, promptIfMissing = true)
         },
     )
 
     rememberSearchEffects(navController, generalPoolViewModel)
 
-    val focusOnOrder = rememberFocusOnOrder(generalPoolViewModel, markerState, cameraPositionState, scope)
+    val focusOnOrder =
+        rememberFocusOnOrder(generalPoolViewModel, markerState, cameraPositionState, scope)
     val onAddToMe = addToMeAction(context, generalPoolViewModel, currentUserId)
 
     Box(Modifier.fillMaxSize()) {

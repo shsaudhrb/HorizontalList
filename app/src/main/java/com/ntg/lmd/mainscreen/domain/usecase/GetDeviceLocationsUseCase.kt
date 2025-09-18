@@ -1,6 +1,5 @@
 package com.ntg.lmd.mainscreen.domain.usecase
 
-import android.content.Context
 import android.location.Location
 import com.ntg.lmd.mainscreen.domain.repository.LocationRepository
 

@@ -3,11 +3,11 @@ package com.ntg.lmd
 import android.app.Application
 import android.content.Context
 import com.ntg.lmd.authentication.data.repositoryImp.AuthRepositoryImp
+import com.ntg.lmd.di.generalPoolModule
+import com.ntg.lmd.di.locationModule
 import com.ntg.lmd.di.networkModule
-import com.ntg.lmd.di.repositoryModule
 import com.ntg.lmd.di.socketModule
-import com.ntg.lmd.di.useCaseModule
-import com.ntg.lmd.di.viewModelModule
+import com.ntg.lmd.di.updateOrderStatusModule
 import com.ntg.lmd.network.connectivity.NetworkMonitor
 import com.ntg.lmd.network.core.RetrofitProvider
 import com.ntg.lmd.network.sockets.SocketIntegration
@@ -33,21 +33,21 @@ class MyApp : Application() {
     override fun onCreate() {
         super.onCreate()
 
+        networkMonitor = NetworkMonitor(applicationContext)
+        appContext = applicationContext
+        RetrofitProvider.init(this)
+
         startKoin {
             androidLogger()
             androidContext(this@MyApp)
             modules(
                 networkModule,
                 socketModule,
-                repositoryModule,
-                useCaseModule,
-                viewModelModule
+                generalPoolModule,
+                updateOrderStatusModule,
+                locationModule,
             )
         }
-
-        networkMonitor = NetworkMonitor(applicationContext)
-        appContext = applicationContext
-        RetrofitProvider.init(this)
 
         socket =
             SocketIntegration(

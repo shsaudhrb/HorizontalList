@@ -1,6 +1,5 @@
 package com.ntg.lmd.mainscreen.domain.repository
 
-import android.content.Context
 import android.location.Location
 
 interface LocationRepository {

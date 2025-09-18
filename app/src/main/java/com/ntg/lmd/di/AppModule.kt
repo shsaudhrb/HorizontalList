@@ -1,63 +1,83 @@
 package com.ntg.lmd.di
 
+import android.content.Context
+import com.google.android.gms.location.LocationServices
 import com.ntg.lmd.BuildConfig
 import com.ntg.lmd.mainscreen.data.datasource.remote.LiveOrdersApiService
+import com.ntg.lmd.mainscreen.data.datasource.remote.UpdatetOrdersStatusApi
 import com.ntg.lmd.mainscreen.data.repository.LiveOrdersRepositoryImpl
+import com.ntg.lmd.mainscreen.data.repository.LocationRepositoryImpl
+import com.ntg.lmd.mainscreen.data.repository.UpdateOrdersStatusRepositoryImpl
 import com.ntg.lmd.mainscreen.domain.repository.LiveOrdersRepository
+import com.ntg.lmd.mainscreen.domain.repository.LocationRepository
+import com.ntg.lmd.mainscreen.domain.repository.UpdateOrdersStatusRepository
 import com.ntg.lmd.mainscreen.domain.usecase.ComputeDistancesUseCase
 import com.ntg.lmd.mainscreen.domain.usecase.GetDeviceLocationsUseCase
 import com.ntg.lmd.mainscreen.domain.usecase.LoadOrdersUseCase
+import com.ntg.lmd.mainscreen.domain.usecase.OrdersRealtimeUseCase
+import com.ntg.lmd.mainscreen.domain.usecase.UpdateOrderStatusUseCase
 import com.ntg.lmd.mainscreen.ui.viewmodel.GeneralPoolViewModel
+import com.ntg.lmd.network.core.RetrofitProvider
 import com.ntg.lmd.network.sockets.SocketIntegration
 import okhttp3.OkHttpClient
-import okhttp3.logging.HttpLoggingInterceptor
 import org.koin.androidx.viewmodel.dsl.viewModel
+import org.koin.core.qualifier.named
 import org.koin.dsl.module
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
 
-val networkModule = module {
-    single {
-        OkHttpClient.Builder()
-            .addInterceptor(HttpLoggingInterceptor().apply {
-                level = HttpLoggingInterceptor.Level.BODY
-            })
-            .build()
+val networkModule =
+    module {
+        single { RetrofitProvider.tokenStore }
+        single { RetrofitProvider.userStore }
+
+        single<LiveOrdersApiService> { RetrofitProvider.liveOrderApi }
+        single<UpdatetOrdersStatusApi> { RetrofitProvider.updateStatusApi }
+
+        // OkHttp for WebSocket
+        single<OkHttpClient>(qualifier = named("ws")) { RetrofitProvider.okHttpForWs }
     }
 
-    single {
-        Retrofit.Builder()
-            .baseUrl(BuildConfig.BASE_URL) // make sure you have this in buildConfigField
-            .client(get())
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
+val socketModule =
+    module {
+        single {
+            SocketIntegration(
+                baseWsUrl = BuildConfig.WS_BASE_URL,
+                client = get<OkHttpClient>(named("ws")),
+                tokenStore = get(),
+            )
+        }
     }
 
-    single<LiveOrdersApiService> { get<Retrofit>().create(LiveOrdersApiService::class.java) }
-}
+val generalPoolModule =
+    module {
 
-val socketModule = module {
-    single<SocketIntegration> { SocketIntegrationImpl() }
-}
+        // repository
+        single<LocationRepository> { LocationRepositoryImpl(get()) }
+        single<LiveOrdersRepository> { LiveOrdersRepositoryImpl(get(), get<SocketIntegration>()) }
 
-val repositoryModule = module {
-    single<LiveOrdersRepository> { LiveOrdersRepositoryImpl(get(), get()) }
-}
+        // Use cases
+        factory { LoadOrdersUseCase(get<LiveOrdersRepository>()) }
+        factory { OrdersRealtimeUseCase(get<LiveOrdersRepository>()) }
+        factory { ComputeDistancesUseCase() }
+        factory { GetDeviceLocationsUseCase(get<LocationRepository>()) }
 
-val useCaseModule = module {
-    factory { LoadOrdersUseCase(get<LiveOrdersRepository>()) }
-    factory { ComputeDistancesUseCase() }
-    factory { GetDeviceLocationsUseCase() }
-    factory { OrdersRealtimeUseCase() }
-}
-
-val viewModelModule = module {
-    viewModel {
-        GeneralPoolViewModel(
-            repo = get<LiveOrdersRepository>(),
-            loadOrders = get<LoadOrdersUseCase>(),
-            computeDistances = get<ComputeDistancesUseCase>(),
-            getDeviceLocations = get<GetDeviceLocationsUseCase>(),
-        )
+        // view model
+        viewModel {
+            GeneralPoolViewModel(
+                ordersRealtime = get(),
+                computeDistances = get(),
+                getDeviceLocations = get(),
+                loadOrdersUseCase = get(),
+            )
+        }
     }
-}
+
+val updateOrderStatusModule =
+    module {
+        single<UpdateOrdersStatusRepository> { UpdateOrdersStatusRepositoryImpl(get()) }
+        factory { UpdateOrderStatusUseCase(get<UpdateOrdersStatusRepository>()) }
+    }
+
+val locationModule =
+    module {
+        single { LocationServices.getFusedLocationProviderClient(get<Context>()) }
+    }

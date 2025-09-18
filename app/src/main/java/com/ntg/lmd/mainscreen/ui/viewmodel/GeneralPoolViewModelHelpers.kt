@@ -1,10 +1,5 @@
 package com.ntg.lmd.mainscreen.ui.viewmodel
 
-import android.Manifest
-import android.content.Context
-import android.content.pm.PackageManager
-import android.location.Location
-import androidx.core.content.ContextCompat
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
 import com.ntg.lmd.mainscreen.ui.model.GeneralPoolUiState
@@ -35,7 +30,10 @@ internal fun determineNextSelection(
 ): OrderInfo? =
     when {
         userPinnedSelection -> currentSel
-        currentSel == null -> merged.firstOrNull { it.lat != 0.0 && it.lng != 0.0 } ?: merged.firstOrNull()
+        currentSel == null ->
+            merged.firstOrNull { it.lat != 0.0 && it.lng != 0.0 }
+                ?: merged.firstOrNull()
+
         merged.none { it.orderNumber == currentSel.orderNumber } -> null
         else -> merged.firstOrNull { it.orderNumber == currentSel.orderNumber }
     }
@@ -51,27 +49,6 @@ internal fun pickDefaultSelection(
 @Suppress("MaxLineLength")
 fun MutableStateFlow<GeneralPoolUiState>.ensureSelectedStillVisible(update: GeneralPoolUiState.() -> GeneralPoolUiState) {
     this.update(update)
-}
-
-//suspend fun getCurrentDeviceLocation(
-//    context: Context
-//): Location? {
-//    val (last, current) = GeneralPoolProvider.getDeviceLocationsUseCase().invoke(context)
-//    return current ?: last
-//}
-
-fun isLocationGranted(context: Context): Boolean {
-    val fine =
-        ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.ACCESS_FINE_LOCATION,
-        ) == PackageManager.PERMISSION_GRANTED
-    val coarse =
-        ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.ACCESS_COARSE_LOCATION,
-        ) == PackageManager.PERMISSION_GRANTED
-    return fine || coarse
 }
 
 fun determineSelectionAfterDistanceUpdate(

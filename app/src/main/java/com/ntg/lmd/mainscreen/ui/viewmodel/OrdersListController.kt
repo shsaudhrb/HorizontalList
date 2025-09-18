@@ -44,7 +44,7 @@ class OrdersListController(
             it.copy(
                 isLoading = !alreadyHasData,
                 errorMessage = null,
-                emptyMessage = null
+                emptyMessage = null,
             )
         }
 

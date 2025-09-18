@@ -1,7 +1,5 @@
 package com.ntg.lmd.mainscreen.ui.mapper
 
-import android.content.Context
-import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.data.model.Order
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
