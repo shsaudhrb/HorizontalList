@@ -22,12 +22,10 @@ import org.koin.dsl.module
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
-class AppModule
-
 val authModule =
     module {
         // SecureUserStore
-        single { SecureUserStore(androidContext()) }
+        single { SecureUserStore(get()) }
 
         single {
             AuthInterceptor(
@@ -53,7 +51,7 @@ val authModule =
         }
 
         // AuthApi (Retrofit no auth)
-        single<AuthApi> { RetrofitProvider.apiNoAuth }
+        single<AuthApi> { get<Retrofit>().create(AuthApi::class.java) }
 
         // Repository
         single<AuthRepository> {
@@ -74,16 +72,7 @@ val authModule =
 val networkModule =
     module {
         // SecureTokenStore (only here)
-        single { SecureTokenStore(androidContext()) }
-
-        // RetrofitProvider init
-        single {
-            RetrofitProvider.init(androidContext())
-            RetrofitProvider
-        }
-
-        // AuthApi without token
-        single<AuthApi> { RetrofitProvider.apiNoAuth }
+        single { SecureTokenStore(get()) }
     }
 
 val socketModule =
