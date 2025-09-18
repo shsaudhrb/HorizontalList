@@ -38,6 +38,8 @@ import com.ntg.lmd.mainscreen.ui.viewmodel.MyOrdersViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyPoolViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
 
+import retrofit2.converter.gson.GsonConverterFactory
+
 val authModule =
     module {
         // SecureUserStore
@@ -67,7 +69,7 @@ val authModule =
         }
 
         // AuthApi (Retrofit no auth)
-        single<AuthApi> { RetrofitProvider.apiNoAuth }
+        single<AuthApi> { get<Retrofit>().create(AuthApi::class.java) }
 
         // Repository
         single<AuthRepository> {
@@ -99,6 +101,8 @@ val networkModule =
         single<UpdatetOrdersStatusApi> { RetrofitProvider.updateStatusApi }
 
         single<GetUsersApi> { RetrofitProvider.usersApi }
+        // SecureTokenStore (only here)
+        single { SecureTokenStore(get()) }
     }
 
 val socketModule =
