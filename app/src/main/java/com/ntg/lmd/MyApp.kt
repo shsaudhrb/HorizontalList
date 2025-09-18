@@ -3,7 +3,6 @@ package com.ntg.lmd
 import android.app.Application
 import com.ntg.lmd.di.MyOrderMyPoolModule
 import com.ntg.lmd.di.networkModule
-import com.ntg.lmd.di.secureUserStoreModule
 import com.ntg.lmd.network.connectivity.NetworkMonitor
 import com.ntg.lmd.di.authModule
 import com.ntg.lmd.di.monitorModule
@@ -32,7 +31,6 @@ class MyApp : Application() {
                     socketModule,
                     monitorModule,
                     settingsModule,
-                    secureUserStoreModule,
                     MyOrderMyPoolModule,
                 ),
             )

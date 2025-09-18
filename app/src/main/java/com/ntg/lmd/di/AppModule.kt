@@ -38,8 +38,6 @@ import com.ntg.lmd.mainscreen.ui.viewmodel.MyOrdersViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyPoolViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
 
-import retrofit2.converter.gson.GsonConverterFactory
-
 val authModule =
     module {
         // SecureUserStore
@@ -90,19 +88,14 @@ val authModule =
 val networkModule =
     module {
 
-        // RetrofitProvider init
-        single {
-            RetrofitProvider.init(androidContext())
-            RetrofitProvider
-        }
-
-        single<OrdersApi> { RetrofitProvider.ordersApi }
-
-        single<UpdatetOrdersStatusApi> { RetrofitProvider.updateStatusApi }
-
-        single<GetUsersApi> { RetrofitProvider.usersApi }
         // SecureTokenStore (only here)
         single { SecureTokenStore(get()) }
+
+        single<OrdersApi> { get<Retrofit>().create(OrdersApi::class.java)}
+
+        single<UpdatetOrdersStatusApi> { get<Retrofit>().create(UpdatetOrdersStatusApi::class.java) }
+
+        single<GetUsersApi> { get<Retrofit>().create(GetUsersApi::class.java)}
     }
 
 val socketModule =
@@ -122,12 +115,12 @@ val socketModule =
 
 val monitorModule =
     module {
-        single { NetworkMonitor(androidContext()) }
+        single { NetworkMonitor(get()) }
     }
 
 val settingsModule =
     module {
-        single { SettingsPreferenceDataSource(androidContext()) }
+        single { SettingsPreferenceDataSource(get()) }
 
         single {
             LogoutManager(
@@ -142,12 +135,6 @@ val settingsModule =
                 logoutManager = get(),
             )
         }
-    }
-
-
-val secureUserStoreModule =
-    module {
-        single { SecureUserStore(get()) }
     }
 
 val MyOrderMyPoolModule =
