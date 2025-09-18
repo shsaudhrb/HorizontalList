@@ -6,7 +6,6 @@ import com.ntg.lmd.authentication.data.repositoryImp.AuthRepositoryImp
 import com.ntg.lmd.authentication.domain.repository.AuthRepository
 import com.ntg.lmd.authentication.domain.usecase.LoginUseCase
 import com.ntg.lmd.authentication.ui.viewmodel.login.LoginViewModel
-import com.ntg.lmd.mainscreen.data.datasource.remote.OrdersApi
 import com.ntg.lmd.mainscreen.data.repository.DeliveriesLogRepositoryImpl
 import com.ntg.lmd.mainscreen.domain.repository.DeliveriesLogRepository
 import com.ntg.lmd.mainscreen.domain.usecase.GetDeliveriesLogFromApiUseCase
@@ -26,7 +25,6 @@ import com.ntg.lmd.settings.ui.viewmodel.SettingsViewModel
 import com.ntg.lmd.utils.LogoutManager
 import com.ntg.lmd.utils.SecureUserStore
 import okhttp3.OkHttpClient
-import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
 import retrofit2.Retrofit
