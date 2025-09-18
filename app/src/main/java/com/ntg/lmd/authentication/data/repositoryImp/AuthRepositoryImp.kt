@@ -3,7 +3,9 @@ package com.ntg.lmd.authentication.data.repositoryImp
 import com.ntg.lmd.authentication.data.datasource.model.LoginData
 import com.ntg.lmd.authentication.data.datasource.model.LoginRequest
 import com.ntg.lmd.authentication.data.datasource.model.LoginResponse
+import com.ntg.lmd.authentication.data.datasource.model.User
 import com.ntg.lmd.authentication.data.datasource.remote.api.AuthApi
+import com.ntg.lmd.authentication.domain.repository.AuthRepository
 import com.ntg.lmd.network.authheader.SecureTokenStore
 import com.ntg.lmd.network.queue.NetworkError
 import com.ntg.lmd.network.queue.NetworkResult
@@ -13,11 +15,12 @@ class AuthRepositoryImp(
     private val loginApi: AuthApi,
     private val store: SecureTokenStore,
     private val userStore: SecureUserStore,
-) {
+) : AuthRepository {
     @Volatile
-    var lastLoginName: String? = null
+    override var lastLoginName: String? = null
+        private set
 
-    suspend fun login(
+    override suspend fun login(
         email: String,
         password: String,
     ): NetworkResult<Unit> =
@@ -35,6 +38,10 @@ class AuthRepositoryImp(
         } catch (e: java.io.IOException) {
             NetworkResult.Error(NetworkError.fromException(e))
         }
+
+    override fun getCurrentUser(): User? = userStore.getUser()
+
+    override fun isAuthenticated(): Boolean = store.getAccessToken()?.isNotBlank() == true
 
     // Ensures success flag true and data present; maps to IllegalStateException for compact guards
     private fun validate(response: LoginResponse?): LoginData {
