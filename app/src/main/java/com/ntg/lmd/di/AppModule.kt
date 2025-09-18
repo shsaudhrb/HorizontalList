@@ -65,6 +65,9 @@ val authModule =
                 .build()
         }
 
+        // AuthApi without token
+        single<AuthApi> { RetrofitProvider.apiNoAuth }
+
         // Repository
         single<AuthRepository> {
             AuthRepositoryImp(
@@ -91,9 +94,6 @@ val networkModule =
             RetrofitProvider.init(androidContext())
             RetrofitProvider
         }
-
-        // AuthApi without token
-        single<AuthApi> { RetrofitProvider.apiNoAuth }
 
         single<LiveOrdersApiService> { RetrofitProvider.liveOrderApi }
         single<UpdatetOrdersStatusApi> { RetrofitProvider.updateStatusApi }
