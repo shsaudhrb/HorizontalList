@@ -41,7 +41,7 @@ import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
 val authModule =
     module {
         // SecureUserStore
-        single { SecureUserStore(androidContext()) }
+        single { SecureUserStore(get()) }
 
         single {
             AuthInterceptor(
@@ -87,17 +87,12 @@ val authModule =
 
 val networkModule =
     module {
-        // SecureTokenStore (only here)
-        single { SecureTokenStore(androidContext()) }
 
         // RetrofitProvider init
         single {
             RetrofitProvider.init(androidContext())
             RetrofitProvider
         }
-
-        // AuthApi without token
-        single<AuthApi> { RetrofitProvider.apiNoAuth }
 
         single<OrdersApi> { RetrofitProvider.ordersApi }
 
