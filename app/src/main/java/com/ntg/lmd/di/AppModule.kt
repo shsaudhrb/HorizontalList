@@ -28,11 +28,6 @@ import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
 
-val networkBridgeModule =
-    module {
-        single<OrdersHistoryApi> { RetrofitProvider.ordersHistoryApi }
-        single<OrdersApi> { RetrofitProvider.ordersApi }
-    }
 val ordersHistoryModule =
     module {
         single<OrdersRepository> { OrdersRepositoryImpl(get()) }
@@ -50,9 +45,6 @@ val authModule =
     module {
         // SecureUserStore
         single { SecureUserStore(androidContext()) }
-
-        // AuthApi (Retrofit no auth)
-        single<AuthApi> { RetrofitProvider.apiNoAuth }
 
         // Repository
         single<AuthRepository> {
@@ -83,6 +75,8 @@ val networkModule =
 
         // AuthApi without token
         single<AuthApi> { RetrofitProvider.apiNoAuth }
+        single<OrdersHistoryApi> { RetrofitProvider.ordersHistoryApi }
+        single<OrdersApi> { RetrofitProvider.ordersApi }
     }
 
 val socketModule =
