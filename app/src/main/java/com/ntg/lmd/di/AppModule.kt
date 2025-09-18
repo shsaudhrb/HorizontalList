@@ -40,7 +40,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 val authModule =
     module {
         // SecureUserStore
-        single { SecureUserStore(androidContext()) }
+        single { SecureUserStore(get()) }
 
         single {
             AuthInterceptor(
@@ -65,8 +65,8 @@ val authModule =
                 .build()
         }
 
-        // AuthApi without token
-        single<AuthApi> { RetrofitProvider.apiNoAuth }
+        // AuthApi (Retrofit no auth)
+        single<AuthApi> { get<Retrofit>().create(AuthApi::class.java) }
 
         // Repository
         single<AuthRepository> {
@@ -87,16 +87,7 @@ val authModule =
 val networkModule =
     module {
         // SecureTokenStore (only here)
-        single { SecureTokenStore(androidContext()) }
-
-        // RetrofitProvider init
-        single {
-            RetrofitProvider.init(androidContext())
-            RetrofitProvider
-        }
-
-        single<LiveOrdersApiService> { RetrofitProvider.liveOrderApi }
-        single<UpdatetOrdersStatusApi> { RetrofitProvider.updateStatusApi }
+        single { SecureTokenStore(get()) }
     }
 
 val socketModule =
@@ -160,12 +151,16 @@ val generalPoolModule =
                 loadOrdersUseCase = get(),
             )
         }
+
+        // Api
+        single<LiveOrdersApiService> { RetrofitProvider.liveOrderApi }
     }
 
 val updateOrderStatusModule =
     module {
         single<UpdateOrdersStatusRepository> { UpdateOrdersStatusRepositoryImpl(get()) }
         factory { UpdateOrderStatusUseCase(get<UpdateOrdersStatusRepository>()) }
+        single<UpdatetOrdersStatusApi> { RetrofitProvider.updateStatusApi }
     }
 
 val locationModule = module {
