@@ -1,6 +1,5 @@
 package com.ntg.lmd.mainscreen.ui.screens
 
-import android.app.Application
 import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
@@ -45,9 +44,9 @@ import com.ntg.lmd.mainscreen.ui.model.GeneralPoolUiState
 import com.ntg.lmd.mainscreen.ui.model.MapStates
 import com.ntg.lmd.mainscreen.ui.viewmodel.GeneralPoolViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
-import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModelFactory
 import com.ntg.lmd.network.core.RetrofitProvider.userStore
 import kotlinx.coroutines.launch
+import org.koin.androidx.compose.koinViewModel
 
 // Map / Camera behavior
 private const val INITIAL_MAP_ZOOM = 12f
@@ -108,9 +107,7 @@ private fun addToMeAction(
     viewModel: GeneralPoolViewModel,
     currentUserId: String?,
 ): (OrderInfo) -> Unit {
-    val app = LocalContext.current.applicationContext as Application
-    val updateVm: UpdateOrderStatusViewModel =
-        viewModel(factory = UpdateOrderStatusViewModelFactory(app))
+    val updateVm: UpdateOrderStatusViewModel = koinViewModel()
     val scope = rememberCoroutineScope()
 
     return remember(currentUserId) {

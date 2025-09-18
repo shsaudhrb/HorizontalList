@@ -5,11 +5,11 @@ import com.ntg.lmd.mainscreen.data.model.UpdateOrderStatusRequest
 import com.ntg.lmd.mainscreen.data.model.UpdatedOrderData
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus.Companion.fromId
-import com.ntg.lmd.mainscreen.domain.repository.UpdateOrdersStatus
+import com.ntg.lmd.mainscreen.domain.repository.UpdateOrdersStatusRepository
 
-class UpdateOrdersStatusRepository(
+class UpdateOrdersStatusRepositoryImpl(
     private val api: UpdatetOrdersStatusApi,
-) : UpdateOrdersStatus {
+) : UpdateOrdersStatusRepository {
     override suspend fun updateOrderStatus(
         orderId: String,
         statusId: Int,

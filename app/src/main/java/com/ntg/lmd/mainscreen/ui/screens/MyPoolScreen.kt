@@ -39,8 +39,8 @@ import com.ntg.lmd.mainscreen.ui.components.rememberFocusOnMyOrder
 import com.ntg.lmd.mainscreen.ui.model.MapStates
 import com.ntg.lmd.mainscreen.ui.model.MapUiState
 import com.ntg.lmd.mainscreen.ui.model.MyOrdersPoolUiState
-import com.ntg.lmd.mainscreen.ui.viewmodel.MyPoolVMFactory
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyPoolViewModel
+import org.koin.androidx.compose.koinViewModel
 
 private val ZERO_LATLNG = LatLng(0.0, 0.0)
 
@@ -65,7 +65,7 @@ fun rememberMapStates(): MapStates = remember { MapStates(CameraPositionState(),
 
 @Composable
 fun myPoolScreen(
-    viewModel: MyPoolViewModel = viewModel(factory = MyPoolVMFactory()),
+    viewModel: MyPoolViewModel = koinViewModel(),
     onOpenOrderDetails: (String) -> Unit,
 ) {
     val ui by viewModel.ui.collectAsState()

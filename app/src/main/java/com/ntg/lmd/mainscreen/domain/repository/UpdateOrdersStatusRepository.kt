@@ -2,7 +2,7 @@ package com.ntg.lmd.mainscreen.domain.repository
 
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 
-interface UpdateOrdersStatus {
+interface UpdateOrdersStatusRepository {
     suspend fun updateOrderStatus(
         orderId: String,
         statusId: Int,

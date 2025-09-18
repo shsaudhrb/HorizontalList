@@ -10,9 +10,6 @@ import com.ntg.lmd.mainscreen.data.model.Order
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
 import com.ntg.lmd.mainscreen.domain.repository.OrdersRepository
-import com.ntg.lmd.mainscreen.domain.usecase.ComputeDistancesUseCase
-import com.ntg.lmd.mainscreen.domain.usecase.GetDeviceLocationsUseCase
-import com.ntg.lmd.mainscreen.domain.usecase.LoadOrdersUseCase
 import com.ntg.lmd.mainscreen.ui.mapper.toUi
 import com.ntg.lmd.mainscreen.ui.model.GeneralPoolUiState
 import kotlinx.coroutines.Job
@@ -28,7 +25,7 @@ sealed class GeneralPoolUiEvent {
     data object RequestLocationPermission : GeneralPoolUiEvent()
 }
 
-class GeneralPoolViewModel() : ViewModel() {
+class GeneralPoolViewModel : ViewModel() {
     private val _ui = MutableStateFlow(GeneralPoolUiState())
     val ui: StateFlow<GeneralPoolUiState> = _ui.asStateFlow()
 
