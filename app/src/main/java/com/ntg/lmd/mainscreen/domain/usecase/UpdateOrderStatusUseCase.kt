@@ -1,7 +1,7 @@
 package com.ntg.lmd.mainscreen.domain.usecase
 
-import com.ntg.lmd.mainscreen.data.repository.UpdateOrdersStatusRepository
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
+import com.ntg.lmd.mainscreen.domain.repository.UpdateOrdersStatusRepository
 
 class UpdateOrderStatusUseCase(
     private val repo: UpdateOrdersStatusRepository,

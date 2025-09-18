@@ -41,8 +41,8 @@ class OrdersListHelpers(
             } else {
                 list.filter { o ->
                     o.orderNumber.contains(q, ignoreCase = true) ||
-                            o.name.contains(q, ignoreCase = true) ||
-                            (o.details?.contains(q, ignoreCase = true) == true)
+                        o.name.contains(q, ignoreCase = true) ||
+                        (o.details?.contains(q, ignoreCase = true) == true)
                 }
             }
         val afterStatus = afterQuery.filter { it.status in allowedStatuses }

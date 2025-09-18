@@ -1,6 +1,5 @@
 package com.ntg.lmd.mainscreen.ui.screens
 
-import android.app.Application
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,7 +21,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
@@ -36,19 +34,16 @@ import com.ntg.lmd.mainscreen.ui.components.ordersEffects
 import com.ntg.lmd.mainscreen.ui.components.reassignBottomSheet
 import com.ntg.lmd.mainscreen.ui.model.MyOrdersUiState
 import com.ntg.lmd.mainscreen.ui.viewmodel.ActiveAgentsViewModel
-import com.ntg.lmd.mainscreen.ui.viewmodel.ActiveAgentsViewModelFactory
 import com.ntg.lmd.mainscreen.ui.viewmodel.AgentsState
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyOrdersViewModel
-import com.ntg.lmd.mainscreen.ui.viewmodel.MyOrdersViewModelFactory
-import com.ntg.lmd.mainscreen.ui.viewmodel.MyPoolVMFactory
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyPoolViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel.OrderLogger
-import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModelFactory
 import com.ntg.lmd.network.core.RetrofitProvider.userStore
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
+import org.koin.androidx.compose.koinViewModel
 
 @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -57,12 +52,10 @@ fun myOrdersScreen(
     navController: NavController,
     onOpenOrderDetails: (String) -> Unit,
 ) {
-    val app = LocalContext.current.applicationContext as Application
-    val ordersVm: MyOrdersViewModel = viewModel(factory = MyOrdersViewModelFactory(app))
-    val updateVm: UpdateOrderStatusViewModel =
-        viewModel(factory = UpdateOrderStatusViewModelFactory(app))
-    val agentsVm: ActiveAgentsViewModel = viewModel(factory = ActiveAgentsViewModelFactory(app))
-    val poolVm: MyPoolViewModel = viewModel(factory = MyPoolVMFactory())
+    val ordersVm: MyOrdersViewModel = koinViewModel()
+    val updateVm: UpdateOrderStatusViewModel = koinViewModel()
+    val agentsVm: ActiveAgentsViewModel = koinViewModel()
+    val poolVm: MyPoolViewModel = koinViewModel()
 
     val snack = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
