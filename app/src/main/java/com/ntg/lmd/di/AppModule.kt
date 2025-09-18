@@ -35,19 +35,15 @@ import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
 import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory import com.ntg.lmd.mainscreen.data.datasource.remote.GetUsersApi
+import retrofit2.converter.gson.GsonConverterFactory
+import com.ntg.lmd.mainscreen.data.datasource.remote.GetUsersApi
 import com.ntg.lmd.mainscreen.data.datasource.remote.OrdersApi
-import com.ntg.lmd.mainscreen.data.datasource.remote.UpdatetOrdersStatusApi
 import com.ntg.lmd.mainscreen.data.repository.MyOrdersRepositoryImpl
-import com.ntg.lmd.mainscreen.data.repository.UpdateOrdersStatusRepositoryImpl
 import com.ntg.lmd.mainscreen.data.repository.UsersRepositoryImpl
 import com.ntg.lmd.mainscreen.domain.repository.MyOrdersRepository
-import com.ntg.lmd.mainscreen.domain.repository.UpdateOrdersStatusRepository
 import com.ntg.lmd.mainscreen.domain.repository.UsersRepository
-import com.ntg.lmd.mainscreen.domain.usecase.ComputeDistancesUseCase
 import com.ntg.lmd.mainscreen.domain.usecase.GetActiveUsersUseCase
 import com.ntg.lmd.mainscreen.domain.usecase.GetMyOrdersUseCase
-import com.ntg.lmd.mainscreen.domain.usecase.UpdateOrderStatusUseCase
 import com.ntg.lmd.mainscreen.ui.viewmodel.ActiveAgentsViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyOrdersViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyPoolViewModel
@@ -213,13 +209,6 @@ val generalPoolModule =
 
         // Api
         single<LiveOrdersApiService> { RetrofitProvider.liveOrderApi }
-    }
-
-val updateOrderStatusModule =
-    module {
-        single<UpdateOrdersStatusRepository> { UpdateOrdersStatusRepositoryImpl(get()) }
-        factory { UpdateOrderStatusUseCase(get<UpdateOrdersStatusRepository>()) }
-        single<UpdatetOrdersStatusApi> { RetrofitProvider.updateStatusApi }
     }
 
 val locationModule = module {
