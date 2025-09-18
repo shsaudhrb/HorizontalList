@@ -21,17 +21,25 @@ import com.ntg.lmd.mainscreen.domain.usecase.LoadOrdersUseCase
 import com.ntg.lmd.mainscreen.domain.usecase.OrdersRealtimeUseCase
 import com.ntg.lmd.mainscreen.domain.usecase.UpdateOrderStatusUseCase
 import com.ntg.lmd.mainscreen.ui.viewmodel.GeneralPoolViewModel
+import com.ntg.lmd.mainscreen.data.repository.DeliveriesLogRepositoryImpl
+import com.ntg.lmd.mainscreen.domain.repository.DeliveriesLogRepository
+import com.ntg.lmd.mainscreen.domain.usecase.GetDeliveriesLogFromApiUseCase
+import com.ntg.lmd.mainscreen.ui.viewmodel.DeliveriesLogViewModel
 import com.ntg.lmd.network.authheader.AuthInterceptor
 import com.ntg.lmd.network.authheader.SecureTokenStore
 import com.ntg.lmd.network.connectivity.NetworkMonitor
 import com.ntg.lmd.network.core.RetrofitProvider
 import com.ntg.lmd.network.sockets.SocketIntegration
+import com.ntg.lmd.order.data.remote.OrdersHistoryApi
+import com.ntg.lmd.order.data.remote.repository.OrdersRepositoryImpl
+import com.ntg.lmd.order.domain.model.repository.OrdersRepository
+import com.ntg.lmd.order.domain.model.usecase.GetOrdersUseCase
+import com.ntg.lmd.order.ui.viewmodel.OrderHistoryViewModel
 import com.ntg.lmd.settings.data.SettingsPreferenceDataSource
 import com.ntg.lmd.settings.ui.viewmodel.SettingsViewModel
 import com.ntg.lmd.utils.LogoutManager
 import com.ntg.lmd.utils.SecureUserStore
 import okhttp3.OkHttpClient
-import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
 import retrofit2.Retrofit
@@ -48,6 +56,21 @@ import com.ntg.lmd.mainscreen.ui.viewmodel.ActiveAgentsViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyOrdersViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.MyPoolViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
+
+val ordersHistoryModule =
+    module {
+        single<OrdersHistoryApi> { get<Retrofit>().create(OrdersHistoryApi::class.java)}
+        single<OrdersRepository> { OrdersRepositoryImpl(get()) }
+        factory { GetOrdersUseCase(get()) }
+        viewModel { OrderHistoryViewModel(get()) }
+    }
+val deliveriesLogModule =
+    module {
+        single<OrdersApi> { get<Retrofit>().create(OrdersApi::class.java) }
+        single<DeliveriesLogRepository> { DeliveriesLogRepositoryImpl(get()) }
+        factory { GetDeliveriesLogFromApiUseCase(get()) }
+        viewModel { DeliveriesLogViewModel(get()) }
+    }
 
 val authModule =
     module {

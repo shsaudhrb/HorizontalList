@@ -10,6 +10,8 @@ import com.ntg.lmd.di.locationModule
 import com.ntg.lmd.di.monitorModule
 import com.ntg.lmd.di.settingsModule
 import com.ntg.lmd.di.socketModule
+import com.ntg.lmd.di.deliveriesLogModule
+import com.ntg.lmd.di.ordersHistoryModule
 import com.ntg.lmd.network.core.RetrofitProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -18,6 +20,7 @@ import kotlinx.coroutines.launch
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.GlobalContext.startKoin
 import org.koin.java.KoinJavaComponent
+import org.koin.core.context.GlobalContext.startKoin
 
 class MyApp : Application() {
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -35,6 +38,8 @@ class MyApp : Application() {
                     monitorModule,
                     settingsModule,
                     MyOrderMyPoolModule,
+                    ordersHistoryModule,
+                    deliveriesLogModule,
                     generalPoolModule,
                     locationModule,
                 ),
