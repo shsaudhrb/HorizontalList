@@ -1,6 +1,5 @@
 package com.ntg.lmd.authentication.ui.screens.login
 
-import android.app.Application
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.background
@@ -25,12 +24,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.ntg.lmd.R
 import com.ntg.lmd.authentication.ui.components.appLogo
@@ -44,8 +41,8 @@ import com.ntg.lmd.authentication.ui.model.CardUi
 import com.ntg.lmd.authentication.ui.model.InputProps
 import com.ntg.lmd.authentication.ui.model.LoginUiState
 import com.ntg.lmd.authentication.ui.viewmodel.login.LoginViewModel
-import com.ntg.lmd.authentication.ui.viewmodel.login.LoginViewModelFactory
 import com.ntg.lmd.navigation.Screen
+import org.koin.androidx.compose.koinViewModel
 
 private const val CARD_SCALE_FOCUSED = 1.02f
 private const val CARD_SCALE_DEFAULT = 1f
@@ -54,7 +51,7 @@ private const val CARD_ELEVATION_DEFAULT = 2f
 
 @Composable
 fun loginScreen(navController: NavController) {
-    val viewModel = rememberLoginViewModel()
+    val viewModel: LoginViewModel = koinViewModel()
     val ui = collectLoginUi(viewModel)
     val focusManager = LocalFocusManager.current
     val (cardUi, onUsernameFocus, onPasswordFocus) = rememberCardAndFocusHandlers(viewModel)
@@ -73,12 +70,6 @@ fun loginScreen(navController: NavController) {
             }
         }
     }
-}
-
-@Composable
-private fun rememberLoginViewModel(): LoginViewModel {
-    val ctx = LocalContext.current
-    return viewModel(factory = LoginViewModelFactory(ctx.applicationContext as Application))
 }
 
 @Composable
