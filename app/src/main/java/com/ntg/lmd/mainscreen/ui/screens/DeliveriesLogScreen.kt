@@ -1,6 +1,5 @@
 package com.ntg.lmd.mainscreen.ui.screens
 
-import android.content.Context
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,7 +26,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.domain.model.LogsUi
@@ -41,19 +39,20 @@ import com.ntg.lmd.order.domain.model.defaultVerticalListConfig
 import com.ntg.lmd.order.ui.components.verticalListComponent
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun deliveriesLogScreen(
-    navController: NavController,
-    vm: DeliveriesLogViewModel = viewModel(),
+    navController: NavController
 ) {
+    val vm: DeliveriesLogViewModel = koinViewModel()
     val ctx = LocalContext.current
-    LaunchedEffect(Unit) { vm.load(ctx) }
-    observeSearch(navController, vm, ctx)
+    LaunchedEffect(Unit) { vm.load() }
+    observeSearch(navController, vm)
 
     val ui = rememberLogsUi(vm)
-    val bundle = rememberLogListBundle(ui, vm, ctx)
+    val bundle = rememberLogListBundle(ui, vm)
 
     Column(
         Modifier
@@ -78,7 +77,6 @@ fun deliveriesLogScreen(
 private fun rememberLogListBundle(
     ui: LogsUi,
     vm: DeliveriesLogViewModel,
-    ctx: Context,
 ): LogListBundle {
     val listState = rememberLazyListState()
 
@@ -87,10 +85,10 @@ private fun rememberLogListBundle(
         remember(ui.refreshing, ui.loadingMore, ui.endReached) {
             PagingState(
                 isRefreshing = ui.refreshing,
-                onRefresh = { vm.refresh(ctx) },
+                onRefresh = { vm.refresh() },
                 isLoadingMore = ui.loadingMore,
                 endReached = ui.endReached,
-                onLoadMore = { vm.loadMore(ctx) },
+                onLoadMore = { vm.loadMore() },
             )
         }
 
@@ -117,7 +115,6 @@ private data class LogListBundle(
 private fun observeSearch(
     navController: NavController,
     vm: DeliveriesLogViewModel,
-    ctx: Context,
 ) {
     val back = navController.currentBackStackEntry
     LaunchedEffect(back) {
@@ -129,7 +126,7 @@ private fun observeSearch(
             .distinctUntilChanged()
             .collect { q ->
                 vm.searchById(q)
-                vm.load(ctx)
+                vm.load()
             }
     }
     LaunchedEffect(back) {
@@ -137,7 +134,7 @@ private fun observeSearch(
         h.getStateFlow("search_submit", "").collect { s ->
             if (s.isNotEmpty()) {
                 vm.searchById(s)
-                vm.load(ctx)
+                vm.load()
                 h["search_submit"] = ""
             }
         }

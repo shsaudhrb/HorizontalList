@@ -33,21 +33,16 @@ import com.ntg.lmd.order.ui.components.ordersHistoryMenu
 import com.ntg.lmd.order.ui.components.sharePdf
 import com.ntg.lmd.order.ui.components.verticalListComponent
 import com.ntg.lmd.order.ui.viewmodel.OrderHistoryViewModel
-import com.ntg.lmd.order.ui.viewmodel.OrderHistoryViewModelFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun ordersHistoryRoute(registerOpenMenu: ((() -> Unit) -> Unit)? = null) {
-    val vm: OrderHistoryViewModel =
-        viewModel(
-            factory =
-                OrderHistoryViewModelFactory(
-                    GetOrdersUseCase(OrdersRepositoryImpl(RetrofitProvider.ordersHistoryApi)),
-                ),
-        )
+    val vm: OrderHistoryViewModel = koinViewModel()
+
     val token = RetrofitProvider.tokenStore.getAccessToken() ?: ""
     ordersHistoryStateHolders(vm, token, registerOpenMenu)
 }
