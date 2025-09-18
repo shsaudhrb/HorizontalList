@@ -5,6 +5,7 @@ import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.data.model.Order
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.domain.model.OrderStatus
+import com.ntg.lmd.mainscreen.domain.model.RelativeTime
 import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -39,43 +40,27 @@ private fun parseIsoToMillis(s: String?): Long? {
     }
 }
 
-private fun formatRelative(
-    ctx: Context,
-    then: Long?,
-): String {
-    if (then == null) return "-"
+private fun formatRelative(then: Long?): RelativeTime {
+    if (then == null) return RelativeTime.Unknown
     val now = System.currentTimeMillis()
     val diff = abs(now - then)
 
     return when {
-        diff < MINUTE_MILLIS -> ctx.getString(R.string.time_just_now)
-        diff < HOUR_MILLIS ->
-            ctx.getString(
-                R.string.time_minutes_ago,
-                (diff / MINUTE_MILLIS).toInt(),
-            )
-
+        diff < MINUTE_MILLIS -> RelativeTime.JustNow
+        diff < HOUR_MILLIS -> RelativeTime.MinutesAgo((diff / MINUTE_MILLIS).toInt())
         diff < DAY_MILLIS -> {
             val h = (diff / HOUR_MILLIS).toInt()
-            if (h == 1) {
-                ctx.getString(R.string.time_one_hour_ago)
-            } else {
-                ctx.getString(R.string.time_hours_ago, h)
-            }
+            if (h == 1) RelativeTime.HoursAgo(1) else RelativeTime.HoursAgo(h)
         }
 
         else -> {
             val d = (diff / DAY_MILLIS).toInt()
-            if (d == 1) {
-                ctx.getString(R.string.time_one_day_ago)
-            } else {
-                ctx.getString(R.string.time_days_ago, d)
-            }
+            if (d == 1) RelativeTime.DaysAgo(1) else RelativeTime.DaysAgo(d)
         }
     }
 }
 
-fun Order.toUi(context: Context): OrderInfo {
+fun Order.toUi(): OrderInfo {
     val lat = coordinates?.latitude ?: latitude ?: 0.0
     val lng = coordinates?.longitude ?: longitude ?: 0.0
 
@@ -84,7 +69,7 @@ fun Order.toUi(context: Context): OrderInfo {
             ?: parseIsoToMillis(orderDate)
             ?: parseIsoToMillis(deliveryTime)
 
-    val timeAgo = formatRelative(context, whenMillis)
+    val timeAgo = formatRelative(whenMillis)
 
     return OrderInfo(
         id = orderId ?: id ?: orderNumber ?: "-",

@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.location.Location
 import androidx.core.content.ContextCompat
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
+import com.ntg.lmd.mainscreen.domain.model.OrderStatus
 import com.ntg.lmd.mainscreen.ui.model.GeneralPoolUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
@@ -52,12 +53,12 @@ fun MutableStateFlow<GeneralPoolUiState>.ensureSelectedStillVisible(update: Gene
     this.update(update)
 }
 
-suspend fun getCurrentDeviceLocation(
-    context: Context
-): Location? {
-    val (last, current) = GeneralPoolProvider.getDeviceLocationsUseCase().invoke(context)
-    return current ?: last
-}
+//suspend fun getCurrentDeviceLocation(
+//    context: Context
+//): Location? {
+//    val (last, current) = GeneralPoolProvider.getDeviceLocationsUseCase().invoke(context)
+//    return current ?: last
+//}
 
 fun isLocationGranted(context: Context): Boolean {
     val fine =
@@ -102,3 +103,12 @@ fun GeneralPoolUiState.removeInvalidSelectionIfNeeded(): GeneralPoolUiState {
     val sel = selected
     return if (sel != null && orders.none { it.orderNumber == sel.orderNumber }) copy(selected = null) else this
 }
+
+internal fun List<OrderInfo>.poolVisible(currentUserId: String?): List<OrderInfo> =
+    filter { info ->
+        val mine =
+            currentUserId?.let { uid ->
+                info.assignedAgentId?.equals(uid, ignoreCase = true) == true
+            } ?: false
+        info.status == OrderStatus.ADDED && !mine
+    }

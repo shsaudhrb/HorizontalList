@@ -10,28 +10,24 @@ import com.ntg.lmd.mainscreen.domain.repository.LocationRepository
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 
-class LocationRepositoryImpl : LocationRepository {
-    private fun client(context: Context): FusedLocationProviderClient =
-        LocationServices.getFusedLocationProviderClient(context.applicationContext)
+class LocationRepositoryImpl(
+    private val fused: FusedLocationProviderClient
+) : LocationRepository {
 
     @SuppressLint("MissingPermission")
-    override suspend fun getLastLocation(context: Context): Location? {
-        val c = client(context)
-        return suspendCancellableCoroutine { cont ->
-            c.lastLocation
+    override suspend fun getLastLocation(): Location? =
+        suspendCancellableCoroutine { cont ->
+            fused.lastLocation
                 .addOnSuccessListener { cont.resume(it) }
                 .addOnFailureListener { cont.resume(null) }
         }
-    }
 
     @SuppressLint("MissingPermission")
-    override suspend fun getCurrentLocation(context: Context): Location? {
-        val c = client(context)
-        return suspendCancellableCoroutine { cont ->
-            c
+    override suspend fun getCurrentLocation(): Location? =
+        suspendCancellableCoroutine { cont ->
+            fused
                 .getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, null)
                 .addOnSuccessListener { cont.resume(it) }
                 .addOnFailureListener { cont.resume(null) }
         }
-    }
 }

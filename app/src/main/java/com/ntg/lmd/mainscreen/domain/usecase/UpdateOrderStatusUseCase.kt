@@ -1,10 +1,10 @@
 package com.ntg.lmd.mainscreen.domain.usecase
 
-import com.ntg.lmd.mainscreen.data.repository.UpdateOrdersStatusRepository
+import com.ntg.lmd.mainscreen.data.repository.UpdateOrdersStatusRepositoryImpl
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 
 class UpdateOrderStatusUseCase(
-    private val repo: UpdateOrdersStatusRepository,
+    private val repo: UpdateOrdersStatusRepositoryImpl,
 ) {
     suspend operator fun invoke(
         orderId: String,

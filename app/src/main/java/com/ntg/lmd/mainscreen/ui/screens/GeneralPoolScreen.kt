@@ -48,6 +48,7 @@ import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModel
 import com.ntg.lmd.mainscreen.ui.viewmodel.UpdateOrderStatusViewModelFactory
 import com.ntg.lmd.network.core.RetrofitProvider.userStore
 import kotlinx.coroutines.launch
+import org.koin.androidx.compose.koinViewModel
 
 // Map / Camera behavior
 private const val INITIAL_MAP_ZOOM = 12f
@@ -56,8 +57,9 @@ private const val ORDER_FOCUS_ZOOM = 14f
 @Composable
 fun generalPoolScreen(
     navController: NavController,
-    generalPoolViewModel: GeneralPoolViewModel = viewModel(),
+    generalPoolViewModel: GeneralPoolViewModel = koinViewModel()
 ) {
+
     val context = LocalContext.current
     val ui by generalPoolViewModel.ui.collectAsStateWithLifecycle()
     val cameraPositionState = rememberCameraPositionState()

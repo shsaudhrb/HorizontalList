@@ -11,7 +11,7 @@ import com.ntg.lmd.mainscreen.data.datasource.remote.LiveOrdersApiService
 import com.ntg.lmd.mainscreen.data.datasource.remote.PagedOrdersResponse
 import com.ntg.lmd.mainscreen.data.model.Order
 import com.ntg.lmd.mainscreen.data.model.PageInfo
-import com.ntg.lmd.mainscreen.domain.repository.OrdersRepository
+import com.ntg.lmd.mainscreen.domain.repository.LiveOrdersRepository
 import com.ntg.lmd.network.sockets.SocketIntegration
 import retrofit2.HttpException
 import java.io.IOException
@@ -19,10 +19,10 @@ import kotlin.coroutines.cancellation.CancellationException
 
 private const val ORDERS_TAG = "OrdersRepo"
 
-class OrdersRepositoryImpl(
+class LiveOrdersRepositoryImpl(
     private val liveOrdersApi: LiveOrdersApiService,
     private val socket: SocketIntegration,
-) : OrdersRepository {
+) : LiveOrdersRepository {
     // fetch all live orders with pagination support
     override suspend fun getAllLiveOrders(pageSize: Int): Result<List<Order>> =
         try {

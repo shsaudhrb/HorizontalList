@@ -191,6 +191,7 @@ dependencies {
     //Koin
     implementation(libs.koin.android)
     implementation(libs.koin.androidx.compose)
+
 }
 
 // Custom tasks for code quality checks
