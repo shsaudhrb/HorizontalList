@@ -47,7 +47,7 @@ afterEvaluate {
             create<MavenPublication>("release") {
                 from(components["release"])
 
-                groupId = "com.bitbucket.ntglms"
+                groupId = "com.github.shsaudhrb"
                 artifactId = "horizontallist"
                 version = "1.0.0"
             }
