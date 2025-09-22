@@ -22,15 +22,14 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.CameraPositionState
 import com.google.maps.android.compose.MarkerState
+import com.ntg.horizontallist.GeneralHorizontalList
+import com.ntg.horizontallist.GeneralHorizontalListCallbacks
 import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
-import com.ntg.lmd.mainscreen.ui.components.HorizontalListCallbacks
-import com.ntg.lmd.mainscreen.ui.components.generalHorizontalList
 import com.ntg.lmd.mainscreen.ui.components.initialCameraPositionEffect
 import com.ntg.lmd.mainscreen.ui.components.locationPermissionHandler
 import com.ntg.lmd.mainscreen.ui.components.mapCenter
@@ -204,21 +203,40 @@ private fun ordersHorizontalList(
     state: MapOverlayState,
     callbacks: MapOverlayCallbacks,
 ) {
-    generalHorizontalList(
-        orders = state.orders,
-        callbacks =
-            HorizontalListCallbacks(
-                onCenteredOrderChange = { order, index ->
-                    callbacks.onCenteredOrderChange(order, index)
-                },
-                onNearEnd = { idx -> callbacks.onNearEnd(idx) },
-            ),
-        cardContent = { order, _ ->
-            myPoolOrderCardItem(
-                order = order,
-                onOpenOrderDetails = callbacks.onOpenOrderDetails,
-                onCall = { },
-            )
-        },
-    )
+    GeneralHorizontalList(
+        items = state.orders,
+        key = { it.orderNumber }, // use a unique field from OrderInfo
+        callbacks = GeneralHorizontalListCallbacks(
+            onCenteredItemChange = { order, index ->
+                callbacks.onCenteredOrderChange(order, index)
+            },
+            onNearEnd = { idx ->
+                callbacks.onNearEnd(idx)
+            }
+        )
+    ) { order, _ ->
+        myPoolOrderCardItem(
+            order = order,
+            onOpenOrderDetails = callbacks.onOpenOrderDetails,
+            onCall = { },
+        )
+    }
+
+//    generalHorizontalList(
+//        orders = state.orders,
+//        callbacks =
+//            HorizontalListCallbacks(
+//                onCenteredOrderChange = { order, index ->
+//                    callbacks.onCenteredOrderChange(order, index)
+//                },
+//                onNearEnd = { idx -> callbacks.onNearEnd(idx) },
+//            ),
+//        cardContent = { order, _ ->
+//            myPoolOrderCardItem(
+//                order = order,
+//                onOpenOrderDetails = callbacks.onOpenOrderDetails,
+//                onCall = { },
+//            )
+//        },
+//    )
 }

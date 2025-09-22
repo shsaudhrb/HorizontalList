@@ -10,6 +10,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.ntg.horizontallist.GeneralHorizontalList
+import com.ntg.horizontallist.GeneralHorizontalListCallbacks
 import com.ntg.lmd.R
 import com.ntg.lmd.mainscreen.domain.model.OrderInfo
 import com.ntg.lmd.mainscreen.ui.model.GeneralPoolUiState
@@ -51,26 +53,45 @@ fun ordersHorizontalList(
 ) {
     Box(Modifier.fillMaxSize()) {
         Box(Modifier.align(Alignment.BottomCenter)) {
-            generalHorizontalList(
-                orders = ui.mapOrders,
-                callbacks =
-                    HorizontalListCallbacks(
-                        onCenteredOrderChange = { order, _ ->
-                            focusOnOrder(order, false)
-                            viewModel.onOrderSelected(order)
-                        },
-                        onNearEnd = { idx ->
-                            // viewModel.loadNextIfNeeded(idx)
-                        },
-                    ),
-                cardContent = { order, _ ->
-                    orderCard(
-                        order = order,
-                        onAddClick = { onAddToMe(order) },
-                        onOrderClick = { clicked -> focusOnOrder(clicked, false) },
-                    )
-                },
-            )
+            GeneralHorizontalList<OrderInfo>(
+                items = ui.mapOrders,
+                key = { it.orderNumber }, // مفتاح فريد
+                callbacks = GeneralHorizontalListCallbacks(
+                    onCenteredItemChange = { order, _ ->
+                        focusOnOrder(order, false)
+                        viewModel.onOrderSelected(order)
+                    },
+                    onNearEnd = { idx ->
+                        // viewModel.loadNextIfNeeded(idx)
+                    }
+                )
+            ) { order, _ ->
+                orderCard(
+                    order = order,
+                    onAddClick = { onAddToMe(order) },
+                    onOrderClick = { clicked -> focusOnOrder(clicked, false) },
+                )
+            }
+//            generalHorizontalList(
+//                orders = ui.mapOrders,
+//                callbacks =
+//                    HorizontalListCallbacks(
+//                        onCenteredOrderChange = { order, _ ->
+//                            focusOnOrder(order, false)
+//                            viewModel.onOrderSelected(order)
+//                        },
+//                        onNearEnd = { idx ->
+//                            // viewModel.loadNextIfNeeded(idx)
+//                        },
+//                    ),
+//                cardContent = { order, _ ->
+//                    orderCard(
+//                        order = order,
+//                        onAddClick = { onAddToMe(order) },
+//                        onOrderClick = { clicked -> focusOnOrder(clicked, false) },
+//                    )
+//                },
+//            )
         }
     }
 }
